@@ -12,26 +12,38 @@ import 'package:open_tv/models/settings.dart';
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/source_type.dart';
 import 'package:open_tv/setup.dart';
-import 'package:open_tv/screens/tv/tv_home.dart';
+import 'package:open_tv/screens/tv/tv_bootstrap.dart';
 import 'package:media_kit/media_kit.dart';
 
-// Detector de Android TV
-// Detector de Android TV
+/// Detecta si la app corre en un Android TV (UiMode televisión o leanback).
+///
+/// Para forzar el modo TV en un teléfono:
+/// `flutter run --dart-define=FORCE_TV=true`.
 class PlatformDetector {
-  // Cambia esto a true para forzar el modo TV en móviles para pruebas
-  static const bool _forceTVMode = true;
+  static const MethodChannel channel =
+      MethodChannel('dev.fredol.open_tv/device');
 
-  static bool get isAndroidTV {
-    if (kIsWeb) return false;
+  static const bool _forceTv = bool.fromEnvironment('FORCE_TV');
 
-    // Si estamos forzando modo TV
-    if (_forceTVMode) return true;
+  static bool defaultIsAndroid() => !kIsWeb && Platform.isAndroid;
 
-    // TODO: Implementar detección real usando device_info_plus
-    // androidInfo.systemFeatures.contains('android.software.leanback')
+  /// Reemplazable en tests.
+  static bool Function() isAndroidPlatform = defaultIsAndroid;
 
-    return false;
+  static bool _isTv = false;
+
+  static Future<void> init() async {
+    _isTv = false;
+    if (!isAndroidPlatform()) return;
+    try {
+      _isTv = (await channel.invokeMethod<bool>('isTv')) ?? false;
+    } catch (e) {
+      debugPrint('PlatformDetector: no se pudo consultar isTv: $e');
+      _isTv = false;
+    }
   }
+
+  static bool get isAndroidTV => _forceTv || _isTv;
 
   static bool get isMobile => !isAndroidTV;
 }
@@ -57,13 +69,17 @@ Future<void> _loadDefaultM3USource() async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+  await PlatformDetector.init();
 
-  // Si detectamos Android TV, forzamos orientación landscape
+  // Android TV: orientación horizontal y arranque inmediato; la lista por
+  // defecto se descarga con una pantalla de carga (TvBootstrap).
   if (PlatformDetector.isAndroidTV) {
-    SystemChrome.setPreferredOrientations([
+    await SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+    runApp(MyApp(skipSetup: true, settings: Settings(), isTv: true));
+    return;
   }
 
   var hasSources = await Sql.hasSources();
@@ -84,7 +100,13 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   final bool skipSetup;
   final Settings settings;
-  const MyApp({super.key, required this.skipSetup, required this.settings});
+  final bool isTv;
+  const MyApp({
+    super.key,
+    required this.skipSetup,
+    required this.settings,
+    this.isTv = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -98,21 +120,19 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         brightness: Brightness.dark,
       ),
-      themeMode: ThemeMode.system,
+      themeMode: isTv ? ThemeMode.dark : ThemeMode.system,
       debugShowCheckedModeBanner: false,
-
-      // Aquí decidimos qué interfaz mostrar
-      home: PlatformDetector.isAndroidTV
-          ? const TVHome() // Interfaz para Android TV
-          : (skipSetup     // Tu lógica original para móvil
-          ? Home(
-          firstLaunch: true,
-          refresh: settings.refreshOnStart,
-          home: HomeManager(
-              filters: Filters(
-                viewType: settings.defaultView,
-              )))
-          : const Setup()),
+      home: isTv
+          ? const TvBootstrap() // Interfaz para Android TV
+          : (skipSetup
+              ? Home(
+                  firstLaunch: true,
+                  refresh: settings.refreshOnStart,
+                  home: HomeManager(
+                      filters: Filters(
+                    viewType: settings.defaultView,
+                  )))
+              : const Setup()),
     );
   }
 }

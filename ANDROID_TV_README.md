@@ -1,117 +1,78 @@
 # Fred TV - Guía de Android TV
 
-## Compatibilidad con Android TV
+Fred TV detecta automáticamente Android TV (modo televisión o `leanback`) y muestra una interfaz pensada para el control remoto. En teléfonos y tablets se usa la interfaz móvil original.
 
-Fred TV ahora es totalmente compatible con Android TV y soporta controles remotos de televisores y dispositivos Android TV.
+## Controles
 
-## Características de Android TV
+### Navegación general
+| Tecla | Acción |
+|---|---|
+| ↑ ↓ ← → | Mover el foco |
+| OK | Seleccionar / reproducir |
+| Mantener OK (o MENU / INFO) | Opciones del canal (favorito, agregar a una lista…) |
+| ← en el borde izquierdo | Volver al menú lateral |
+| → en el menú lateral | Entrar al contenido de la pestaña |
+| Atrás | Contenido → menú lateral; menú lateral → salir de la app |
 
-### Navegación con Control Remoto
+Pestañas del menú: **Canales**, **Favoritos**, **Mis listas**, **Buscar**, **Ajustes**.
 
-La aplicación soporta completamente la navegación con el control remoto de tu televisor o Android TV Box:
+### Reproductor
+| Tecla | En vivo | Película / VOD |
+|---|---|---|
+| ↑ / ↓ (o CH+ / CH−) | Canal anterior / siguiente | Muestra la información |
+| ← / → | Muestra la información (no hace seek) | Retrocede / avanza 10 s |
+| OK | Muestra u oculta la información | Pausa / reanuda |
+| Mantener OK (o MENU / INFO) | Opciones: audio, subtítulos, ajustar imagen, favorito | igual |
+| PLAY / PAUSE | Pausa / reanuda | igual |
+| Atrás (o STOP) | Salir | Salir (guarda la posición) |
 
-#### En la Pantalla Principal
-- **D-PAD (↑ ↓ ← →)**: Navega entre los canales
-- **ENTER/OK/SELECT**: Selecciona y reproduce un canal
-- **BACK**: Regresa a la pantalla anterior
-- **MENU**: Marca/desmarca canal como favorito
+Si un canal no se puede reproducir, la pantalla muestra el error con **Reintentar**, **Siguiente canal** y **Volver**. La app prueba primero decodificación por hardware y, si no sale imagen en 15 s, por software; en directo reconecta sola hasta 3 veces.
 
-#### En el Reproductor
-- **PLAY/PAUSE**: Reproduce o pausa el contenido
-- **PLAY/PAUSE o ENTER**: Alterna entre reproducir y pausar
-- **STOP**: Detiene y sale del reproductor
-- **← (Izquierda)**: Retrocede 10 segundos
-- **→ (Derecha)**: Avanza 10 segundos
-- **↑ (Arriba)**: Sube el volumen
-- **↓ (Abajo)**: Baja el volumen
-- **REWIND**: Retrocede rápidamente
-- **FAST FORWARD**: Avanza rápidamente
-- **BACK**: Sale del reproductor
+## Listas de canales
 
-### Interfaz Optimizada para TV
+- **Agregar desde iptv-org** (Ajustes): lista recomendada en español, todos los países y las categorías de [iptv-org](https://github.com/iptv-org/iptv).
+- **Agregar lista M3U por URL** (Ajustes): cualquier lista `http://` o `https://`.
+- **Actualización automática**: al abrir la app se actualizan, en segundo plano, las listas con más de 24 h. Favoritos, historial y *Mis listas* se conservan. También puedes actualizar todas o una sola desde **Ajustes → Mis fuentes**.
+- **Mis listas**: crea tus propias listas, agrega canales con *Mantener OK → Agregar a una lista…* o por URL, y reordénalos. Las listas siguen funcionando cuando se actualizan los enlaces de las fuentes.
 
-La aplicación detecta automáticamente cuando se ejecuta en Android TV y muestra una interfaz optimizada:
+## Probar el modo TV en un teléfono
 
-- **Grid de Canales**: Vista de cuadrícula optimizada para pantallas grandes (4 columnas)
-- **Logos de Canales**: Muestra los logos de los canales cuando están disponibles
-- **Feedback Visual**: Indicadores claros de qué elemento tiene el foco
-- **Auto-scroll**: La lista se desplaza automáticamente para mantener el elemento seleccionado visible
-- **Botones Grandes**: Todos los botones están optimizados para ser visibles desde la distancia
-
-## Configuración
-
-### Cambiar entre Modo Móvil y TV
-
-En el archivo `lib/main.dart`, puedes cambiar el modo de la aplicación:
-
-```dart
-static bool get isAndroidTV {
-  if (!kIsWeb && Platform.isAndroid) {
-    return true; // Cambia a false para modo móvil
-  }
-  return false;
-}
+```bash
+flutter run --dart-define=FORCE_TV=true
 ```
-
-### Requisitos de Android TV
-
-El `AndroidManifest.xml` ya está configurado con:
-- Soporte para `LEANBACK_LAUNCHER` (launcher de TV)
-- `touchscreen` marcado como no requerido
-- `android.software.leanback` como característica opcional
-- Banner de TV configurado
-
-## Control desde Celular
-
-Si tienes la aplicación de control remoto de Android TV en tu celular, también puedes controlar la aplicación:
-
-1. **App de Google TV** (Android/iOS)
-2. **Control Remoto Android TV** (integrado en algunos dispositivos Android)
-3. **Teclado y Mouse Bluetooth**
 
 ## Instalación en Android TV
 
-### Método 1: APK Directo
-1. Compila la aplicación: `flutter build apk --release`
-2. Transfiere el APK a tu Android TV usando USB o red
-3. Instala usando un explorador de archivos de TV
+### APK directo
+1. `flutter build apk --release`
+2. Copia `build/app/outputs/flutter-apk/app-release.apk` a la TV (USB o red) e instálalo.
 
-### Método 2: ADB
+### ADB
 ```bash
-flutter build apk --release
 adb connect <IP_DE_TU_TV>:5555
-adb install build/app/outputs/flutter-apk/app-release.apk
+adb install -r build/app/outputs/flutter-apk/app-release.apk
 ```
 
-### Método 3: Android Studio
-1. Conecta tu Android TV por ADB
-2. Ejecuta `flutter run` con el dispositivo TV seleccionado
+### Android Studio
+Conecta la TV por ADB y ejecuta `flutter run` con la TV como dispositivo.
 
-## Solución de Problemas
+## Requisitos de Android TV en el manifiesto
 
-### La aplicación no aparece en el launcher de TV
-- Verifica que el AndroidManifest.xml tenga la categoría `LEANBACK_LAUNCHER`
-- Asegúrate de que el banner de TV esté presente en los recursos
+- Categoría `LEANBACK_LAUNCHER` (aparece en el launcher de TV) y banner `@drawable/tv_banner`.
+- `touchscreen` no requerido y `android.software.leanback` opcional (la app también se instala en teléfonos).
 
-### El control remoto no funciona
-- Verifica que la navegación por D-pad esté habilitada en la configuración de tu TV
-- Reinicia la aplicación
-- Prueba con otro control remoto o la app de control remoto del celular
+## Solución de problemas
 
-### La interfaz se ve pequeña
-- La aplicación detecta automáticamente Android TV
-- Verifica que `PlatformDetector.isAndroidTV` retorne `true` en `main.dart`
+- **No aparece en el launcher de TV**: verifica la categoría `LEANBACK_LAUNCHER` y el banner en `AndroidManifest.xml`.
+- **El control remoto no responde**: reinicia la app o prueba con otro control (o la app de control remoto del celular).
+- **Se ve la interfaz de teléfono en la TV**: la detección usa el modo de UI de Android; fuérzalo con `--dart-define=FORCE_TV=true`.
+- **Un canal no reproduce**: muchos canales gratuitos caen o tienen bloqueo geográfico. Prueba *Siguiente canal* o actualiza la lista.
+- **La lista de iptv-org no carga**: revisa la conexión; el catálogo se descarga de `iptv-org.github.io`.
 
-## Roadmap Futuro
+## Roadmap
 
-Funcionalidades planeadas para futuras versiones:
-- [ ] Recomendaciones en pantalla de inicio
 - [ ] Guía de programación (EPG)
 - [ ] Búsqueda por voz
-- [ ] Android TV Channels integration
+- [ ] Integración con Android TV Channels
 - [ ] Picture-in-Picture (PiP)
-- [ ] Integración con Google Assistant
-
-## Soporte
-
-Para reportar problemas o sugerencias relacionadas con Android TV, por favor abre un issue en el repositorio del proyecto.
+- [ ] Reproductor ExoPlayer nativo

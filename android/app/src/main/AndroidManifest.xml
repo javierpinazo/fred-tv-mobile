@@ -8,7 +8,7 @@
         android:required="false" />
     <uses-feature
         android:name="android.software.leanback"
-        android:required="true" />
+        android:required="false" />
     <uses-feature
         android:name="android.hardware.type.television"
         android:required="false" />
@@ -18,6 +18,7 @@
         android:required="false" />
     <application
         android:label="Fred TV"
+        android:banner="@drawable/tv_banner"
         android:name="${applicationName}"
         android:usesCleartextTraffic="true"
         android:icon="@mipmap/ic_launcher">
