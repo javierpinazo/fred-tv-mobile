@@ -16,6 +16,9 @@ import 'package:sqlite_async/sqlite_async.dart';
 
 const int pageSize = 36;
 
+/// Nombre de la fuente que guarda los canales agregados manualmente.
+const String customSourceName = 'Custom Channels';
+
 class Sql {
   static Future<void> commitWrite(
       List<Future<void> Function(SqliteWriteContext, Map<String, String>)>
@@ -70,16 +73,19 @@ class Sql {
       SELECT group_name, image, ?, media_type
       FROM channels
       WHERE source_id = ?
-      GROUP BY group_name;
-      ON CONFLICT(name, source_id)  
-      DO UPDATE SET
-          media_type = excluded.media_type;
+      GROUP BY group_name
+      ON CONFLICT(name, source_id)
+      DO UPDATE SET media_type = excluded.media_type
     ''', [sourceId, sourceId]);
       await tx.execute('''
       UPDATE channels
-      SET group_id = (SELECT id FROM groups WHERE groups.name = channels.group_name LIMIT 1);
-      WHERE source_id = ?;
-    ''');
+      SET group_id = (
+        SELECT id FROM groups
+        WHERE groups.name = channels.group_name
+        AND groups.source_id = channels.source_id
+        LIMIT 1)
+      WHERE source_id = ?
+    ''', [sourceId]);
     };
   }
 
@@ -351,13 +357,13 @@ class Sql {
 
     // First, ensure we have a "Custom" source
     var sourceId = (await db.getOptional(
-      "SELECT id FROM sources WHERE name = ?", ["Custom Channels"]
+      "SELECT id FROM sources WHERE name = ?", [customSourceName]
     ))?.columnAt(0);
 
     if (sourceId == null) {
       await db.execute('''
         INSERT INTO sources (name, source_type, url, enabled) VALUES (?, ?, ?, ?)
-      ''', ["Custom Channels", 0, "", 1]);
+      ''', [customSourceName, SourceType.m3u.index, "", 1]);
       sourceId = (await db.get("SELECT last_insert_rowid()")).columnAt(0);
     }
 
@@ -397,6 +403,16 @@ class Sql {
       WHERE id = ?
     ''', [favorite ? 1 : 0, channelId]);
   }
+
+  static Future<String?> getSetting(String key) async {
+    var db = await DbFactory.db;
+    var row = await db.getOptional(
+        'SELECT value FROM settings WHERE key = ?', [key]);
+    return row?.columnAt(0);
+  }
+
+  static Future<void> setSetting(String key, String value) =>
+      updateSettings(HashMap.of({key: value}));
 
   static Future<HashMap<String, String>> getSettings() async {
     var db = await DbFactory.db;

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:open_tv/backend/iptv_org_catalog.dart';
+import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/backend/sql.dart' show pageSize;
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/channel_http_headers.dart';
 import 'package:open_tv/models/filters.dart';
 import 'package:open_tv/models/media_type.dart';
+import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/view_type.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
@@ -32,11 +35,29 @@ class FakeTvData extends TvData {
     this.groups = const [],
     this.channels = const [],
     this.onSearchChannels,
-  });
+    List<Source>? sources,
+    IptvOrgCatalog? catalog,
+  })  : sourcesList = sources ?? [],
+        _fakeCatalog = catalog ?? IptvOrgCatalog();
 
   final List<String> groups;
   final List<Channel> channels;
   final Future<List<Channel>> Function(Filters f)? onSearchChannels;
+
+  // --- Fuentes (en memoria) ---
+  final List<Source> sourcesList;
+  final IptvOrgCatalog _fakeCatalog;
+  final List<Source> addedSources = [];
+  final List<int> deletedIds = [];
+  final List<(int, bool)> enabledCalls = [];
+  final List<({bool onlyStale, int? onlySourceId})> refreshCalls = [];
+  final Map<int, DateTime> lastRefreshes = {};
+  bool autoRefresh = true;
+  bool refreshing = false;
+  Object? addSourceError;
+  SourceRefreshResult refreshResult =
+      const SourceRefreshResult(refreshed: 0, failedNames: []);
+  int _nextSourceId = 100;
 
   final List<Filters> channelCalls = [];
   final List<Filters> groupCalls = [];
@@ -94,6 +115,62 @@ class FakeTvData extends TvData {
 
   @override
   Future<ChannelHttpHeaders?> channelHeaders(int channelId) async => null;
+
+  @override
+  Future<List<Source>> sources() async => List.of(sourcesList);
+
+  @override
+  Future<void> addSource(Source source) async {
+    if (addSourceError != null) throw addSourceError!;
+    if (sourcesList.any((s) => s.name == source.name)) {
+      throw StateError('duplicate');
+    }
+    source.id ??= _nextSourceId++;
+    sourcesList.add(source);
+    addedSources.add(source);
+    lastRefreshes[source.id!] = DateTime.now();
+    tvSourcesVersion.value++;
+  }
+
+  @override
+  Future<void> deleteSource(int id) async {
+    deletedIds.add(id);
+    sourcesList.removeWhere((s) => s.id == id);
+    tvSourcesVersion.value++;
+  }
+
+  @override
+  Future<void> setSourceEnabled(int id, bool enabled) async {
+    enabledCalls.add((id, enabled));
+    for (final s in sourcesList) {
+      if (s.id == id) s.enabled = enabled;
+    }
+    tvSourcesVersion.value++;
+  }
+
+  @override
+  Future<SourceRefreshResult> refreshSources({
+    bool onlyStale = false,
+    int? onlySourceId,
+  }) async {
+    refreshCalls.add((onlyStale: onlyStale, onlySourceId: onlySourceId));
+    return refreshResult;
+  }
+
+  @override
+  bool get isRefreshing => refreshing;
+
+  @override
+  Future<DateTime?> lastRefresh(int sourceId) async => lastRefreshes[sourceId];
+
+  @override
+  Future<bool> autoRefreshEnabled() async => autoRefresh;
+
+  @override
+  Future<void> setAutoRefreshEnabled(bool value) async => autoRefresh = value;
+
+  @override
+  IptvOrgCatalog get catalog => _fakeCatalog;
 }
 
 Future<void> pumpTv(WidgetTester t, Widget child) async {

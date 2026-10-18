@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:open_tv/backend/m3u.dart';
-import 'package:open_tv/backend/sql.dart';
+import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/backend/xtream.dart';
 import 'package:open_tv/memory.dart';
 import 'package:open_tv/models/source.dart';
@@ -42,9 +42,10 @@ class Utils {
   }
 
   static Future<void> refreshAllSources() async {
-    var sources = await Sql.getSources();
-    for (var source in sources) {
-      await refreshSource(source);
+    final result = await SourceRefresher.instance.refreshAll();
+    if (result.failedNames.isNotEmpty) {
+      throw Exception(
+          'No se pudieron actualizar: ${result.failedNames.join(', ')}');
     }
   }
 }

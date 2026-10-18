@@ -129,26 +129,50 @@ bool setChannelHeaders(
   return false;
 }
 
+class HttpStatusException implements Exception {
+  const HttpStatusException(this.statusCode);
+
+  final int statusCode;
+
+  @override
+  String toString() => 'Failed to download file: $statusCode';
+}
+
 Future<void> processM3UUrl(Source source, bool wipe) async {
   var path = await downloadM3U(source.url!);
-  await processM3U(source, wipe, path);
+  try {
+    await processM3U(source, wipe, path);
+  } finally {
+    try {
+      await File(path).delete();
+    } catch (_) {}
+  }
 }
 
 Future<String> downloadM3U(String urlStr) async {
   final url = Uri.parse(urlStr);
   final client = http.Client();
-  final request = http.Request('GET', url);
-  final response = await client.send(request);
-  if (response.statusCode != 200) {
-    throw Exception('Failed to download file: ${response.statusCode}');
+  try {
+    final request = http.Request('GET', url)
+      ..headers['User-Agent'] = 'FredTV/1.3';
+    final response =
+        await client.send(request).timeout(const Duration(seconds: 60));
+    if (response.statusCode != 200) {
+      throw HttpStatusException(response.statusCode);
+    }
+    final path = await Utils.getTempPath(
+        "get_${DateTime.now().microsecondsSinceEpoch}.m3u");
+    final sink = File(path).openWrite();
+    try {
+      await for (var chunk
+          in response.stream.timeout(const Duration(seconds: 60))) {
+        sink.add(chunk);
+      }
+    } finally {
+      await sink.close();
+    }
+    return path;
+  } finally {
+    client.close();
   }
-  final path = await Utils.getTempPath("get.m3u");
-  final file = File(path);
-  final sink = file.openWrite();
-  await for (var chunk in response.stream) {
-    sink.add(chunk);
-  }
-  await sink.close();
-  client.close();
-  return path;
 }
