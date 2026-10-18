@@ -1,13 +1,35 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:open_tv/backend/sql.dart';
+import 'package:open_tv/backend/sql.dart' show pageSize;
 import 'package:open_tv/models/channel.dart';
+import 'package:open_tv/models/filters.dart';
+import 'package:open_tv/screens/tv/player/tv_player.dart';
+import 'package:open_tv/screens/tv/tv_channel_browser.dart'
+    show TvAddToPlaylistCallback, TvPlayCallback;
+import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/tv_search_filters.dart';
-import 'package:open_tv/player.dart';
+import 'package:open_tv/screens/tv/widgets/tv_channel_card.dart';
+import 'package:open_tv/screens/tv/widgets/tv_channel_menu.dart';
+import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
+import 'package:open_tv/screens/tv/widgets/tv_text_field.dart';
+import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
+enum _SearchStatus { idle, searching, results, empty, error }
+
+/// Búsqueda de canales con el control remoto.
 class TVSearch extends StatefulWidget {
-  const TVSearch({super.key});
+  const TVSearch({
+    super.key,
+    this.data = const TvData(),
+    this.onPlay,
+    this.onAddToPlaylist,
+  });
+
+  final TvData data;
+  final TvPlayCallback? onPlay;
+  final TvAddToPlaylistCallback? onAddToPlaylist;
 
   @override
   State<TVSearch> createState() => _TVSearchState();
@@ -15,185 +37,278 @@ class TVSearch extends StatefulWidget {
 
 class _TVSearchState extends State<TVSearch> {
   final TextEditingController _controller = TextEditingController();
-  final FocusNode _inputFocusNode = FocusNode();
-  List<Channel> _results = [];
-  bool _loading = false;
-  Timer? _debounce;
+  final FocusNode _fieldScope = FocusNode(
+    canRequestFocus: false,
+    skipTraversal: true,
+  );
+  final ScrollController _scroll = ScrollController();
+  final Map<int, FocusNode> _nodes = {};
 
-  @override
-  void initState() {
-    super.initState();
-    // Auto-focus the search field when entering the screen
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _inputFocusNode.requestFocus();
-    });
-  }
+  Timer? _debounce;
+  int _request = 0;
+  bool _focusFirstOnResults = false;
+
+  _SearchStatus _status = _SearchStatus.idle;
+  String _query = '';
+  List<Channel> _results = [];
+  bool _hasMore = false;
+  bool _loadingMore = false;
+  int _page = 1;
 
   @override
   void dispose() {
-    _controller.dispose();
-    _inputFocusNode.dispose();
     _debounce?.cancel();
+    _controller.dispose();
+    _fieldScope.dispose();
+    _scroll.dispose();
+    for (final n in _nodes.values) {
+      n.dispose();
+    }
     super.dispose();
   }
 
-  void _onSearchChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      _performSearch(query);
-    });
+  FocusNode _node(int i) => _nodes.putIfAbsent(i, FocusNode.new);
+
+  void _onChanged(String text) {
+    _debounce?.cancel();
+    _debounce = Timer(
+      const Duration(milliseconds: 400),
+      () => _search(text),
+    );
   }
 
-  Future<void> _performSearch(String query) async {
-    if (query.isEmpty) {
+  void _onSubmitted(String text) {
+    _debounce?.cancel();
+    _search(text, focusFirst: true);
+  }
+
+  Future<Filters?> _filters(String text, int page) async {
+    final ids = await widget.data.enabledSourceIds();
+    final filters = buildTvSearchFilters(text, ids);
+    filters?.page = page;
+    return filters;
+  }
+
+  Future<void> _search(String text, {bool focusFirst = false}) async {
+    final request = ++_request;
+    _focusFirstOnResults = focusFirst;
+    final query = text.trim();
+    if (query.length < tvSearchMinChars) {
       setState(() {
+        _status = _SearchStatus.idle;
         _results = [];
-        _loading = false;
+        _hasMore = false;
+        _loadingMore = false;
       });
       return;
     }
-
-    setState(() => _loading = true);
-
+    setState(() {
+      _status = _SearchStatus.searching;
+      _query = query;
+    });
     try {
-      final sources = await Sql.getEnabledSourcesMinimal();
-      final sourceIds = sources.map((x) => x.id).toList();
-
-      final filters = buildTvSearchFilters(query, sourceIds);
-      final results =
-          filters == null ? <Channel>[] : await Sql.search(filters);
-
+      final filters = await _filters(text, 1);
+      final items = filters == null
+          ? <Channel>[]
+          : await widget.data.searchChannels(filters);
+      if (!mounted || request != _request) return;
       setState(() {
-        _results = results;
-        _loading = false;
+        _results = List.of(items);
+        _page = 1;
+        _hasMore = items.length >= pageSize;
+        _loadingMore = false;
+        _status = items.isEmpty ? _SearchStatus.empty : _SearchStatus.results;
       });
+      if (_focusFirstOnResults && items.isNotEmpty) {
+        _focusFirstOnResults = false;
+        WidgetsBinding.instance.endOfFrame.then((_) {
+          // requestFocus aplica el foco en un microtask: se espera a que el
+          // campo lo recupere antes de comprobar que el usuario sigue en él.
+          Future.microtask(() {
+            if (mounted && request == _request && _fieldScope.hasFocus) {
+              _focusResult(0);
+            }
+          });
+        });
+      }
     } catch (e) {
-      print("Error searching: $e");
-      setState(() => _loading = false);
+      debugPrint('TVSearch: error buscando "$query": $e');
+      if (!mounted || request != _request) return;
+      setState(() => _status = _SearchStatus.error);
     }
   }
 
-  void _playChannel(Channel channel) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => Player(channel: channel),
-      ),
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore || _status != _SearchStatus.results) return;
+    final request = _request;
+    final next = _page + 1;
+    setState(() => _loadingMore = true);
+    List<Channel> items = [];
+    try {
+      final filters = await _filters(_controller.text, next);
+      if (filters != null) items = await widget.data.searchChannels(filters);
+    } catch (e) {
+      debugPrint('TVSearch: error cargando más resultados: $e');
+    }
+    if (!mounted || request != _request) return;
+    setState(() {
+      _results.addAll(items);
+      _page = next;
+      _hasMore = items.length >= pageSize;
+      _loadingMore = false;
+    });
+  }
+
+  void _focusResult(int index) {
+    if (index >= _results.length) return;
+    final node = _node(index);
+    if (node.context != null) {
+      node.requestFocus();
+      return;
+    }
+    WidgetsBinding.instance.endOfFrame.then((_) {
+      if (mounted) _node(index).requestFocus();
+    });
+  }
+
+  Future<void> _play(int index) async {
+    final playlist = List.of(_results);
+    final last = await (widget.onPlay ??
+        (ctx, list, i) =>
+            openTvPlayer(ctx, playlist: list, index: i, data: widget.data))(
+      context,
+      playlist,
+      index,
     );
+    if (!mounted || last == null) return;
+    _focusResult(last);
+  }
+
+  Future<void> _toggleFavorite(int index) async {
+    final channel = _results[index];
+    final value = !channel.favorite;
+    try {
+      await widget.data.setFavorite(channel.id!, value);
+    } catch (e) {
+      debugPrint('TVSearch: error cambiando favorito: $e');
+      return;
+    }
+    if (!mounted) return;
+    setState(() => channel.favorite = value);
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+      content: Text(value ? 'Agregado a favoritos' : 'Quitado de favoritos'),
+      duration: const Duration(milliseconds: 800),
+    ));
+  }
+
+  Future<void> _openMenu(int index) {
+    final channel = _results[index];
+    return showTvChannelMenu(
+      context,
+      channel: channel,
+      onPlay: () => _play(index),
+      onToggleFavorite: () => _toggleFavorite(index),
+      onAddToPlaylist: widget.onAddToPlaylist == null
+          ? null
+          : () => widget.onAddToPlaylist!(context, channel),
+    );
+  }
+
+  String _statusText() {
+    switch (_status) {
+      case _SearchStatus.idle:
+        return 'Escribe al menos 2 letras';
+      case _SearchStatus.searching:
+        return 'Buscando…';
+      case _SearchStatus.results:
+        return '${_results.length} resultados';
+      case _SearchStatus.empty:
+        return 'Sin resultados para "$_query"';
+      case _SearchStatus.error:
+        return 'Error al buscar. Intenta de nuevo.';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: TextField(
-            controller: _controller,
-            focusNode: _inputFocusNode,
-            onChanged: _onSearchChanged,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Search channels...',
-              hintStyle: TextStyle(color: Colors.grey[600]),
-              prefixIcon: const Icon(Icons.search, color: Colors.grey),
-              filled: true,
-              fillColor: Colors.grey[800],
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Colors.blue, width: 2),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          const SizedBox(height: 16),
+          Focus(
+            focusNode: _fieldScope,
+            onKeyEvent: (node, event) {
+              // ↓ desde el campo (en modo botón) entra al primer resultado.
+              if ((event is KeyDownEvent || event is KeyRepeatEvent) &&
+                  event.logicalKey == LogicalKeyboardKey.arrowDown &&
+                  _results.isNotEmpty) {
+                _focusResult(0);
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: TvTextField(
+              key: const ValueKey('tv-search-field'),
+              controller: _controller,
+              label: 'Buscar canales',
+              hint: 'Presiona OK para escribir',
+              icon: Icons.search,
+              textInputAction: TextInputAction.search,
+              onChanged: _onChanged,
+              onSubmitted: _onSubmitted,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                _statusText(),
+                style: TextStyle(
+                  fontSize: TvTheme.fontSmall,
+                  color: _status == _SearchStatus.error
+                      ? TvTheme.error
+                      : TvTheme.textSecondary,
+                ),
               ),
             ),
-            onSubmitted: _performSearch,
           ),
+          Expanded(child: _buildGrid()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGrid() {
+    if (_results.isEmpty) return const SizedBox.shrink();
+    return NotificationListener<ScrollNotification>(
+      onNotification: (n) {
+        if (n.metrics.pixels >= n.metrics.maxScrollExtent - 400) _loadMore();
+        return false;
+      },
+      child: GridView.builder(
+        controller: _scroll,
+        padding: const EdgeInsets.all(8),
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: TvTheme.tileMaxExtent,
+          childAspectRatio: TvTheme.tileAspectRatio,
+          mainAxisSpacing: 20,
+          crossAxisSpacing: 20,
         ),
-        Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _results.isEmpty
-                  ? Center(
-                      child: Text(
-                        _controller.text.isEmpty 
-                            ? 'Type to search' 
-                            : 'No results found',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 18),
-                      ),
-                    )
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 4,
-                        childAspectRatio: 1.5,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                      ),
-                      itemCount: _results.length,
-                      itemBuilder: (context, index) {
-                        final channel = _results[index];
-                        return Focus(
-                          onKeyEvent: (node, event) {
-                            if (event is KeyDownEvent) {
-                              if (event.logicalKey == LogicalKeyboardKey.enter || 
-                                  event.logicalKey == LogicalKeyboardKey.select ||
-                                  event.logicalKey == LogicalKeyboardKey.space) {
-                                _playChannel(channel);
-                                return KeyEventResult.handled;
-                              }
-                            }
-                            return KeyEventResult.ignored;
-                          },
-                          child: Builder(
-                            builder: (context) {
-                              final hasFocus = Focus.of(context).hasFocus;
-                              return AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[800],
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: hasFocus 
-                                      ? Border.all(color: Colors.blue, width: 3) 
-                                      : Border.all(color: Colors.transparent),
-                                  boxShadow: hasFocus 
-                                      ? [BoxShadow(color: Colors.blue.withOpacity(0.5), blurRadius: 10)] 
-                                      : [],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    Expanded(
-                                      child: ClipRRect(
-                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
-                                        child: channel.image != null && channel.image!.isNotEmpty
-                                            ? Image.network(
-                                                channel.image!,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) => const Icon(Icons.tv, color: Colors.white54),
-                                              )
-                                            : const Icon(Icons.tv, color: Colors.white54),
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Text(
-                                        channel.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(color: Colors.white, fontSize: 12),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-                          ),
-                        );
-                      },
-                    ),
-        ),
-      ],
+        itemCount: _results.length,
+        itemBuilder: (context, index) {
+          final channel = _results[index];
+          return TvFocusable(
+            key: ValueKey('tv-search-result-$index'),
+            focusNode: _node(index),
+            onSelect: () => _play(index),
+            onLongPress: () => _openMenu(index),
+            builder: (context, focused) =>
+                TvChannelCard(channel: channel, focused: focused),
+          );
+        },
+      ),
     );
   }
 }

@@ -136,9 +136,11 @@ bool injectBackKey() {
 
 /// Da el foco al [TvFocusable] con esa key.
 Future<void> focusKey(WidgetTester t, String key) async {
-  t
-      .state<TvFocusableState>(find.byKey(ValueKey(key)))
-      .focusNode
-      .requestFocus();
+  final f = find.descendant(
+    of: find.byKey(ValueKey(key)),
+    matching: find.byType(TvFocusable),
+    matchRoot: true,
+  );
+  t.state<TvFocusableState>(f.first).focusNode.requestFocus();
   await t.pump();
 }
