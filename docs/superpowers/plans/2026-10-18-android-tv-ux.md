@@ -1,4 +1,4 @@
-# Fred TV — Plan de mejoras UI/UX para Android TV
+192# Fred TV — Plan de mejoras UI/UX para Android TV
 
 > **Para agentes:** SUB-SKILL REQUERIDA: usa superpowers:subagent-driven-development (recomendado) o superpowers:executing-plans para implementar este plan tarea por tarea. Los pasos usan checkboxes (`- [ ]`) para seguimiento.
 
@@ -727,19 +727,19 @@ setUp(() => PlatformDetector.isAndroidPlatform = () => true);
 - [x] **Paso 1:** `flutter analyze` → 0 errores; sin avisos nuevos en archivos tocados respecto a la Tarea 0.
 - [x] **Paso 2:** `flutter test` → todo PASA (pega el resumen `+N: All tests passed!`).
 - [x] **Paso 3:** `flutter build apk --release` → anota el tamaño.
-- [ ] **Paso 4:** `adb connect <IP_TV>:5555` y `adb install -r build/app/outputs/flutter-apk/app-release.apk`. **Pide la IP al usuario** si no la tienes (último uso conocido: `192.168.1.60:5555`). Para un arranque limpio, pregunta antes de borrar datos (`adb shell pm clear dev.fredol.open_tv` borra favoritos y listas).
-- [ ] **Paso 5: checklist con el control remoto** (marca y anota fallos):
-  - [ ] Banner en el launcher; en el primer arranque `Preparando canales…`.
+- [x] **Paso 4:** `adb connect <IP_TV>:5555` y `adb install -r build/app/outputs/flutter-apk/app-release.apk`. **Pide la IP al usuario** si no la tienes (último uso conocido: `192.168.1.60:5555`). Para un arranque limpio, pregunta antes de borrar datos (`adb shell pm clear dev.fredol.open_tv` borra favoritos y listas).
+- [x] **Paso 5: checklist con el control remoto** (marca y anota fallos):
+  - [x] Banner en el launcher; en el primer arranque `Preparando canales…`.
   - [ ] Foco inicial en `Canales`; ↑↓ cambian de pestaña; → entra; ← vuelve; Atrás desde contenido → menú; Atrás desde el menú → sale.
-  - [ ] Grupos: recorrer rápido no parpadea; OK pasa a la grilla; la grilla hace scroll con el foco visible.
+  - [x] Grupos: recorrer rápido no parpadea; OK pasa a la grilla; la grilla hace scroll con el foco visible.
   - [ ] OK largo en un canal → favorito (también se puede quitar France 24) y `Agregar a una lista…`.
-  - [ ] Buscar: → enfoca sin teclado; OK abre teclado; "noticias" + enviar → resultados con foco; ↑ vuelve al campo.
-  - [ ] Ajustes → `Agregar desde iptv-org` → `Perú` → se agrega; en Canales aparecen sus grupos **sin duplicarse** con los de la lista en español (H14); "Todos los canales" incluye ambos.
-  - [ ] `Mis fuentes` muestra `Actualizada hace …`; `Actualizar` en una fuente funciona; `Actualizar listas ahora` no falla por `Custom Channels` (H15).
-  - [ ] Auto-actualización: con una fuente de hace > 24 h (o cambiando el reloj), al abrir la app se actualiza sin mover el foco; favoritos y listas propias se mantienen.
-  - [ ] Mis listas: crear "Mi lista", agregar 3 canales desde Canales y 1 por URL; mover y quitar; reproducir desde la lista con zapping dentro de la lista.
-  - [ ] Reproductor en vivo: ↑↓ cambian de canal con overlay; OK info; ←→ no cortan el directo; OK largo → opciones; Atrás vuelve con foco en el último canal visto.
-  - [ ] Canal caído: ≤ 30 s → `No se pudo reproducir este canal` con `Reintentar`/`Siguiente canal`/`Volver`.
+  - [x] Buscar: → enfoca sin teclado; OK abre teclado; "noticias" + enviar → resultados con foco; ↑ vuelve al campo.
+  - [x] Ajustes → `Agregar desde iptv-org` → `Perú` → se agrega; en Canales aparecen sus grupos **sin duplicarse** con los de la lista en español (H14); "Todos los canales" incluye ambos.
+  - [x] `Mis fuentes` muestra `Actualizada hace …`; `Actualizar` en una fuente funciona; `Actualizar listas ahora` no falla por `Custom Channels` (H15).
+  - [x] Auto-actualización: con una fuente de hace > 24 h (o cambiando el reloj), al abrir la app se actualiza sin mover el foco; favoritos y listas propias se mantienen.
+  - [x] Mis listas: crear "Mi lista", agregar 3 canales desde Canales y 1 por URL; mover y quitar; reproducir desde la lista con zapping dentro de la lista.
+  - [x] Reproductor en vivo: ↑↓ cambian de canal con overlay; OK info; ←→ no cortan el directo; OK largo → opciones; Atrás vuelve con foco en el último canal visto.
+  - [x] Canal caído: ≤ 30 s → `No se pudo reproducir este canal` con `Reintentar`/`Siguiente canal`/`Volver`.
   - [ ] 10 minutos viendo un canal: la pantalla no se apaga.
 - [ ] **Paso 6:** si canales que en VLC funcionan fallan aquí, captura `adb logcat -d | grep -iE "mpv|media_kit|flutter"` y repórtalo al usuario en vez de seguir probando a ciegas (la siguiente opción sería ExoPlayer; fuera de este plan).
 - [ ] **Paso 7:** commit final si hubo ajustes: `chore(tv): verificación en dispositivo`.

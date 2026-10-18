@@ -59,6 +59,7 @@ class _TvPlayerState extends State<TvPlayer> {
   final mk.Player _player = mk.Player();
   late final VideoController _video;
   final FocusNode _focus = FocusNode();
+  final FocusNode _retryFocus = FocusNode();
   final List<StreamSubscription<dynamic>> _subs = [];
 
   Timer? _overlayTimer;
@@ -108,6 +109,7 @@ class _TvPlayerState extends State<TvPlayer> {
     }
     _player.dispose();
     _focus.dispose();
+    _retryFocus.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
@@ -121,10 +123,16 @@ class _TvPlayerState extends State<TvPlayer> {
     _firstFrameTimer?.cancel();
     _reconnectTimer?.cancel();
     if (mounted) {
+      final hadError = _hasError;
       setState(() {
         _loading = true;
         _hasError = false;
       });
+      if (hadError) {
+        WidgetsBinding.instance.endOfFrame.then((_) {
+          if (mounted && !_hasError) _focus.requestFocus();
+        });
+      }
     }
     try {
       // El id puede haber cambiado si la fuente se refrescó después de listar
@@ -132,11 +140,7 @@ class _TvPlayerState extends State<TvPlayer> {
       final id = await widget.data.resolveChannelId(channel);
       if (!mounted || generation != _generation) return;
       if (id == null) {
-        setState(() {
-          _loading = false;
-          _hasError = true;
-          _overlayVisible = true;
-        });
+        _showError();
         return;
       }
       if (attemptIndex == 0) {
@@ -176,6 +180,25 @@ class _TvPlayerState extends State<TvPlayer> {
     }
   }
 
+  /// Muestra el error y le da el foco a "Reintentar" (el `autofocus` pierde
+  /// frente al Focus raíz del reproductor).
+  void _showError() {
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _hasError = true;
+      _overlayVisible = true;
+    });
+    // Con el error en pantalla no se reintenta solo: los reintentos en segundo
+    // plano devolvían el foco a "Reintentar" y se comían las pulsaciones.
+    _overlayTimer?.cancel();
+    _firstFrameTimer?.cancel();
+    _reconnectTimer?.cancel();
+    WidgetsBinding.instance.endOfFrame.then((_) {
+      if (mounted && _hasError) _retryFocus.requestFocus();
+    });
+  }
+
   void _onFailure(int generation) {
     if (!mounted || _exiting || generation != _generation) return;
     _firstFrameTimer?.cancel();
@@ -183,12 +206,7 @@ class _TvPlayerState extends State<TvPlayer> {
       _play(_attemptIndex + 1);
       return;
     }
-    setState(() {
-      _loading = false;
-      _hasError = true;
-      _overlayVisible = true;
-    });
-    _overlayTimer?.cancel();
+    _showError();
   }
 
   void _onWidth(int? width) {
@@ -205,7 +223,7 @@ class _TvPlayerState extends State<TvPlayer> {
 
   void _onPlayerError(String message) {
     debugPrint('TvPlayer: error de mpv: $message');
-    if (_exiting) return;
+    if (_exiting || _hasError) return;
     if (_loading) {
       _onFailure(_generation);
     } else if (_isLive) {
@@ -214,18 +232,15 @@ class _TvPlayerState extends State<TvPlayer> {
   }
 
   void _onCompleted(bool completed) {
-    if (completed && _isLive && !_exiting && !_loading) _reconnectLive();
+    if (completed && _isLive && !_exiting && !_loading && !_hasError) {
+      _reconnectLive();
+    }
   }
 
   void _reconnectLive() {
-    if (_exiting || _reconnectTimer?.isActive == true) return;
+    if (_exiting || _hasError || _reconnectTimer?.isActive == true) return;
     if (_liveReconnects >= TvRetryPolicy.maxLiveReconnects) {
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-          _overlayVisible = true;
-        });
-      }
+      _showError();
       return;
     }
     _liveReconnects++;
@@ -299,6 +314,8 @@ class _TvPlayerState extends State<TvPlayer> {
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     final key = event.logicalKey;
+    // Atrás lo gestiona el PopScope (evita procesarlo dos veces).
+    if (isSystemBackKey(key)) return KeyEventResult.ignored;
     final isOk = key == LogicalKeyboardKey.select ||
         key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.numpadEnter ||
@@ -635,7 +652,7 @@ class _TvPlayerState extends State<TvPlayer> {
             children: [
               _errorButton(
                 'Reintentar',
-                autofocus: true,
+                focusNode: _retryFocus,
                 onSelect: () {
                   _liveReconnects = 0;
                   _play(0);
@@ -657,11 +674,11 @@ class _TvPlayerState extends State<TvPlayer> {
 
   Widget _errorButton(
     String label, {
-    bool autofocus = false,
+    FocusNode? focusNode,
     required VoidCallback onSelect,
   }) {
     return TvFocusable(
-      autofocus: autofocus,
+      focusNode: focusNode,
       onSelect: onSelect,
       builder: (context, focused) => Container(
         constraints: const BoxConstraints(minWidth: 160, minHeight: 56),

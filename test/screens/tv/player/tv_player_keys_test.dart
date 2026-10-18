@@ -82,4 +82,11 @@ void main() {
     expect(_live(LogicalKeyboardKey.keyA), TvPlayerCommand.none);
     expect(_vod(LogicalKeyboardKey.keyA), TvPlayerCommand.none);
   });
+
+  test('Atrás del sistema lo gestiona el PopScope, no la tecla', () {
+    expect(isSystemBackKey(LogicalKeyboardKey.goBack), isTrue);
+    expect(isSystemBackKey(LogicalKeyboardKey.browserBack), isTrue);
+    expect(isSystemBackKey(LogicalKeyboardKey.escape), isFalse);
+    expect(isSystemBackKey(LogicalKeyboardKey.mediaStop), isFalse);
+  });
 }

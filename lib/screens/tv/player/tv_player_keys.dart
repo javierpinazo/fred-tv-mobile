@@ -72,3 +72,9 @@ TvPlayerCommand mapTvPlayerKey(LogicalKeyboardKey key, {required bool isLive}) {
   }
   return TvPlayerCommand.none;
 }
+
+/// Teclas "Atrás" del control. Android además envía el "atrás" del sistema, que
+/// recibe el `PopScope`; si el reproductor también consumiera la tecla se
+/// procesaría dos veces (cierra el reproductor y mueve el foco del menú).
+bool isSystemBackKey(LogicalKeyboardKey key) =>
+    key == LogicalKeyboardKey.goBack || key == LogicalKeyboardKey.browserBack;
