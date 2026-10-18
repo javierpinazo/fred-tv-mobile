@@ -366,7 +366,7 @@ class Sql {
       INSERT INTO channels (name, image, url, source_id, media_type, favorite, group_name)
       VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT (name, source_id)
-      DO UPDATE SET url = excluded.url, favorite = excluded.favorite
+      DO UPDATE SET url = excluded.url
     ''', [name, image, url, sourceId, 0, favorite ? 1 : 0, group]);
   }
 

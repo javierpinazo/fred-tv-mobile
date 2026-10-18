@@ -1,548 +1,474 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:open_tv/backend/sql.dart';
+import 'package:open_tv/backend/sql.dart' show pageSize;
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/filters.dart';
 import 'package:open_tv/models/media_type.dart';
 import 'package:open_tv/models/view_type.dart';
-import 'package:open_tv/player.dart';
+import 'package:open_tv/screens/tv/player/tv_player.dart';
+import 'package:open_tv/screens/tv/tv_data.dart';
+import 'package:open_tv/screens/tv/widgets/tv_channel_card.dart';
+import 'package:open_tv/screens/tv/widgets/tv_channel_menu.dart';
+import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
+import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
+typedef TvPlayCallback = Future<int?> Function(
+    BuildContext context, List<Channel> playlist, int index);
+
+typedef TvAddToPlaylistCallback = Future<void> Function(
+    BuildContext context, Channel channel);
+
+const String _allChannelsLabel = 'Todos los canales';
+const double _groupRowExtent = 56;
+const int _maxGroupPages = 20;
+
+/// Explorador de canales: grupos a la izquierda y grilla de canales.
 class TVChannelBrowser extends StatefulWidget {
-  final VoidCallback? onBackToMenu;
-  final FocusNode? contentFocusNode;
-  final bool favoritesOnly;
-
   const TVChannelBrowser({
     super.key,
-    this.onBackToMenu,
-    this.contentFocusNode,
     this.favoritesOnly = false,
+    this.data = const TvData(),
+    this.onPlay,
+    this.onAddToPlaylist,
   });
 
+  final bool favoritesOnly;
+  final TvData data;
+  final TvPlayCallback? onPlay;
+  final TvAddToPlaylistCallback? onAddToPlaylist;
+
   @override
-  State<TVChannelBrowser> createState() => _TVChannelBrowserState();
+  State<TVChannelBrowser> createState() => TVChannelBrowserState();
 }
 
-class _TVChannelBrowserState extends State<TVChannelBrowser> {
-  // Data
-  List<Channel> _groups = [];
-  List<Channel> _channels = [];
-  
-  // State
+class TVChannelBrowserState extends State<TVChannelBrowser> {
+  // Grupos: el índice 0 es "Todos los canales" (sin filtro).
+  List<String> _groups = [];
   bool _loadingGroups = true;
-  bool _loadingChannels = false;
-  int _selectedGroupIndex = 0;
-  int _selectedChannelIndex = -1; // -1 means focus is on groups
-  
-  // Pagination
-  int _channelPage = 1;
-  bool _hasMoreChannels = true;
-  bool _isLoadingMoreChannels = false;
+  int _selectedGroup = 0;
+  Timer? _groupDebounce;
 
-  // Controllers
-  final ScrollController _groupScrollController = ScrollController();
-  final ScrollController _channelScrollController = ScrollController();
+  // Canales del grupo seleccionado.
+  List<Channel> _channels = [];
+  bool _loadingChannels = true;
+  bool _loadingMore = false;
+  bool _hasMore = true;
+  int _page = 1;
+  int _requestId = 0;
+  int _lastFocusedChannel = 0;
 
-  // Focus nodes for channels and groups
-  final Map<int, FocusNode> _channelFocusNodes = {};
-  final Map<int, FocusNode> _groupFocusNodes = {};
+  // Geometría de la grilla (se recalcula en cada layout).
+  int _columns = 4;
+  double _rowExtent = 138;
+
+  final ScrollController _gridScroll = ScrollController();
+  final ScrollController _groupScroll = ScrollController();
+  final Map<int, FocusNode> _channelNodes = {};
+  final Map<int, FocusNode> _groupNodes = {};
 
   @override
   void initState() {
     super.initState();
-    _loadGroups();
-
-    // Listen to content focus node to pass focus to first group
-    if (widget.contentFocusNode != null) {
-      widget.contentFocusNode!.addListener(_handleContentFocusChange);
-    }
-  }
-
-  void _handleContentFocusChange() {
-    if (widget.contentFocusNode!.hasFocus) {
-      // Move focus to first group
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_groups.isNotEmpty) {
-          final firstGroupNode = _getGroupFocusNode(0);
-          firstGroupNode.requestFocus();
-        }
-      });
-    }
-  }
-
-  Future<void> _toggleFavorite(Channel channel) async {
-    try {
-      await Sql.favoriteChannel(channel.id!, !channel.favorite);
-      setState(() {
-        channel.favorite = !channel.favorite;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(channel.favorite ? "Added to favorites" : "Removed from favorites"),
-            duration: const Duration(milliseconds: 800),
-          ),
-        );
-      }
-    } catch (e) {
-      print("Error toggling favorite: $e");
-    }
+    reload();
   }
 
   @override
   void dispose() {
-    if (widget.contentFocusNode != null) {
-      widget.contentFocusNode!.removeListener(_handleContentFocusChange);
+    _groupDebounce?.cancel();
+    _gridScroll.dispose();
+    _groupScroll.dispose();
+    for (final n in _channelNodes.values) {
+      n.dispose();
     }
-    _groupScrollController.dispose();
-    _channelScrollController.dispose();
-    // Dispose all focus nodes
-    for (var node in _channelFocusNodes.values) {
-      node.dispose();
+    for (final n in _groupNodes.values) {
+      n.dispose();
     }
-    for (var node in _groupFocusNodes.values) {
-      node.dispose();
-    }
-    _channelFocusNodes.clear();
-    _groupFocusNodes.clear();
     super.dispose();
   }
 
-  FocusNode _getChannelFocusNode(int index) {
-    return _channelFocusNodes.putIfAbsent(index, () => FocusNode());
-  }
+  FocusNode _channelNode(int i) => _channelNodes.putIfAbsent(i, FocusNode.new);
+  FocusNode _groupNode(int i) => _groupNodes.putIfAbsent(i, FocusNode.new);
 
-  FocusNode _getGroupFocusNode(int index) {
-    return _groupFocusNodes.putIfAbsent(index, () => FocusNode());
-  }
+  // --- Carga --------------------------------------------------------------
 
-  void _scrollToGroup(int index) {
-    const itemHeight = 48.0; // Approximate height of each group item
-    final targetOffset = index * itemHeight;
-    _groupScrollController.animateTo(
-      targetOffset,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeInOut,
-    );
-  }
-
-  void _scrollToChannel(int index) {
-    const itemHeight = 150.0; // Approximate height of each row (based on aspect ratio 1.5)
-    const crossAxisCount = 4;
-    final row = index ~/ crossAxisCount;
-    final targetOffset = row * itemHeight;
-    _channelScrollController.animateTo(
-      targetOffset,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeInOut,
-    );
-  }
-
-  Future<void> _loadGroups() async {
-    setState(() => _loadingGroups = true);
-    try {
-      // Add test channels on first load (only for main channel browser)
-      if (!widget.favoritesOnly) {
-        await Sql.addTestChannels();
-      }
-
-      final sources = await Sql.getEnabledSourcesMinimal();
-      final sourceIds = sources.map((x) => x.id).toList();
-
-      if (widget.favoritesOnly) {
-        // For favorites view, skip groups and load favorites directly
-        setState(() {
-          _groups = [
-            Channel(
-              id: -1,
-              name: "My Favorites",
-              mediaType: MediaType.group,
-              sourceId: -1,
-              favorite: false
-            )
-          ];
-          _loadingGroups = false;
-        });
-        _loadChannels(0);
-        return;
-      }
-
-      final filters = Filters(
-        viewType: ViewType.categories,
-        sourceIds: sourceIds,
-        mediaTypes: [MediaType.livestream], // Focus on Live TV for now
-      );
-
-      final groups = await Sql.searchGroup(filters);
-
-      // Add "All Channels" pseudo-group at the beginning
-      final allChannelsGroup = Channel(
-        id: -1,
-        name: "All Channels",
-        mediaType: MediaType.group,
-        sourceId: -1,
-        favorite: false
-      );
-
-      setState(() {
-        _groups = [allChannelsGroup, ...groups];
-        _loadingGroups = false;
-      });
-
-      // Load channels for the first group (All Channels)
-      _loadChannels(0);
-
-    } catch (e) {
-      print("Error loading groups: $e");
-      setState(() => _loadingGroups = false);
+  /// Recarga grupos y canales desde cero.
+  Future<void> reload() async {
+    _groupDebounce?.cancel();
+    if (widget.favoritesOnly) {
+      if (mounted) setState(() => _loadingGroups = false);
+      await _loadFirstPage();
+      return;
     }
+    if (mounted) setState(() => _loadingGroups = true);
+    final names = <String>[];
+    try {
+      final ids = await widget.data.enabledSourceIds();
+      for (var page = 1; page <= _maxGroupPages; page++) {
+        final batch = await widget.data.searchGroups(Filters(
+          viewType: ViewType.categories,
+          sourceIds: ids,
+          mediaTypes: [MediaType.livestream],
+          page: page,
+        ));
+        names.addAll(batch.map((g) => g.name));
+        if (batch.length < pageSize) break;
+      }
+    } catch (e) {
+      debugPrint('TVChannelBrowser: error cargando grupos: $e');
+    }
+    if (!mounted) return;
+    setState(() {
+      _groups = [_allChannelsLabel, ...names];
+      _selectedGroup = 0;
+      _loadingGroups = false;
+    });
+    await _loadFirstPage();
   }
 
-  Future<void> _loadChannels(int groupIndex, {bool loadMore = false}) async {
-    if (groupIndex < 0 || groupIndex >= _groups.length) return;
+  Future<List<Channel>> _fetch(int page) async {
+    final ids = await widget.data.enabledSourceIds();
+    final groupName = widget.favoritesOnly || _selectedGroup == 0
+        ? null
+        : _groups[_selectedGroup];
+    return widget.data.searchChannels(Filters(
+      viewType: widget.favoritesOnly ? ViewType.favorites : ViewType.all,
+      sourceIds: ids,
+      mediaTypes: widget.favoritesOnly
+          ? [MediaType.livestream, MediaType.movie]
+          : [MediaType.livestream],
+      page: page,
+      groupName: groupName,
+    ));
+  }
 
-    if (!loadMore) {
+  Future<void> _loadFirstPage() async {
+    final request = ++_requestId;
+    if (mounted) {
       setState(() {
         _loadingChannels = true;
+        _loadingMore = false;
+        _hasMore = true;
+        _page = 1;
         _channels = [];
-        _channelPage = 1;
-        _hasMoreChannels = true;
+        _lastFocusedChannel = 0;
       });
-    } else {
-      if (_isLoadingMoreChannels || !_hasMoreChannels) return;
-      setState(() => _isLoadingMoreChannels = true);
     }
-
+    List<Channel> items = [];
     try {
-      final group = _groups[groupIndex];
-      final sources = await Sql.getEnabledSourcesMinimal();
-      final sourceIds = sources.map((x) => x.id).toList();
-
-      final filters = Filters(
-        viewType: widget.favoritesOnly ? ViewType.favorites : ViewType.all,
-        sourceIds: sourceIds,
-        mediaTypes: [MediaType.livestream],
-        page: loadMore ? _channelPage + 1 : 1,
-        groupId: widget.favoritesOnly ? null : (group.id == -1 ? null : group.id),
-      );
-
-      final newChannels = await Sql.search(filters);
-
-      setState(() {
-        if (loadMore) {
-          _channels.addAll(newChannels);
-          _channelPage++;
-          _isLoadingMoreChannels = false;
-        } else {
-          _channels = newChannels;
-          _loadingChannels = false;
-        }
-        _hasMoreChannels = newChannels.length >= 36; // Assuming pageSize is 36
-      });
+      items = await _fetch(1);
     } catch (e) {
-      print("Error loading channels: $e");
-      setState(() {
-        _loadingChannels = false;
-        _isLoadingMoreChannels = false;
+      debugPrint('TVChannelBrowser: error cargando canales: $e');
+    }
+    if (!mounted || request != _requestId) return;
+    setState(() {
+      _channels = List.of(items);
+      _hasMore = items.length >= pageSize;
+      _loadingChannels = false;
+    });
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore || _loadingChannels) return;
+    final request = _requestId;
+    final next = _page + 1;
+    setState(() => _loadingMore = true);
+    List<Channel> items = [];
+    try {
+      items = await _fetch(next);
+    } catch (e) {
+      debugPrint('TVChannelBrowser: error cargando más canales: $e');
+    }
+    if (!mounted || request != _requestId) return;
+    setState(() {
+      _channels.addAll(items);
+      _page = next;
+      _hasMore = items.length >= pageSize;
+      _loadingMore = false;
+    });
+  }
+
+  // --- Grupos -------------------------------------------------------------
+
+  void _onGroupFocused(int index) {
+    _groupDebounce?.cancel();
+    if (index == _selectedGroup) return;
+    _groupDebounce =
+        Timer(const Duration(milliseconds: 300), () => _selectGroup(index));
+  }
+
+  Future<void> _selectGroup(int index) async {
+    _groupDebounce?.cancel();
+    if (!mounted || index == _selectedGroup) return;
+    setState(() => _selectedGroup = index);
+    await _loadFirstPage();
+  }
+
+  void _focusGroup(int index) {
+    final node = _groupNode(index);
+    if (node.context != null) {
+      node.requestFocus();
+      return;
+    }
+    if (_groupScroll.hasClients) {
+      _groupScroll.jumpTo((index * _groupRowExtent)
+          .clamp(0.0, _groupScroll.position.maxScrollExtent));
+    }
+    WidgetsBinding.instance.endOfFrame.then((_) {
+      if (mounted) _groupNode(index).requestFocus();
+    });
+  }
+
+  Future<void> _onGroupSelect(int index) async {
+    await _selectGroup(index);
+    if (mounted && _channels.isNotEmpty) _focusChannel(0);
+  }
+
+  // --- Canales ------------------------------------------------------------
+
+  void _focusChannel(int index) {
+    final node = _channelNode(index);
+    if (node.context != null) {
+      node.requestFocus();
+      return;
+    }
+    if (_gridScroll.hasClients) {
+      _gridScroll.jumpTo(((index ~/ _columns) * _rowExtent)
+          .clamp(0.0, _gridScroll.position.maxScrollExtent));
+    }
+    WidgetsBinding.instance.endOfFrame.then((_) {
+      if (mounted) _channelNode(index).requestFocus();
+    });
+  }
+
+  Future<void> _play(int index) async {
+    final playlist = List.of(_channels);
+    final last = await (widget.onPlay ??
+        (ctx, list, i) =>
+            openTvPlayer(ctx, playlist: list, index: i, data: widget.data))(
+      context,
+      playlist,
+      index,
+    );
+    if (!mounted || last == null || last >= _channels.length) return;
+    _focusChannel(last);
+  }
+
+  Future<void> _toggleFavorite(int index) async {
+    final channel = _channels[index];
+    final value = !channel.favorite;
+    try {
+      await widget.data.setFavorite(channel.id!, value);
+    } catch (e) {
+      debugPrint('TVChannelBrowser: error cambiando favorito: $e');
+      return;
+    }
+    if (!mounted) return;
+    final removed = widget.favoritesOnly && !value;
+    setState(() {
+      channel.favorite = value;
+      if (removed) _channels.removeAt(index);
+    });
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+      content: Text(value ? 'Agregado a favoritos' : 'Quitado de favoritos'),
+      duration: const Duration(milliseconds: 800),
+    ));
+    if (removed && _channels.isNotEmpty) {
+      WidgetsBinding.instance.endOfFrame.then((_) {
+        if (mounted) _focusChannel(index.clamp(0, _channels.length - 1));
       });
     }
   }
 
-  void _onGroupSelected(int index) {
-    if (_selectedGroupIndex == index) return;
-    setState(() {
-      _selectedGroupIndex = index;
-      _selectedChannelIndex = -1; // Reset channel selection
-    });
-    _loadChannels(index);
-  }
-
-  void _playChannel(Channel channel) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => Player(channel: channel),
-      ),
+  Future<void> _openMenu(int index) {
+    final channel = _channels[index];
+    return showTvChannelMenu(
+      context,
+      channel: channel,
+      onPlay: () => _play(index),
+      onToggleFavorite: () => _toggleFavorite(index),
+      onAddToPlaylist: widget.onAddToPlaylist == null
+          ? null
+          : () => widget.onAddToPlaylist!(context, channel),
     );
   }
+
+  // --- UI -----------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     if (_loadingGroups) {
       return const Center(child: CircularProgressIndicator());
     }
-
-    return Focus(
-      focusNode: widget.contentFocusNode,
-      canRequestFocus: true,
-      skipTraversal: true,
-      child: Row(
+    return Column(
       children: [
-        // Groups List (Left Side)
-        SizedBox(
-          width: 250,
-          child: Container(
-            color: Colors.grey[900],
-            child: ListView.builder(
-            controller: _groupScrollController,
-            itemCount: _groups.length,
-            itemBuilder: (context, index) {
-                final group = _groups[index];
-                final isSelected = _selectedGroupIndex == index;
-                final hasFocus = _selectedChannelIndex == -1 && isSelected;
+        Expanded(
+          child: Row(
+            children: [
+              if (!widget.favoritesOnly)
+                SizedBox(width: TvTheme.groupsWidth, child: _buildGroups()),
+              Expanded(child: _buildGrid()),
+            ],
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(top: 8, bottom: 4),
+          child: Text(
+            'OK Reproducir  ·  Mantén OK Opciones  ·  ← Menú',
+            style: TextStyle(
+              fontSize: TvTheme.fontSmall,
+              color: TvTheme.textSecondary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-                return Focus(
-                  focusNode: _getGroupFocusNode(index),
-                  canRequestFocus: true,
-                  skipTraversal: false,
-                  onFocusChange: (focused) {
-                    if (focused) {
-                      setState(() {
-                        _selectedGroupIndex = index;
-                        _selectedChannelIndex = -1;
-                      });
-                      _loadChannels(index);
-                    }
-                  },
-                  onKeyEvent: (node, event) {
-                    if (event is KeyDownEvent) {
-                      // Handle UP - go to previous group
-                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                        if (index > 0) {
-                          _getGroupFocusNode(index - 1).requestFocus();
-                          _scrollToGroup(index - 1);
-                        }
-                        return KeyEventResult.handled;
-                      }
-                      // Handle DOWN - go to next group
-                      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                        if (index < _groups.length - 1) {
-                          _getGroupFocusNode(index + 1).requestFocus();
-                          _scrollToGroup(index + 1);
-                        }
-                        return KeyEventResult.handled;
-                      }
-                      // Handle RIGHT - go to channels
-                      if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                        if (_channels.isNotEmpty) {
-                          setState(() => _selectedChannelIndex = 0);
-                          _getChannelFocusNode(0).requestFocus();
-                        }
-                        return KeyEventResult.handled;
-                      }
-                      // Handle LEFT - go back to menu
-                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                        widget.onBackToMenu?.call();
-                        return KeyEventResult.handled;
-                      }
-                      // Handle SELECT/ENTER - also go to channels
-                      if (event.logicalKey == LogicalKeyboardKey.select ||
-                          event.logicalKey == LogicalKeyboardKey.enter) {
-                        if (_channels.isNotEmpty) {
-                          setState(() => _selectedChannelIndex = 0);
-                          _getChannelFocusNode(0).requestFocus();
-                        }
-                        return KeyEventResult.handled;
-                      }
-                    }
-                    return KeyEventResult.handled;
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    color: isSelected 
-                        ? (hasFocus ? Colors.blue : Colors.blue.withOpacity(0.5)) 
-                        : Colors.transparent,
-                    child: Text(
-                      group.name,
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.grey[400],
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        fontSize: 16,
-                      ),
+  Widget _buildGroups() {
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: (node, event) {
+        // → entra a la grilla (en lugar del tile más cercano en pantalla).
+        if ((event is KeyDownEvent || event is KeyRepeatEvent) &&
+            event.logicalKey == LogicalKeyboardKey.arrowRight &&
+            _channels.isNotEmpty) {
+          _focusChannel(_lastFocusedChannel.clamp(0, _channels.length - 1));
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Container(
+        color: TvTheme.surface,
+        child: ListView.builder(
+          controller: _groupScroll,
+          itemExtent: _groupRowExtent,
+          itemCount: _groups.length,
+          itemBuilder: (context, index) {
+            final selected = index == _selectedGroup;
+            return TvFocusable(
+              key: ValueKey('tv-group-$index'),
+              focusNode: _groupNode(index),
+              scaleOnFocus: false,
+              onFocusChange: (focused) {
+                if (focused) _onGroupFocused(index);
+              },
+              onSelect: () => _onGroupSelect(index),
+              builder: (context, focused) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: focused ? TvTheme.surfaceRaised : Colors.transparent,
+                  border: Border(
+                    left: BorderSide(
+                      color: selected ? TvTheme.accent : Colors.transparent,
+                      width: 4,
                     ),
                   ),
+                ),
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _groups[index],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: TvTheme.fontBody,
+                    color: selected || focused
+                        ? TvTheme.textPrimary
+                        : TvTheme.textSecondary,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGrid() {
+    if (_loadingChannels) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_channels.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(
+            widget.favoritesOnly
+                ? 'Aún no tienes favoritos. Mantén presionado OK sobre un canal para agregarlo.'
+                : 'No hay canales en este grupo',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: TvTheme.fontBody,
+              color: TvTheme.textSecondary,
+            ),
+          ),
+        ),
+      );
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const padding = 16.0;
+        const spacing = 20.0;
+        final cross = constraints.maxWidth - 2 * padding;
+        _columns = (cross / (TvTheme.tileMaxExtent + spacing)).ceil().clamp(1, 24);
+        final tileWidth = (cross - (_columns - 1) * spacing) / _columns;
+        _rowExtent = tileWidth / TvTheme.tileAspectRatio + spacing;
+        return Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          onKeyEvent: (node, event) {
+            // ← en la primera columna vuelve al grupo seleccionado.
+            if (!widget.favoritesOnly &&
+                (event is KeyDownEvent || event is KeyRepeatEvent) &&
+                event.logicalKey == LogicalKeyboardKey.arrowLeft &&
+                _lastFocusedChannel % _columns == 0) {
+              _focusGroup(_selectedGroup);
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (n) {
+              if (n.metrics.pixels >= n.metrics.maxScrollExtent - 400) {
+                _loadMore();
+              }
+              return false;
+            },
+            child: GridView.builder(
+              controller: _gridScroll,
+              padding: const EdgeInsets.all(padding),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: TvTheme.tileMaxExtent,
+                childAspectRatio: TvTheme.tileAspectRatio,
+                mainAxisSpacing: spacing,
+                crossAxisSpacing: spacing,
+              ),
+              itemCount: _channels.length + (_loadingMore ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index >= _channels.length) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final channel = _channels[index];
+                return TvFocusable(
+                  key: ValueKey('tv-channel-$index'),
+                  focusNode: _channelNode(index),
+                  onFocusChange: (focused) {
+                    if (focused) _lastFocusedChannel = index;
+                  },
+                  onSelect: () => _play(index),
+                  onLongPress: () => _openMenu(index),
+                  builder: (context, focused) =>
+                      TvChannelCard(channel: channel, focused: focused),
                 );
               },
             ),
           ),
-        ),
-        
-        // Channels Grid (Right Side)
-        Expanded(
-          child: _loadingChannels
-              ? const Center(child: CircularProgressIndicator())
-              : _channels.isEmpty
-                  ? const Center(child: Text("No channels found", style: TextStyle(color: Colors.white)))
-                  : NotificationListener<ScrollNotification>(
-                      onNotification: (scrollInfo) {
-                        if (!_isLoadingMoreChannels && 
-                            _hasMoreChannels && 
-                            scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200) {
-                          _loadChannels(_selectedGroupIndex, loadMore: true);
-                        }
-                        return false;
-                      },
-                      child: GridView.builder(
-                        controller: _channelScrollController,
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          childAspectRatio: 1.5,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                        ),
-                        itemCount: _channels.length + (_isLoadingMoreChannels ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index >= _channels.length) {
-                            return const Center(child: CircularProgressIndicator());
-                          }
-
-                          final channel = _channels[index];
-                          final isSelected = _selectedChannelIndex == index;
-
-                          return Focus(
-                            focusNode: _getChannelFocusNode(index),
-                            canRequestFocus: true,
-                            skipTraversal: false,
-                            onFocusChange: (focused) {
-                              if (focused) {
-                                setState(() => _selectedChannelIndex = index);
-                              }
-                            },
-                            onKeyEvent: (node, event) {
-                              if (event is KeyDownEvent) {
-                                const crossAxisCount = 4; // Number of columns in grid
-
-                                // Handle UP - go to channel in previous row
-                                if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                                  final targetIndex = index - crossAxisCount;
-                                  if (targetIndex >= 0) {
-                                    setState(() => _selectedChannelIndex = targetIndex);
-                                    _getChannelFocusNode(targetIndex).requestFocus();
-                                    _scrollToChannel(targetIndex);
-                                  }
-                                  return KeyEventResult.handled;
-                                }
-
-                                // Handle DOWN - go to channel in next row
-                                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                                  final targetIndex = index + crossAxisCount;
-                                  if (targetIndex < _channels.length) {
-                                    setState(() => _selectedChannelIndex = targetIndex);
-                                    _getChannelFocusNode(targetIndex).requestFocus();
-                                    _scrollToChannel(targetIndex);
-                                  }
-                                  return KeyEventResult.handled;
-                                }
-
-                                // Handle LEFT - go to previous channel or back to groups
-                                if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                                  if (index % crossAxisCount == 0) {
-                                    // On left edge, go back to groups
-                                    setState(() => _selectedChannelIndex = -1);
-                                    _getGroupFocusNode(_selectedGroupIndex).requestFocus();
-                                  } else {
-                                    // Go to previous channel
-                                    final targetIndex = index - 1;
-                                    setState(() => _selectedChannelIndex = targetIndex);
-                                    _getChannelFocusNode(targetIndex).requestFocus();
-                                  }
-                                  return KeyEventResult.handled;
-                                }
-
-                                // Handle RIGHT - go to next channel
-                                if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                                  final targetIndex = index + 1;
-                                  if (targetIndex < _channels.length) {
-                                    setState(() => _selectedChannelIndex = targetIndex);
-                                    _getChannelFocusNode(targetIndex).requestFocus();
-                                  }
-                                  return KeyEventResult.handled;
-                                }
-
-                                // Handle SELECT/ENTER - play channel
-                                if (event.logicalKey == LogicalKeyboardKey.enter ||
-                                    event.logicalKey == LogicalKeyboardKey.select) {
-                                  _playChannel(channel);
-                                  return KeyEventResult.handled;
-                                }
-
-                                // Handle MENU/INFO/F2 - toggle favorite (most TV remotes use these)
-                                if (event.logicalKey == LogicalKeyboardKey.contextMenu ||
-                                    event.logicalKey == LogicalKeyboardKey.f2 ||
-                                    event.logicalKey == LogicalKeyboardKey.info ||
-                                    event.logicalKey == LogicalKeyboardKey.mediaRecord) {
-                                  _toggleFavorite(channel);
-                                  return KeyEventResult.handled;
-                                }
-                              }
-                              return KeyEventResult.handled;
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 150),
-                              decoration: BoxDecoration(
-                                color: channel.favorite ? Colors.amber.withOpacity(0.2) : Colors.grey[800],
-                                borderRadius: BorderRadius.circular(8),
-                                border: isSelected
-                                    ? Border.all(color: Colors.blue, width: 3)
-                                    : channel.favorite
-                                        ? Border.all(color: Colors.amber, width: 1)
-                                        : Border.all(color: Colors.transparent),
-                                boxShadow: isSelected
-                                    ? [BoxShadow(color: Colors.blue.withOpacity(0.5), blurRadius: 10)]
-                                    : [],
-                              ),
-                              child: Stack(
-                                children: [
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      Expanded(
-                                        child: ClipRRect(
-                                          borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
-                                          child: channel.image != null && channel.image!.isNotEmpty
-                                              ? Image.network(
-                                                  channel.image!,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (_, __, ___) => const Icon(Icons.tv, color: Colors.white54),
-                                                )
-                                              : const Icon(Icons.tv, color: Colors.white54),
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: Text(
-                                          channel.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(color: Colors.white, fontSize: 12),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  // Favorite indicator
-                                  if (channel.favorite)
-                                    Positioned(
-                                      top: 4,
-                                      right: 4,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.amber,
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: const Icon(Icons.star, color: Colors.white, size: 16),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-        ),
-      ],
-      ),
+        );
+      },
     );
   }
 }

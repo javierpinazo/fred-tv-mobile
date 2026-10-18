@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_tv/backend/sql.dart' show pageSize;
 import 'package:open_tv/models/channel.dart';
@@ -48,7 +49,11 @@ class FakeTvData extends TvData {
   @override
   Future<List<Channel>> searchGroups(Filters f) async {
     groupCalls.add(f);
+    final start = (f.page - 1) * pageSize;
+    if (start >= groups.length) return [];
+    final end = (start + pageSize).clamp(0, groups.length);
     return groups
+        .sublist(start, end)
         .map((g) => Channel(
             name: g,
             mediaType: MediaType.group,
@@ -111,4 +116,29 @@ bool isFocused(WidgetTester t, Key key) {
   );
   if (f.evaluate().isEmpty) return false;
   return t.state<TvFocusableState>(f.first).hasFocus;
+}
+
+/// Inyecta la tecla Atrás (el simulador no la soporta); devuelve si algún
+/// widget la consumió.
+bool injectBackKey() {
+  final handled = HardwareKeyboard.instance.handleKeyEvent(KeyDownEvent(
+    physicalKey: PhysicalKeyboardKey.browserBack,
+    logicalKey: LogicalKeyboardKey.goBack,
+    timeStamp: Duration.zero,
+  ));
+  HardwareKeyboard.instance.handleKeyEvent(KeyUpEvent(
+    physicalKey: PhysicalKeyboardKey.browserBack,
+    logicalKey: LogicalKeyboardKey.goBack,
+    timeStamp: Duration.zero,
+  ));
+  return handled;
+}
+
+/// Da el foco al [TvFocusable] con esa key.
+Future<void> focusKey(WidgetTester t, String key) async {
+  t
+      .state<TvFocusableState>(find.byKey(ValueKey(key)))
+      .focusNode
+      .requestFocus();
+  await t.pump();
 }

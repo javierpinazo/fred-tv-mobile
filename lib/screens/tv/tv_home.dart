@@ -115,22 +115,10 @@ class _TVHomeState extends State<TVHome> {
                 child: IndexedStack(
                   index: _selectedIndex,
                   children: [
-                    TVChannelBrowser(
-                      key: _browserKey,
-                      contentFocusNode: _channelBrowserFocusNode,
-                      onBackToMenu: () {
-                        setState(() => _isNavigationFocused = true);
-                        _navFocusNodes[_selectedIndex].requestFocus();
-                      },
-                    ),
+                    TVChannelBrowser(key: _browserKey),
                     TVChannelBrowser(
                       key: _favoritesKey,
-                      contentFocusNode: _favoritesBrowserFocusNode,
                       favoritesOnly: true,
-                      onBackToMenu: () {
-                        setState(() => _isNavigationFocused = true);
-                        _navFocusNodes[_selectedIndex].requestFocus();
-                      },
                     ),
                     const TVSearch(),
                     TVSettings(onSourceAdded: _onSourceAdded),
