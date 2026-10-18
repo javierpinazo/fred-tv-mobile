@@ -439,6 +439,8 @@ class Sql {
     await db.writeTransaction((tx) async {
       await tx.execute("DELETE FROM channels WHERE source_id = ?", [sourceId]);
       await tx.execute("DELETE FROM groups WHERE source_id = ?", [sourceId]);
+      await tx.execute(
+          "DELETE FROM user_playlist_items WHERE source_id = ?", [sourceId]);
       await tx.execute("DELETE FROM sources WHERE id = ?", [sourceId]);
     });
   }

@@ -121,6 +121,34 @@ class DbFactory {
         await tx.execute('''
           CREATE INDEX index_groups_media_type ON groups(media_type);
         ''');
+      }))
+      ..add(SqliteMigration(4, (tx) async {
+        await tx.execute('''
+          CREATE TABLE "user_playlists" (
+            "id" INTEGER PRIMARY KEY,
+            "name" varchar(100) NOT NULL,
+            "created_at" integer
+          );
+        ''');
+        await tx.execute('''
+          CREATE UNIQUE INDEX index_user_playlists_name ON user_playlists(name);
+        ''');
+        await tx.execute('''
+          CREATE TABLE "user_playlist_items" (
+            "id" INTEGER PRIMARY KEY,
+            "playlist_id" integer NOT NULL,
+            "source_id" integer NOT NULL,
+            "channel_name" varchar(100) NOT NULL,
+            "position" integer NOT NULL
+          );
+        ''');
+        await tx.execute('''
+          CREATE UNIQUE INDEX index_user_playlist_items_unique
+          ON user_playlist_items(playlist_id, source_id, channel_name);
+        ''');
+        await tx.execute('''
+          UPDATE sources SET source_type = 2 WHERE name = 'Custom Channels';
+        ''');
       }));
     await migrations.migrate(db);
     return db;

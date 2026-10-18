@@ -9,6 +9,7 @@ import 'package:open_tv/models/channel_http_headers.dart';
 import 'package:open_tv/models/filters.dart';
 import 'package:open_tv/models/media_type.dart';
 import 'package:open_tv/models/source.dart';
+import 'package:open_tv/models/user_playlist.dart';
 import 'package:open_tv/models/view_type.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
@@ -171,6 +172,96 @@ class FakeTvData extends TvData {
 
   @override
   IptvOrgCatalog get catalog => _fakeCatalog;
+
+  // --- Listas propias (en memoria; misma semántica que el SQL real) ---
+  final Map<int, String> playlistNames = {};
+  final Map<int, List<Channel>> playlistItems = {};
+  int _nextPlaylistId = 1;
+  int _nextManualId = 9000;
+
+  bool _nameTaken(String name, {int? exceptId}) => playlistNames.entries.any(
+      (e) => e.key != exceptId && e.value.toLowerCase() == name.toLowerCase());
+
+  bool _sameChannel(Channel a, Channel b) =>
+      a.sourceId == b.sourceId && a.name == b.name;
+
+  @override
+  Future<List<UserPlaylist>> userPlaylists() async {
+    final list = playlistNames.entries
+        .map((e) => UserPlaylist(
+            id: e.key,
+            name: e.value,
+            channelCount: playlistItems[e.key]!.length))
+        .toList();
+    list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return list;
+  }
+
+  @override
+  Future<int> createUserPlaylist(String name) async {
+    if (_nameTaken(name)) throw StateError('duplicate');
+    final id = _nextPlaylistId++;
+    playlistNames[id] = name;
+    playlistItems[id] = [];
+    return id;
+  }
+
+  @override
+  Future<void> renameUserPlaylist(int id, String name) async {
+    if (_nameTaken(name, exceptId: id)) throw StateError('duplicate');
+    playlistNames[id] = name;
+  }
+
+  @override
+  Future<void> deleteUserPlaylist(int id) async {
+    playlistNames.remove(id);
+    playlistItems.remove(id);
+  }
+
+  @override
+  Future<bool> addToUserPlaylist(int playlistId, Channel channel) async {
+    final items = playlistItems[playlistId]!;
+    if (items.any((c) => _sameChannel(c, channel))) return false;
+    items.add(channel);
+    return true;
+  }
+
+  @override
+  Future<void> removeFromUserPlaylist(int playlistId, Channel channel) async {
+    playlistItems[playlistId]!.removeWhere((c) => _sameChannel(c, channel));
+  }
+
+  @override
+  Future<void> moveInUserPlaylist(
+      int playlistId, Channel channel, int delta) async {
+    final items = playlistItems[playlistId]!;
+    final i = items.indexWhere((c) => _sameChannel(c, channel));
+    final j = i + delta;
+    if (i < 0 || j < 0 || j >= items.length) return;
+    final tmp = items[i];
+    items[i] = items[j];
+    items[j] = tmp;
+  }
+
+  @override
+  Future<List<Channel>> userPlaylistChannels(int playlistId) async =>
+      List.of(playlistItems[playlistId] ?? const <Channel>[]);
+
+  @override
+  Future<Channel> addManualChannel({
+    required String name,
+    required String url,
+  }) async {
+    return Channel(
+      id: _nextManualId++,
+      name: name,
+      url: url,
+      mediaType: MediaType.livestream,
+      sourceId: 0,
+      favorite: false,
+      group: 'Mis canales',
+    );
+  }
 }
 
 Future<void> pumpTv(WidgetTester t, Widget child) async {

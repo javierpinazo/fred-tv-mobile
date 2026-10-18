@@ -1,11 +1,13 @@
 import 'package:open_tv/backend/iptv_org_catalog.dart';
 import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/backend/sql.dart';
+import 'package:open_tv/backend/user_playlists_sql.dart';
 import 'package:open_tv/backend/utils.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/channel_http_headers.dart';
 import 'package:open_tv/models/filters.dart';
 import 'package:open_tv/models/source.dart';
+import 'package:open_tv/models/user_playlist.dart';
 
 const String _autoRefreshKey = 'tvAutoRefresh';
 
@@ -79,4 +81,33 @@ class TvData {
       Sql.setSetting(_autoRefreshKey, value ? '1' : '0');
 
   IptvOrgCatalog get catalog => _catalog;
+
+  // --- Listas propias -----------------------------------------------------
+
+  Future<List<UserPlaylist>> userPlaylists() => UserPlaylistsSql.all();
+
+  Future<int> createUserPlaylist(String name) => UserPlaylistsSql.create(name);
+
+  Future<void> renameUserPlaylist(int id, String name) =>
+      UserPlaylistsSql.rename(id, name);
+
+  Future<void> deleteUserPlaylist(int id) => UserPlaylistsSql.delete(id);
+
+  Future<bool> addToUserPlaylist(int playlistId, Channel channel) =>
+      UserPlaylistsSql.add(playlistId, channel);
+
+  Future<void> removeFromUserPlaylist(int playlistId, Channel channel) =>
+      UserPlaylistsSql.remove(playlistId, channel);
+
+  Future<void> moveInUserPlaylist(int playlistId, Channel channel, int delta) =>
+      UserPlaylistsSql.move(playlistId, channel, delta);
+
+  Future<List<Channel>> userPlaylistChannels(int playlistId) =>
+      UserPlaylistsSql.channels(playlistId);
+
+  Future<Channel> addManualChannel({
+    required String name,
+    required String url,
+  }) =>
+      UserPlaylistsSql.addManualChannel(name: name, url: url);
 }
