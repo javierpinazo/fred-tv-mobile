@@ -7,6 +7,7 @@ import 'package:open_tv/models/filters.dart';
 import 'package:open_tv/models/media_type.dart';
 import 'package:open_tv/models/view_type.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
+import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 
 Channel fakeChannel(
   int i, {
@@ -99,4 +100,15 @@ Future<void> pumpTv(WidgetTester t, Widget child) async {
     home: Scaffold(body: child),
   ));
   await t.pumpAndSettle();
+}
+
+/// `true` si el [TvFocusable] con esa key (o dentro del widget con esa key) tiene el foco.
+bool isFocused(WidgetTester t, Key key) {
+  final f = find.descendant(
+    of: find.byKey(key),
+    matching: find.byType(TvFocusable),
+    matchRoot: true,
+  );
+  if (f.evaluate().isEmpty) return false;
+  return t.state<TvFocusableState>(f.first).hasFocus;
 }
