@@ -5,7 +5,6 @@ import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/source_type.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/tv_source_errors.dart';
-import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_list_row.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
