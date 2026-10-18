@@ -136,10 +136,10 @@ Los hallazgos marcados con 🧪 se verificaron con pruebas de widgets en un proy
 
 ### Tarea 0: Preparación (git + línea base)
 
-- [ ] **Paso 1:** en la raíz: `git init`; añade al `.gitignore` (si faltan) `build/`, `.dart_tool/`, `android/build/`, `flutter_01.log`.
-- [ ] **Paso 2:** `git add -A && git commit -m "chore: baseline antes de mejoras Android TV"`.
-- [ ] **Paso 3:** `flutter analyze` → esperado `40 issues found`, ninguno `error`. Anótalo.
-- [ ] **Paso 4:** borra `lib/screens/simple_tv_test.dart` (no se importa), `flutter analyze` sin errores, commit `chore: eliminar pantalla de prueba sin uso`.
+- [x] **Paso 1:** en la raíz: `git init`; añade al `.gitignore` (si faltan) `build/`, `.dart_tool/`, `android/build/`, `flutter_01.log`.
+- [x] **Paso 2:** `git add -A && git commit -m "chore: baseline antes de mejoras Android TV"`.
+- [x] **Paso 3:** `flutter analyze` → esperado `40 issues found`, ninguno `error`. Anótalo.
+- [x] **Paso 4:** borra `lib/screens/simple_tv_test.dart` (no se importa), `flutter analyze` sin errores, commit `chore: eliminar pantalla de prueba sin uso`.
 
 ---
 
@@ -169,7 +169,7 @@ Los hallazgos marcados con 🧪 se verificaron con pruebas de widgets en un proy
     - `class FakeTvData extends TvData` — `FakeTvData({List<String> groups = const [], List<Channel> channels = const [], Future<List<Channel>> Function(Filters f)? onSearchChannels})`; registra `channelCalls`, `groupCalls` (`List<Filters>`), `favoriteCalls` (`List<(int, bool)>`), `historyCalls` (`List<int>`). `enabledSourceIds()` → `[1]`. `searchGroups` → `groups` como `Channel(name: g, mediaType: MediaType.group, sourceId: -1, favorite: false)`. `searchChannels` (sin `onSearchChannels`): filtra por `f.groupName` (contra `Channel.group`), por favorito si `f.viewType == ViewType.favorites`, por todas las palabras de `f.query` (contiene, sin mayúsculas), y pagina con `pageSize` según `f.page`. `channelHeaders` → `null`. (Las tareas 6 y 7 le agregan más métodos.)
     - `Future<void> pumpTv(WidgetTester t, Widget child)` — `t.view.physicalSize = const Size(1920, 1080)`, `t.view.devicePixelRatio = 2`, `addTearDown(t.view.reset)`, `pumpWidget(MaterialApp(theme: ThemeData.dark(useMaterial3: true), home: Scaffold(body: child)))`, `pumpAndSettle()`.
 
-- [ ] **Paso 1: test que falla** — `tv_search_filters_test.dart`:
+- [x] **Paso 1: test que falla** — `tv_search_filters_test.dart`:
 
 ```dart
 test('incluye mediaTypes (regresión H1)', () {
@@ -184,10 +184,10 @@ test('null con menos de 2 letras', () => expect(buildTvSearchFilters(' a ', [1])
 test('null sin fuentes', () => expect(buildTvSearchFilters('abc', []), isNull));
 ```
 
-- [ ] **Paso 2:** `flutter test test/screens/tv/tv_search_filters_test.dart` → FALLA.
-- [ ] **Paso 3:** implementa lo anterior. En `tv_search.dart` reemplaza la construcción de `Filters` (líneas 60-68) por `buildTvSearchFilters` (si es `null`, limpia resultados) — arreglo mínimo; la pantalla se reescribe en la Tarea 5.
-- [ ] **Paso 4:** `flutter test test/screens/tv/` → PASA; `flutter analyze` sin errores.
-- [ ] **Paso 5:** commit `fix(tv): búsqueda sin mediaTypes; fachada TvData; grupos por nombre`.
+- [x] **Paso 2:** `flutter test test/screens/tv/tv_search_filters_test.dart` → FALLA.
+- [x] **Paso 3:** implementa lo anterior. En `tv_search.dart` reemplaza la construcción de `Filters` (líneas 60-68) por `buildTvSearchFilters` (si es `null`, limpia resultados) — arreglo mínimo; la pantalla se reescribe en la Tarea 5.
+- [x] **Paso 4:** `flutter test test/screens/tv/` → PASA; `flutter analyze` sin errores.
+- [x] **Paso 5:** commit `fix(tv): búsqueda sin mediaTypes; fachada TvData; grupos por nombre`.
 
 ---
 
@@ -218,7 +218,7 @@ test('null sin fuentes', () => expect(buildTvSearchFilters('abc', []), isNull));
   - `String formatAgo(Duration d)` (`tv_time.dart`) → textos de "tiempo relativo".
   - `bool isFocused(WidgetTester t, Key key)` en `fakes.dart` → `t.state<TvFocusableState>(find.byKey(key)).hasFocus`.
 
-- [ ] **Paso 1: tests que fallan:**
+- [x] **Paso 1: tests que fallan:**
 
 ```dart
 // tv_focusable_test.dart
@@ -254,10 +254,10 @@ expect(formatAgo(const Duration(hours: 3, minutes: 59)), 'hace 3 h');
 expect(formatAgo(const Duration(days: 2)), 'hace 2 d');
 ```
 
-- [ ] **Paso 2:** `flutter test test/screens/tv/` → FALLAN los nuevos.
-- [ ] **Paso 3:** implementa.
-- [ ] **Paso 4:** `flutter test test/screens/tv/` → PASAN.
-- [ ] **Paso 5:** commit `feat(tv): primitivas de foco y diálogos para D-pad`.
+- [x] **Paso 2:** `flutter test test/screens/tv/` → FALLAN los nuevos.
+- [x] **Paso 3:** implementa.
+- [x] **Paso 4:** `flutter test test/screens/tv/` → PASAN.
+- [x] **Paso 5:** commit `feat(tv): primitivas de foco y diálogos para D-pad`.
 
 ---
 
@@ -305,7 +305,7 @@ expect(formatAgo(const Duration(days: 2)), 'hace 2 d');
 - Opciones: `showTvOptions` con `Audio`, `Subtítulos` (abren `SelectDialog` con `player.state.tracks`, como `player.dart`), `Ajustar imagen` (alterna `_fill`), `Agregar a favoritos`/`Quitar de favoritos` (`data.setFavorite`).
 - `_exit` (bandera `_exiting`): si es película `Sql.setPosition`; `Navigator.pop(context, cursor.index)`.
 
-- [ ] **Paso 1: tests que fallan:**
+- [x] **Paso 1: tests que fallan:**
 
 ```dart
 // tv_player_keys_test.dart — recorre la tabla completa, p. ej.:
@@ -330,10 +330,10 @@ expect(TvRetryPolicy.next(0)!.hardwareDecoding, isFalse);
 expect(TvRetryPolicy.next(1), isNull);
 ```
 
-- [ ] **Paso 2:** `flutter test test/screens/tv/player/` → FALLAN.
-- [ ] **Paso 3:** implementa; restaura `player.dart`; edita `select_dialog.dart`, `pubspec.yaml`, `main.dart`; `flutter pub get`.
-- [ ] **Paso 4:** `flutter test test/screens/tv/` → PASAN; `flutter analyze` sin errores; `grep -rn "video_player\|wakelock_plus" lib` → vacío.
-- [ ] **Paso 5:** commit `feat(tv): reproductor TV con overlay, zapping, reintentos y errores visibles`.
+- [x] **Paso 2:** `flutter test test/screens/tv/player/` → FALLAN.
+- [x] **Paso 3:** implementa; restaura `player.dart`; edita `select_dialog.dart`, `pubspec.yaml`, `main.dart`; `flutter pub get`.
+- [x] **Paso 4:** `flutter test test/screens/tv/` → PASAN; `flutter analyze` sin errores; `grep -rn "video_player\|wakelock_plus" lib` → vacío.
+- [x] **Paso 5:** commit `feat(tv): reproductor TV con overlay, zapping, reintentos y errores visibles`.
 
 ---
 
@@ -365,7 +365,7 @@ expect(TvRetryPolicy.next(1), isNull);
 - Favorito: `data.setFavorite(id, !fav)`, actualiza modelo, snackbar 800 ms. En `favoritesOnly`, quitar un favorito lo saca de la grilla y enfoca la vecina (o el estado vacío).
 - `favoritesOnly`: `ViewType.favorites`, sin grupos. Estados vacíos y carga según "Textos".
 
-- [ ] **Paso 1: tests que fallan** (`pumpTv` + `FakeTvData(groups: ['Deportes', 'Noticias', 'Cine'], channels: 50 canales con `group` repartido)`):
+- [x] **Paso 1: tests que fallan** (`pumpTv` + `FakeTvData(groups: ['Deportes', 'Noticias', 'Cine'], channels: 50 canales con `group` repartido)`):
 
 ```dart
 testWidgets('↓ en la grilla baja una fila en la misma columna', ...);   // top mayor, left ≈ igual (±1)
@@ -385,10 +385,10 @@ testWidgets('mantener ↓ con paginación no pierde el foco', ...);
 testWidgets('favoritesOnly sin favoritos muestra estado vacío', ...);
 ```
 
-- [ ] **Paso 2:** `flutter test test/screens/tv/tv_channel_browser_test.dart` → FALLAN.
-- [ ] **Paso 3:** implementa; ajusta `tv_home.dart` para compilar; cambia `addCustomChannel`.
-- [ ] **Paso 4:** `flutter test test/screens/tv/` → PASAN; `flutter analyze` sin errores.
-- [ ] **Paso 5:** commit `feat(tv): explorador con foco nativo, menú de canal y debounce`.
+- [x] **Paso 2:** `flutter test test/screens/tv/tv_channel_browser_test.dart` → FALLAN.
+- [x] **Paso 3:** implementa; ajusta `tv_home.dart` para compilar; cambia `addCustomChannel`.
+- [x] **Paso 4:** `flutter test test/screens/tv/` → PASAN; `flutter analyze` sin errores.
+- [x] **Paso 5:** commit `feat(tv): explorador con foco nativo, menú de canal y debounce`.
 
 ---
 
@@ -407,7 +407,7 @@ testWidgets('favoritesOnly sin favoritos muestra estado vacío', ...);
 - Estado bajo el campo: `Escribe al menos 2 letras` / `Buscando…` / `{n} resultados` / `Sin resultados para "{q}"` / `Error al buscar. Intenta de nuevo.` (si lanza; `debugPrint`).
 - Resultados: misma grilla y menú que la Tarea 4.
 
-- [ ] **Paso 1: tests que fallan:**
+- [x] **Paso 1: tests que fallan:**
 
 ```dart
 testWidgets('buscar muestra resultados (regresión H1)', ...);
@@ -420,8 +420,8 @@ testWidgets('respuesta vieja no pisa a la nueva', ...);              // Complete
 testWidgets('error muestra mensaje', ...);
 ```
 
-- [ ] **Paso 2:** → FALLAN. **Paso 3:** implementa. **Paso 4:** `flutter test test/screens/tv/` → PASAN.
-- [ ] **Paso 5:** commit `feat(tv): búsqueda navegable con D-pad, estados y control de respuestas`.
+- [x] **Paso 2:** → FALLAN. **Paso 3:** implementa. **Paso 4:** `flutter test test/screens/tv/` → PASAN.
+- [x] **Paso 5:** commit `feat(tv): búsqueda navegable con D-pad, estados y control de respuestas`.
 
 ---
 
@@ -466,7 +466,7 @@ testWidgets('error muestra mensaje', ...);
   - `TvData` gana: `Future<List<Source>> sources()`, `Future<void> addSource(Source s)` (si `Sql.sourceNameExists(s.name)` → `StateError('duplicate')`; luego `Utils.processSource(s)`; luego guarda `lastRefresh_<id>` con la hora actual buscando el id por nombre; `tvSourcesVersion.value++`), `Future<void> deleteSource(int id)`, `Future<void> setSourceEnabled(int id, bool enabled)` (ambas incrementan `tvSourcesVersion`), `Future<SourceRefreshResult> refreshSources({bool onlyStale = false, int? onlySourceId})`, `bool get isRefreshing`, `Future<DateTime?> lastRefresh(int sourceId)`, `Future<bool> autoRefreshEnabled()` (clave `tvAutoRefresh`, por defecto `true`), `Future<void> setAutoRefreshEnabled(bool v)` (`'1'`/`'0'`), `IptvOrgCatalog get catalog` (instancia compartida).
   - `FakeTvData` gana implementaciones en memoria de todo lo anterior (lista `sourcesList`, `addedSources`, `deletedIds`, `refreshCalls` con sus parámetros, mapa `lastRefreshes`, `autoRefresh` bool, y `catalog` inyectable por constructor `IptvOrgCatalog? catalog`), más `Object? addSourceError` para forzar errores.
 
-- [ ] **Paso 1: tests que fallan:**
+- [x] **Paso 1: tests que fallan:**
 
 ```dart
 // source_refresher_test.dart  (fakes de las 4 funciones; fuentes: A m3uUrl, B xtream, C m3uUrl deshabilitada,
@@ -492,10 +492,10 @@ test('recomendado de idioma usa /languages/', () =>
 test('countries() cachea y lanza en error HTTP', ...);  // MockClient: 1.ª llamada 200, 2.ª no pega a la red; otro con 500 → throws
 ```
 
-- [ ] **Paso 2:** `flutter test test/backend/` → FALLAN.
-- [ ] **Paso 3:** implementa.
-- [ ] **Paso 4:** `flutter test` → PASA; `flutter analyze` sin errores.
-- [ ] **Paso 5:** commit `feat: refresco seguro de fuentes, catálogo iptv-org y arreglo de grupos`.
+- [x] **Paso 2:** `flutter test test/backend/` → FALLAN.
+- [x] **Paso 3:** implementa.
+- [x] **Paso 4:** `flutter test` → PASA; `flutter analyze` sin errores.
+- [x] **Paso 5:** commit `feat: refresco seguro de fuentes, catálogo iptv-org y arreglo de grupos`.
 
 ---
 
@@ -532,7 +532,7 @@ test('countries() cachea y lanza en error HTTP', ...);  // MockClient: 1.ª llam
   - `TvData` gana: `userPlaylists()`, `createUserPlaylist(String name) → Future<int>`, `renameUserPlaylist(int id, String name)`, `deleteUserPlaylist(int id)`, `addToUserPlaylist(int playlistId, Channel c) → Future<bool>`, `removeFromUserPlaylist(int playlistId, Channel c)`, `moveInUserPlaylist(int playlistId, Channel c, int delta)`, `userPlaylistChannels(int playlistId)`, `addManualChannel({required String name, required String url}) → Future<Channel>` — delegan en `UserPlaylistsSql`.
   - `FakeTvData` implementa lo anterior en memoria con la **misma semántica** (duplicados sin mayúsculas → `StateError('duplicate')`, `add` devuelve `false` si ya estaba, `move` intercambia con el vecino, `channelCount` = tamaño de la lista).
 
-- [ ] **Paso 1: tests que fallan** (sobre `FakeTvData`, para fijar la semántica que usan las pantallas):
+- [x] **Paso 1: tests que fallan** (sobre `FakeTvData`, para fijar la semántica que usan las pantallas):
 
 ```dart
 test('crear duplicado lanza', () async {
@@ -544,8 +544,8 @@ test('move intercambia con el vecino y no sale de los bordes', ...);
 test('channelCount refleja los canales', ...);
 ```
 
-- [ ] **Paso 2:** → FALLAN. **Paso 3:** implementa (migración, SQL, modelo, `TvData`, fake). **Paso 4:** `flutter test` → PASA; `flutter analyze` sin errores.
-- [ ] **Paso 5:** commit `feat: listas de canales propias (BD + fachada)`.
+- [x] **Paso 2:** → FALLAN. **Paso 3:** implementa (migración, SQL, modelo, `TvData`, fake). **Paso 4:** `flutter test` → PASA; `flutter analyze` sin errores.
+- [x] **Paso 5:** commit `feat: listas de canales propias (BD + fachada)`.
 
 ---
 
@@ -574,7 +574,7 @@ test('channelCount refleja los canales', ...);
 - `TvIptvOrgScreen`: título `Listas de iptv-org`; columna izquierda con 3 secciones (`Recomendados`, `Países`, `Categorías`; enfocar una la muestra); derecha `ListView` de `TvFocusable` con `flag` + `name` y chip `Agregada` si la `url` ya está en `data.sources()`. `Países`/`Categorías` se cargan al abrirse la sección; error → `No se pudo cargar el catálogo. Revisa tu conexión.` + `Reintentar`. OK en un ítem: si ya está → snackbar `Ya agregada`; si no → diálogo modal no cancelable `Agregando «{nombre}»…` → `data.addSource(Source(name: p.sourceName, url: p.url, sourceType: SourceType.m3uUrl))` → snackbar `«{nombre}» agregada` y chip; `HttpStatusException` → `Esta lista no está disponible`; `StateError('duplicate')` → `Ya existe una lista con ese nombre`; otro → `No se pudo agregar la lista`.
 - `TvAddM3uScreen`: el formulario (título `Agregar lista M3U`, dos `TvTextField`, botón `Agregar lista`). Validación: vacíos → `Completa todos los campos`; sin `http://`/`https://` → `La URL debe empezar con http:// o https://`. Llama `data.addSource(...)` con `SourceType.m3uUrl`; mismos mensajes de error; éxito → `Lista agregada correctamente` y limpia. No usa `Error.tryAsync`.
 
-- [ ] **Paso 1: tests que fallan:**
+- [x] **Paso 1: tests que fallan:**
 
 ```dart
 // tv_settings_test.dart
@@ -597,8 +597,8 @@ testWidgets('↓ recorre nombre → URL → Agregar', ...);
 testWidgets('vacíos / URL inválida / duplicado / éxito', ...);         // 4 casos, mensajes exactos
 ```
 
-- [ ] **Paso 2:** → FALLAN. **Paso 3:** implementa. **Paso 4:** `flutter test test/screens/tv/` → PASAN.
-- [ ] **Paso 5:** commit `feat(tv): ajustes con catálogo iptv-org, mis fuentes y actualización automática`.
+- [x] **Paso 2:** → FALLAN. **Paso 3:** implementa. **Paso 4:** `flutter test test/screens/tv/` → PASAN.
+- [x] **Paso 5:** commit `feat(tv): ajustes con catálogo iptv-org, mis fuentes y actualización automática`.
 
 ---
 
@@ -621,7 +621,7 @@ testWidgets('vacíos / URL inválida / duplicado / éxito', ...);         // 4 c
 - Vacíos: sin listas → `Crea tu primera lista con «Nueva lista».` con foco en `Nueva lista`; lista vacía → texto de lista vacía (la tarjeta `Agregar canal por URL` sigue presente).
 - En `TVChannelBrowser` y `TVSearch` (instancias creadas en la Tarea 10) se pasará `onAddToPlaylist: tvAddToPlaylist(data)`.
 
-- [ ] **Paso 1: tests que fallan** (`FakeTvData` con canales y listas en memoria):
+- [x] **Paso 1: tests que fallan** (`FakeTvData` con canales y listas en memoria):
 
 ```dart
 testWidgets('crear lista desde "Nueva lista"', ...);                 // aparece y queda seleccionada
@@ -634,8 +634,8 @@ testWidgets('Eliminar lista pide confirmación', ...);
 testWidgets('showAddToPlaylistDialog agrega y avisa si ya estaba', ...);
 ```
 
-- [ ] **Paso 2:** → FALLAN. **Paso 3:** implementa. **Paso 4:** `flutter test test/screens/tv/` → PASAN.
-- [ ] **Paso 5:** commit `feat(tv): pestaña Mis listas y agregar canales a listas propias`.
+- [x] **Paso 2:** → FALLAN. **Paso 3:** implementa. **Paso 4:** `flutter test test/screens/tv/` → PASAN.
+- [x] **Paso 5:** commit `feat(tv): pestaña Mis listas y agregar canales a listas propias`.
 
 ---
 
@@ -657,7 +657,7 @@ testWidgets('showAddToPlaylistDialog agrega y avisa si ya estaba', ...);
 - `tvSourcesVersion`: al cambiar, marca `_pendingReload = true`. Se aplica (recrear con `UniqueKey` el explorador de Canales y recargar Favoritos/Mis listas) **solo** cuando el foco está en el menú — inmediatamente si ya lo está, o en el próximo cambio de foco hacia el menú. Nunca mientras el foco está en el contenido.
 - Atrás: `PopScope(canPop: <foco en el menú>, onPopInvokedWithResult: (didPop, _) { if (!didPop) _focusSidebar(); })`; recalcula `canPop` con `setState` al moverse el foco entre menú y contenido.
 
-- [ ] **Paso 1: tests que fallan** (`pumpTv(t, TVHome(data: fake, onPlay: …))`):
+- [x] **Paso 1: tests que fallan** (`pumpTv(t, TVHome(data: fake, onPlay: …))`):
 
 ```dart
 testWidgets('al iniciar el foco está en Canales (regresión H4)', ...);
@@ -678,8 +678,8 @@ testWidgets('actualización de fuentes no recarga mientras se navega', (t) async
 });
 ```
 
-- [ ] **Paso 2:** → FALLAN. **Paso 3:** implementa. **Paso 4:** `flutter test` (todo) → PASA; `flutter analyze` sin errores.
-- [ ] **Paso 5:** commit `feat(tv): menú lateral colapsable, 5 pestañas y scopes de foco`.
+- [x] **Paso 2:** → FALLAN. **Paso 3:** implementa. **Paso 4:** `flutter test` (todo) → PASA; `flutter analyze` sin errores.
+- [x] **Paso 5:** commit `feat(tv): menú lateral colapsable, 5 pestañas y scopes de foco`.
 
 ---
 
@@ -702,7 +702,7 @@ testWidgets('actualización de fuentes no recarga mientras se navega', (t) async
   - `tv_banner.xml`: `layer-list` de 320×180 dp, fondo `#0E0E12`, `@mipmap/ic_launcher` centrado (`android:gravity="center"`, 96×96 dp).
   - `ANDROID_TV_README.md`: tablas de controles nuevas (explorador y reproductor), F1–F3, cómo forzar modo TV (`flutter run --dart-define=FORCE_TV=true`); elimina "Cambiar entre Modo Móvil y TV".
 
-- [ ] **Paso 1: tests que fallan:**
+- [x] **Paso 1: tests que fallan:**
 
 ```dart
 // platform_detector_test.dart
@@ -716,17 +716,17 @@ setUp(() => PlatformDetector.isAndroidPlatform = () => true);
 // prepare lanza → mensaje; isFocused(Reintentar); OK → prepare llamado 2 veces; 'Continuar' → HOME
 ```
 
-- [ ] **Paso 2:** → FALLAN. **Paso 3:** implementa Dart, Kotlin, manifest, banner y README.
-- [ ] **Paso 4:** `flutter test` → PASA; `flutter analyze` sin errores; `flutter build apk --debug` compila.
-- [ ] **Paso 5:** commit `feat(tv): detección real de TV, arranque con carga, auto-actualización y banner`.
+- [x] **Paso 2:** → FALLAN. **Paso 3:** implementa Dart, Kotlin, manifest, banner y README.
+- [x] **Paso 4:** `flutter test` → PASA; `flutter analyze` sin errores; `flutter build apk --debug` compila.
+- [x] **Paso 5:** commit `feat(tv): detección real de TV, arranque con carga, auto-actualización y banner`.
 
 ---
 
 ### Tarea 12: Verificación final en el dispositivo
 
-- [ ] **Paso 1:** `flutter analyze` → 0 errores; sin avisos nuevos en archivos tocados respecto a la Tarea 0.
-- [ ] **Paso 2:** `flutter test` → todo PASA (pega el resumen `+N: All tests passed!`).
-- [ ] **Paso 3:** `flutter build apk --release` → anota el tamaño.
+- [x] **Paso 1:** `flutter analyze` → 0 errores; sin avisos nuevos en archivos tocados respecto a la Tarea 0.
+- [x] **Paso 2:** `flutter test` → todo PASA (pega el resumen `+N: All tests passed!`).
+- [x] **Paso 3:** `flutter build apk --release` → anota el tamaño.
 - [ ] **Paso 4:** `adb connect <IP_TV>:5555` y `adb install -r build/app/outputs/flutter-apk/app-release.apk`. **Pide la IP al usuario** si no la tienes (último uso conocido: `192.168.1.60:5555`). Para un arranque limpio, pregunta antes de borrar datos (`adb shell pm clear dev.fredol.open_tv` borra favoritos y listas).
 - [ ] **Paso 5: checklist con el control remoto** (marca y anota fallos):
   - [ ] Banner en el launcher; en el primer arranque `Preparando canales…`.

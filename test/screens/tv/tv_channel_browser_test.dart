@@ -241,4 +241,27 @@ void main() {
     await t.pumpAndSettle();
     expect(isFocused(t, _gr(50)), isTrue); // 'Todos los canales' + 50 grupos
   });
+
+  testWidgets('el favorito usa el id vigente tras refrescar la fuente',
+      (t) async {
+    final data = _fake()..resolvedIds['Canal 3'] = 999;
+    await pumpTv(t, TVChannelBrowser(data: data));
+    await focusKey(t, 'tv-channel-2'); // 'Canal 3' con el id viejo 3
+    await _longPress(t);
+    await _key(t, LogicalKeyboardKey.arrowDown);
+    await _ok(t);
+    expect(data.favoriteCalls, [(999, true)]);
+  });
+
+  testWidgets('si el canal ya no existe no se marca nada y se avisa',
+      (t) async {
+    final data = _fake()..vanished.add('Canal 3');
+    await pumpTv(t, TVChannelBrowser(data: data));
+    await focusKey(t, 'tv-channel-2');
+    await _longPress(t);
+    await _key(t, LogicalKeyboardKey.arrowDown);
+    await _ok(t);
+    expect(data.favoriteCalls, isEmpty);
+    expect(find.text('Este canal ya no está disponible'), findsOneWidget);
+  });
 }

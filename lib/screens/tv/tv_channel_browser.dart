@@ -259,7 +259,18 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
     final channel = _channels[index];
     final value = !channel.favorite;
     try {
-      await widget.data.setFavorite(channel.id!, value);
+      // El id puede haber cambiado si la fuente se refrescó mientras se navegaba.
+      final id = await widget.data.resolveChannelId(channel);
+      if (id == null) {
+        if (mounted) {
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
+            content: Text('Este canal ya no está disponible'),
+            duration: Duration(seconds: 2),
+          ));
+        }
+        return;
+      }
+      await widget.data.setFavorite(id, value);
     } catch (e) {
       debugPrint('TVChannelBrowser: error cambiando favorito: $e');
       return;

@@ -127,12 +127,24 @@ class _TvPlayerState extends State<TvPlayer> {
       });
     }
     try {
-      if (attemptIndex == 0) {
-        await widget.data.addToHistory(channel.id!);
+      // El id puede haber cambiado si la fuente se refrescó después de listar
+      // el canal; si ya no existe se muestra el error directamente.
+      final id = await widget.data.resolveChannelId(channel);
+      if (!mounted || generation != _generation) return;
+      if (id == null) {
+        setState(() {
+          _loading = false;
+          _hasError = true;
+          _overlayVisible = true;
+        });
+        return;
       }
-      final headers = await widget.data.channelHeaders(channel.id!);
+      if (attemptIndex == 0) {
+        await widget.data.addToHistory(id);
+      }
+      final headers = await widget.data.channelHeaders(id);
       final seconds = channel.mediaType == MediaType.movie
-          ? await Sql.getPosition(channel.id!)
+          ? await Sql.getPosition(id)
           : null;
       if (!mounted || generation != _generation) return;
       final platform = _player.platform;
@@ -356,8 +368,11 @@ class _TvPlayerState extends State<TvPlayer> {
       case 'fit':
         setState(() => _fill = !_fill);
       case 'fav':
-        await widget.data.setFavorite(channel.id!, !channel.favorite);
-        channel.favorite = !channel.favorite;
+        final id = await widget.data.resolveChannelId(channel);
+        if (id != null) {
+          await widget.data.setFavorite(id, !channel.favorite);
+          channel.favorite = !channel.favorite;
+        }
     }
     if (mounted) _showOverlay();
   }
@@ -411,10 +426,19 @@ class _TvPlayerState extends State<TvPlayer> {
     _exiting = true;
     _generation++;
     if (_channel.mediaType == MediaType.movie) {
-      Sql.setPosition(_channel.id!, _player.state.position.inSeconds);
+      unawaited(_savePosition(_channel, _player.state.position.inSeconds));
     }
     if (!mounted) return;
     Navigator.of(context).pop(_cursor.index);
+  }
+
+  Future<void> _savePosition(Channel channel, int seconds) async {
+    try {
+      final id = await widget.data.resolveChannelId(channel);
+      if (id != null) await Sql.setPosition(id, seconds);
+    } catch (e) {
+      debugPrint('TvPlayer: error guardando la posición: $e');
+    }
   }
 
   // --- UI -----------------------------------------------------------------

@@ -335,6 +335,16 @@ class Sql {
         id: row.columnAt(0), data: SourceType.values[row.columnAt(1)]);
   }
 
+  /// Id actual de un canal por (fuente, nombre). Los ids cambian cuando una
+  /// fuente se refresca, por eso las pantallas TV los resuelven al actuar.
+  static Future<int?> channelIdByKey(int sourceId, String name) async {
+    var db = await DbFactory.db;
+    var row = await db.getOptional(
+        'SELECT id FROM channels WHERE source_id = ? AND name = ?',
+        [sourceId, name]);
+    return row?.columnAt(0);
+  }
+
   static Future<bool> hasSources() async {
     var db = await DbFactory.db;
     var result = await db.getOptional('''

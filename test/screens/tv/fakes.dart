@@ -103,6 +103,18 @@ class FakeTvData extends TvData {
     return list.sublist(start, end);
   }
 
+  /// Simula una actualización de fuente: ids nuevos por nombre de canal.
+  final Map<String, int> resolvedIds = {};
+
+  /// Nombres de canales que ya no existen tras la "actualización".
+  final Set<String> vanished = {};
+
+  @override
+  Future<int?> resolveChannelId(Channel channel) async {
+    if (vanished.contains(channel.name)) return null;
+    return resolvedIds[channel.name] ?? channel.id;
+  }
+
   @override
   Future<void> setFavorite(int channelId, bool favorite) async {
     favoriteCalls.add((channelId, favorite));

@@ -26,6 +26,11 @@ class TvData {
 
   Future<List<Channel>> searchGroups(Filters f) => Sql.searchGroupNames(f);
 
+  /// Id vigente del canal (puede haber cambiado si su fuente se refrescó
+  /// después de mostrarlo); `null` si el canal ya no existe.
+  Future<int?> resolveChannelId(Channel channel) =>
+      Sql.channelIdByKey(channel.sourceId, channel.name);
+
   Future<void> setFavorite(int channelId, bool favorite) =>
       Sql.favoriteChannel(channelId, favorite);
 

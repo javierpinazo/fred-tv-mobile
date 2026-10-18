@@ -198,4 +198,18 @@ void main() {
     expect(pages.toSet().length, pages.length);
     expect(pages, contains(2));
   });
+
+  testWidgets('el favorito desde la búsqueda usa el id vigente', (t) async {
+    final data = _fake()..resolvedIds['Canal 1'] = 777;
+    await pumpTv(t, TVSearch(data: data));
+    await focusKey(t, 'tv-search-field');
+    await _typeAndSubmit(t, 'canal');
+    await t.sendKeyDownEvent(LogicalKeyboardKey.select);
+    await t.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+    await t.sendKeyUpEvent(LogicalKeyboardKey.select);
+    await t.pumpAndSettle();
+    await _key(t, LogicalKeyboardKey.arrowDown);
+    await _ok(t); // Agregar a favoritos
+    expect(data.favoriteCalls, [(777, true)]);
+  });
 }
