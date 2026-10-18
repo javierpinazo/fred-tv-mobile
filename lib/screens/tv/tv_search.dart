@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:open_tv/backend/sql.dart';
 import 'package:open_tv/models/channel.dart';
-import 'package:open_tv/models/filters.dart';
-import 'package:open_tv/models/view_type.dart';
+import 'package:open_tv/screens/tv/tv_search_filters.dart';
 import 'package:open_tv/player.dart';
 
 class TVSearch extends StatefulWidget {
@@ -60,14 +59,9 @@ class _TVSearchState extends State<TVSearch> {
       final sources = await Sql.getEnabledSourcesMinimal();
       final sourceIds = sources.map((x) => x.id).toList();
 
-      final filters = Filters(
-        viewType: ViewType.all,
-        sourceIds: sourceIds,
-        query: query,
-        useKeywords: true, // Use keyword search for better results
-      );
-
-      final results = await Sql.search(filters);
+      final filters = buildTvSearchFilters(query, sourceIds);
+      final results =
+          filters == null ? <Channel>[] : await Sql.search(filters);
 
       setState(() {
         _results = results;

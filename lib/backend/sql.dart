@@ -177,6 +177,8 @@ class Sql {
       sqlQuery += "\nAND series_id = ?";
     } else if (filters.groupId != null) {
       sqlQuery += "\nAND group_id = ?";
+    } else if (filters.groupName != null) {
+      sqlQuery += "\nAND group_name = ?";
     }
     sqlQuery += "\nLIMIT ?, ?";
     params.addAll(keywords);
@@ -186,11 +188,42 @@ class Sql {
       params.add(filters.seriesId!);
     } else if (filters.groupId != null) {
       params.add(filters.groupId!);
+    } else if (filters.groupName != null) {
+      params.add(filters.groupName!);
     }
     params.add(offset);
     params.add(pageSize);
     var results = await db.getAll(sqlQuery, params);
     return results.map(rowToChannel).toList();
+  }
+
+  /// Grupos fusionados por nombre entre fuentes (para la UI de TV).
+  static Future<List<Channel>> searchGroupNames(Filters filters) async {
+    var db = await DbFactory.db;
+    var offset = filters.page * pageSize - pageSize;
+    var mediaTypes = filters.mediaTypes!.map((x) => x.index).toList();
+    var sqlQuery = '''
+        SELECT group_name, MIN(image) FROM channels
+        WHERE group_name IS NOT NULL AND group_name <> '' AND url IS NOT NULL
+          AND media_type IN (${generatePlaceholders(mediaTypes.length)})
+          AND source_id IN (${generatePlaceholders(filters.sourceIds!.length)})
+        GROUP BY group_name ORDER BY group_name COLLATE NOCASE
+        LIMIT ?, ?
+    ''';
+    List<Object> params = [];
+    params.addAll(mediaTypes);
+    params.addAll(filters.sourceIds!);
+    params.add(offset);
+    params.add(pageSize);
+    var results = await db.getAll(sqlQuery, params);
+    return results
+        .map((row) => Channel(
+            name: row.columnAt(0),
+            image: row.columnAt(1),
+            mediaType: MediaType.group,
+            sourceId: -1,
+            favorite: false))
+        .toList();
   }
 
   static Channel rowToChannel(Row row) {

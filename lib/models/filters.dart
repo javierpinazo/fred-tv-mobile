@@ -9,6 +9,7 @@ class Filters {
   int page;
   int? seriesId;
   int? groupId;
+  String? groupName;
   bool useKeywords;
 
   Filters({
@@ -19,6 +20,7 @@ class Filters {
     this.page = 1,
     this.seriesId,
     this.groupId,
+    this.groupName,
     this.useKeywords = false,
   });
 }
