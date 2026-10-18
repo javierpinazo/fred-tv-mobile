@@ -1,148 +1,242 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:open_tv/backend/sql.dart';
-import 'package:open_tv/backend/utils.dart';
-import 'package:open_tv/error.dart';
+import 'package:open_tv/backend/source_refresher.dart';
+import 'package:open_tv/backend/sql.dart' show customSourceName;
 import 'package:open_tv/models/source.dart';
-import 'package:open_tv/models/source_type.dart';
+import 'package:open_tv/screens/tv/tv_add_m3u_screen.dart';
+import 'package:open_tv/screens/tv/tv_data.dart';
+import 'package:open_tv/screens/tv/tv_iptv_org_screen.dart';
+import 'package:open_tv/screens/tv/tv_time.dart';
+import 'package:open_tv/screens/tv/widgets/tv_dialogs.dart';
+import 'package:open_tv/screens/tv/widgets/tv_list_row.dart';
+import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
+class _SourceEntry {
+  const _SourceEntry(this.source, this.lastRefresh);
+
+  final Source source;
+  final DateTime? lastRefresh;
+}
+
+/// Ajustes de TV: alta de listas, actualización y gestión de fuentes.
 class TVSettings extends StatefulWidget {
-  final VoidCallback? onSourceAdded;
-  
-  const TVSettings({super.key, this.onSourceAdded});
+  const TVSettings({super.key, this.data = const TvData()});
+
+  final TvData data;
 
   @override
   State<TVSettings> createState() => _TVSettingsState();
 }
 
 class _TVSettingsState extends State<TVSettings> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _urlController = TextEditingController();
-  bool _isLoading = false;
-  String? _statusMessage;
+  List<_SourceEntry> _entries = [];
+  bool _autoRefresh = true;
+  String? _message;
+  bool _messageIsError = false;
+  final FocusNode _topNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    tvSourcesVersion.addListener(_load);
+    _load();
+  }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _urlController.dispose();
+    tvSourcesVersion.removeListener(_load);
+    _topNode.dispose();
     super.dispose();
   }
 
-  Future<void> _addSource() async {
-    final name = _nameController.text.trim();
-    final url = _urlController.text.trim();
+  Future<void> _load() async {
+    try {
+      final sources = await widget.data.sources();
+      final entries = <_SourceEntry>[];
+      for (final s in sources) {
+        if (s.name == customSourceName || s.id == null) continue;
+        entries.add(_SourceEntry(s, await widget.data.lastRefresh(s.id!)));
+      }
+      final auto = await widget.data.autoRefreshEnabled();
+      if (!mounted) return;
+      setState(() {
+        _entries = entries;
+        _autoRefresh = auto;
+      });
+    } catch (e) {
+      debugPrint('TVSettings: error cargando fuentes: $e');
+    }
+  }
 
-    if (name.isEmpty || url.isEmpty) {
-      setState(() => _statusMessage = "Please fill in all fields");
+  void _setMessage(String text, {bool error = false}) {
+    if (!mounted) return;
+    setState(() {
+      _message = text;
+      _messageIsError = error;
+    });
+  }
+
+  Future<void> _open(Widget screen) async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+    if (mounted) _load();
+  }
+
+  Future<void> _refreshNow({int? onlySourceId}) async {
+    if (widget.data.isRefreshing) {
+      _setMessage('Ya se están actualizando las listas');
       return;
     }
-
-    setState(() {
-      _isLoading = true;
-      _statusMessage = "Adding source...";
-    });
-
+    _setMessage('Actualizando listas…');
     try {
-      if (await Sql.sourceNameExists(name)) {
-        setState(() {
-          _isLoading = false;
-          _statusMessage = "Name already exists";
-        });
-        return;
-      }
-
-      final result = await Error.tryAsync(() async {
-        await Utils.processSource(
-          Source(
-            name: name,
-            sourceType: SourceType.m3uUrl,
-            url: url,
-            enabled: true,
-          ),
-        );
-      }, context, "Successfully added source");
-
-      if (result.success) {
-        setState(() {
-          _statusMessage = "Source added successfully!";
-          _nameController.clear();
-          _urlController.clear();
-        });
-        widget.onSourceAdded?.call();
+      final result =
+          await widget.data.refreshSources(onlySourceId: onlySourceId);
+      if (result.failedNames.isNotEmpty) {
+        _setMessage(
+            '${result.failedNames.length} listas no se pudieron actualizar',
+            error: true);
       } else {
-         setState(() {
-          _statusMessage = "Failed to add source";
-        });
+        _setMessage('Listas actualizadas');
       }
     } catch (e) {
-      setState(() => _statusMessage = "Error: $e");
-    } finally {
-      setState(() => _isLoading = false);
+      debugPrint('TVSettings: error actualizando: $e');
+      _setMessage('No se pudieron actualizar las listas', error: true);
     }
+    if (mounted) _load();
+  }
+
+  Future<void> _toggleAuto() async {
+    final value = !_autoRefresh;
+    await widget.data.setAutoRefreshEnabled(value);
+    if (mounted) setState(() => _autoRefresh = value);
+  }
+
+  Future<void> _openSourceMenu(_SourceEntry entry) async {
+    final s = entry.source;
+    final choice = await showTvOptions<String>(
+      context,
+      title: s.name,
+      options: [
+        if (SourceRefresher.isRefreshable(s)) ('Actualizar', 'refresh'),
+        (s.enabled ? 'Desactivar' : 'Activar', 'toggle'),
+        ('Eliminar', 'delete'),
+      ],
+    );
+    if (!mounted || choice == null) return;
+    switch (choice) {
+      case 'refresh':
+        await _refreshNow(onlySourceId: s.id);
+      case 'toggle':
+        await widget.data.setSourceEnabled(s.id!, !s.enabled);
+        if (mounted) _load();
+      case 'delete':
+        final confirmed = await showTvConfirm(
+          context,
+          message: '¿Eliminar la fuente «${s.name}» y sus canales?',
+        );
+        if (!mounted || !confirmed) return;
+        await widget.data.deleteSource(s.id!);
+        if (!mounted) return;
+        await _load();
+        _topNode.requestFocus();
+    }
+  }
+
+  String _subtitle(_SourceEntry e) {
+    if (!e.source.enabled) return 'Desactivada';
+    final last = e.lastRefresh;
+    if (last == null) return 'Nunca actualizada';
+    return 'Actualizada ${formatAgo(DateTime.now().difference(last))}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 600),
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           children: [
-            const Text(
-              "Add M3U Playlist",
-              style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: "Playlist Name",
-                border: OutlineInputBorder(),
-                filled: true,
-                prefixIcon: Icon(Icons.label),
+            _gap(
+              TvListRow(
+                key: const ValueKey('tv-settings-iptv'),
+                focusNode: _topNode,
+                icon: Icons.public,
+                title: 'Agregar desde iptv-org',
+                onSelect: () => _open(TvIptvOrgScreen(data: widget.data)),
               ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _urlController,
-              decoration: const InputDecoration(
-                labelText: "M3U URL",
-                border: OutlineInputBorder(),
-                filled: true,
-                prefixIcon: Icon(Icons.link),
+            _gap(
+              TvListRow(
+                key: const ValueKey('tv-settings-m3u'),
+                icon: Icons.link,
+                title: 'Agregar lista M3U por URL',
+                onSelect: () => _open(TvAddM3uScreen(data: widget.data)),
               ),
             ),
-            const SizedBox(height: 32),
-            if (_isLoading)
-              const Center(child: CircularProgressIndicator())
-            else
-              ElevatedButton.icon(
-                onPressed: _addSource,
-                icon: const Icon(Icons.add),
-                label: const Text("Add Source"),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.all(16),
-                  textStyle: const TextStyle(fontSize: 18),
+            _gap(
+              TvListRow(
+                key: const ValueKey('tv-settings-refresh'),
+                icon: Icons.refresh,
+                title: 'Actualizar listas ahora',
+                onSelect: _refreshNow,
+              ),
+            ),
+            _gap(
+              TvListRow(
+                key: const ValueKey('tv-settings-auto'),
+                icon: Icons.autorenew,
+                title: 'Actualización automática (cada 24 h)',
+                trailing: Text(
+                  _autoRefresh ? 'Activada' : 'Desactivada',
+                  style: TextStyle(
+                    fontSize: TvTheme.fontBody,
+                    fontWeight: FontWeight.bold,
+                    color: _autoRefresh
+                        ? TvTheme.success
+                        : TvTheme.textSecondary,
+                  ),
+                ),
+                onSelect: _toggleAuto,
+              ),
+            ),
+            if (_message != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  _message!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: TvTheme.fontBody,
+                    color: _messageIsError ? TvTheme.error : TvTheme.success,
+                  ),
                 ),
               ),
-            if (_statusMessage != null) ...[
-              const SizedBox(height: 16),
-              Text(
-                _statusMessage!,
+            const Padding(
+              padding: EdgeInsets.fromLTRB(4, 20, 4, 10),
+              child: Text(
+                'Mis fuentes',
                 style: TextStyle(
-                  color: _statusMessage!.contains("Success") ? Colors.green : Colors.red,
-                  fontSize: 16,
+                  fontSize: TvTheme.fontTitle,
+                  fontWeight: FontWeight.bold,
+                  color: TvTheme.textPrimary,
                 ),
-                textAlign: TextAlign.center,
               ),
-            ],
+            ),
+            for (final entry in _entries)
+              _gap(
+                TvListRow(
+                  key: ValueKey('tv-source-${entry.source.id}'),
+                  icon: Icons.playlist_play,
+                  title: entry.source.name,
+                  subtitle: _subtitle(entry),
+                  onSelect: () => _openSourceMenu(entry),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
+
+  Widget _gap(Widget child) =>
+      Padding(padding: const EdgeInsets.only(bottom: 10), child: child);
 }

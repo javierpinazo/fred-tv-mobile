@@ -56,13 +56,6 @@ class _TVHomeState extends State<TVHome> {
     }
   }
 
-  void _onSourceAdded() {
-    setState(() {
-      _browserKey = UniqueKey();
-      _selectedIndex = 0; // Switch back to channels
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Shortcuts(
@@ -121,7 +114,7 @@ class _TVHomeState extends State<TVHome> {
                       favoritesOnly: true,
                     ),
                     const TVSearch(),
-                    TVSettings(onSourceAdded: _onSourceAdded),
+                    const TVSettings(),
                   ],
                 ),
               ),
