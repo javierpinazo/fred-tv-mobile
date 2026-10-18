@@ -23,14 +23,12 @@ class _PlayerState extends State<Player> {
   late mkvideo.VideoController videoController =
       mkvideo.VideoController(player);
   late final GlobalKey<VideoState> key = GlobalKey<VideoState>();
-  late final FocusNode _focusNode;
   bool exiting = false;
   bool fill = false;
 
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode();
     mk.MediaKit.ensureInitialized();
     initAsync();
   }
@@ -56,7 +54,6 @@ class _PlayerState extends State<Player> {
   @override
   void dispose() {
     player.dispose();
-    _focusNode.dispose();
     super.dispose();
   }
 
@@ -109,68 +106,17 @@ class _PlayerState extends State<Player> {
         onPopInvokedWithResult: (didPop, result) {
           onExit();
         },
-        child: KeyboardListener(
-          focusNode: _focusNode,
-          autofocus: true,
-          onKeyEvent: (KeyEvent event) {
-            if (event is KeyDownEvent) {
-              // Control remoto: Media Controls
-              if (event.logicalKey == LogicalKeyboardKey.mediaPlay) {
-                player.play();
-              } else if (event.logicalKey == LogicalKeyboardKey.mediaPause) {
-                player.pause();
-              } else if (event.logicalKey == LogicalKeyboardKey.mediaPlayPause) {
-                player.playOrPause();
-              } else if (event.logicalKey == LogicalKeyboardKey.mediaStop) {
-                onExit();
-              }
-              // D-Pad: Avance y retroceso
-              else if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
-                  event.logicalKey == LogicalKeyboardKey.mediaRewind) {
-                // Retroceder 10 segundos
-                final currentPos = player.state.position;
-                player.seek(currentPos - Duration(seconds: 10));
-              } else if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
-                  event.logicalKey == LogicalKeyboardKey.mediaFastForward) {
-                // Avanzar 10 segundos
-                final currentPos = player.state.position;
-                player.seek(currentPos + Duration(seconds: 10));
-              }
-              // D-Pad: Volumen
-              else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                // Subir volumen
-                final currentVolume = player.state.volume;
-                player.setVolume((currentVolume + 10).clamp(0, 100));
-              } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                // Bajar volumen
-                final currentVolume = player.state.volume;
-                player.setVolume((currentVolume - 10).clamp(0, 100));
-              }
-              // Botón Select/Enter: Play/Pause
-              else if (event.logicalKey == LogicalKeyboardKey.select ||
-                  event.logicalKey == LogicalKeyboardKey.enter ||
-                  event.logicalKey == LogicalKeyboardKey.space) {
-                player.playOrPause();
-              }
-              // Botón Back: Salir
-              else if (event.logicalKey == LogicalKeyboardKey.escape ||
-                  event.logicalKey == LogicalKeyboardKey.backspace) {
-                onExit();
-              }
-            }
-          },
-          child: Scaffold(
-              backgroundColor: Colors.black,
-              body: MaterialVideoControlsTheme(
-                normal: getThemeData(context),
-                fullscreen: getThemeData(context),
-                child: Video(
-                  key: key,
-                  controller: videoController,
-                  onExitFullscreen: () async => onExit(),
-                ),
-              )),
-        ));
+        child: Scaffold(
+            backgroundColor: Colors.black,
+            body: MaterialVideoControlsTheme(
+              normal: getThemeData(context),
+              fullscreen: getThemeData(context),
+              child: Video(
+                key: key,
+                controller: videoController,
+                onExitFullscreen: () async => onExit(),
+              ),
+            )));
   }
 
   void onExit() async {
@@ -211,47 +157,33 @@ class _PlayerState extends State<Player> {
         seekBarThumbSize: 20,
         seekBarHeight: 10,
         seekGesture: widget.channel.mediaType != MediaType.livestream,
-        // Botones más grandes para TV
-        buttonBarButtonSize: 40,
         topButtonBar: [
-          Focus(
-            autofocus: false,
-            child: IconButton(
-              onPressed: onExit,
-              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 36),
-            ),
+          IconButton(
+            onPressed: onExit,
+            icon: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
           ),
           const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              widget.channel.name,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+          Text(widget.channel.name),
         ],
         bottomButtonBar: [
-          Focus(
-            child: IconButton(
-              onPressed: openSubtitlesModal,
-              icon: const Icon(Icons.subtitles, color: Colors.white, size: 36),
-            ),
+          IconButton(
+            onPressed: openSubtitlesModal,
+            icon: const Icon(Icons.subtitles, color: Colors.white, size: 32),
           ),
-          SizedBox(width: 24),
-          Focus(
-            child: IconButton(
-              onPressed: openAudioModal,
-              icon: const Icon(Icons.music_note, color: Colors.white, size: 36),
-            ),
+          SizedBox(
+            width: 20,
           ),
-          SizedBox(width: 24),
-          Focus(
-            child: IconButton(
-              icon: Icon(Icons.aspect_ratio_outlined,
-                  color: Colors.white, size: 36),
-              onPressed: toggleZoom,
-            ),
+          IconButton(
+            onPressed: openAudioModal,
+            icon: const Icon(Icons.music_note, color: Colors.white, size: 32),
+          ),
+          SizedBox(
+            width: 20,
+          ),
+          IconButton(
+            icon: Icon(Icons.aspect_ratio_outlined,
+                color: Colors.white, size: 32),
+            onPressed: toggleZoom,
           ),
         ]);
   }

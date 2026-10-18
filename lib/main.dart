@@ -13,6 +13,7 @@ import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/source_type.dart';
 import 'package:open_tv/setup.dart';
 import 'package:open_tv/screens/tv/tv_home.dart';
+import 'package:media_kit/media_kit.dart';
 
 // Detector de Android TV
 // Detector de Android TV
@@ -55,6 +56,7 @@ Future<void> _loadDefaultM3USource() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
 
   // Si detectamos Android TV, forzamos orientación landscape
   if (PlatformDetector.isAndroidTV) {

@@ -18,12 +18,18 @@ class SelectDialog extends StatelessWidget {
       content: SingleChildScrollView(
           child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: data.map(getItem).toList(),
+        children: [
+          for (var i = 0; i < data.length; i++)
+            getItem(data[i], autofocus: i == 0),
+        ],
       )),
     );
   }
 
-  Widget getItem(IdData<String> item) {
-    return ListTile(title: Text(item.data), onTap: () => action(item.id));
+  Widget getItem(IdData<String> item, {bool autofocus = false}) {
+    return ListTile(
+        autofocus: autofocus,
+        title: Text(item.data),
+        onTap: () => action(item.id));
   }
 }
