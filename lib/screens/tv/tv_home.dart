@@ -1,11 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/screens/tv/tv_channel_browser.dart';
+import 'package:open_tv/screens/tv/tv_data.dart';
+import 'package:open_tv/screens/tv/tv_focus.dart';
 import 'package:open_tv/screens/tv/tv_search.dart';
 import 'package:open_tv/screens/tv/tv_settings.dart';
+import 'package:open_tv/screens/tv/tv_user_playlists.dart';
+import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
+import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
+const _tabs = <(String, IconData)>[
+  ('Canales', Icons.live_tv),
+  ('Favoritos', Icons.star),
+  ('Mis listas', Icons.playlist_play),
+  ('Buscar', Icons.search),
+  ('Ajustes', Icons.settings),
+];
+
+/// Pantalla principal de TV: menú lateral + pestañas, cada una en su propio
+/// FocusScope. La navegación ↑↓←→ la hace Flutter; solo los bordes saltan
+/// entre el menú y el contenido.
 class TVHome extends StatefulWidget {
-  const TVHome({super.key});
+  const TVHome({super.key, this.data = const TvData(), this.onPlay});
+
+  final TvData data;
+  final TvPlayCallback? onPlay;
 
   @override
   State<TVHome> createState() => _TVHomeState();
@@ -13,227 +32,233 @@ class TVHome extends StatefulWidget {
 
 class _TVHomeState extends State<TVHome> {
   int _selectedIndex = 0;
-  bool _isNavigationFocused = true;
-  // Key to force refresh of channel browser
+  bool _sidebarFocused = true;
+  bool _pendingReload = false;
   Key _browserKey = UniqueKey();
-  Key _favoritesKey = UniqueKey();
+  final GlobalKey<TVChannelBrowserState> _favoritesKey = GlobalKey();
+  final GlobalKey<TvUserPlaylistsScreenState> _playlistsKey = GlobalKey();
 
-  // FocusNodes para controlar el focus
-  final FocusNode _contentFocusNode = FocusNode();
-  final FocusNode _channelBrowserFocusNode = FocusNode();
-  final FocusNode _favoritesBrowserFocusNode = FocusNode();
-  final List<FocusNode> _navFocusNodes = [
-    FocusNode(),
-    FocusNode(),
-    FocusNode(),
-    FocusNode(),
-  ];
+  final FocusScopeNode _sidebarScope = FocusScopeNode(debugLabel: 'tv-sidebar');
+  final List<FocusScopeNode> _tabScopes =
+      List.generate(_tabs.length, (i) => FocusScopeNode(debugLabel: 'tv-tab-$i'));
+  final List<FocusNode> _navNodes = List.generate(_tabs.length, (_) => FocusNode());
+  late final TvEdgeFocusAction _edgeAction = TvEdgeFocusAction(onEdge: _onEdge);
 
   @override
   void initState() {
     super.initState();
+    _sidebarScope.addListener(_onSidebarFocus);
+    tvSourcesVersion.addListener(_onSourcesChanged);
   }
 
   @override
   void dispose() {
-    _contentFocusNode.dispose();
-    _channelBrowserFocusNode.dispose();
-    _favoritesBrowserFocusNode.dispose();
-    for (var node in _navFocusNodes) {
-      node.dispose();
+    _sidebarScope.removeListener(_onSidebarFocus);
+    tvSourcesVersion.removeListener(_onSourcesChanged);
+    _sidebarScope.dispose();
+    for (final s in _tabScopes) {
+      s.dispose();
+    }
+    for (final n in _navNodes) {
+      n.dispose();
     }
     super.dispose();
   }
 
-  FocusNode _getCurrentContentFocusNode() {
-    switch (_selectedIndex) {
-      case 0:
-        return _channelBrowserFocusNode;
-      case 1:
-        return _favoritesBrowserFocusNode;
-      default:
-        return _channelBrowserFocusNode;
+  // --- Foco ---------------------------------------------------------------
+
+  void _onSidebarFocus() {
+    final has = _sidebarScope.hasFocus;
+    if (has != _sidebarFocused && mounted) {
+      setState(() => _sidebarFocused = has);
+    }
+    if (has) _applyPendingReload();
+  }
+
+  void _onEdge(TraversalDirection direction) {
+    final inSidebar = _sidebarScope.hasFocus;
+    if (direction == TraversalDirection.left && !inSidebar) {
+      _focusSidebar();
+    } else if (direction == TraversalDirection.right && inSidebar) {
+      _enterContent();
     }
   }
 
+  void _focusSidebar() => _navNodes[_selectedIndex].requestFocus();
+
+  /// Entra al contenido de la pestaña activa; si no tiene nada enfocable
+  /// (cargando, vacía) el foco se queda en el menú.
+  void _enterContent() => focusFirstIn(_tabScopes[_selectedIndex]);
+
+  void _onNavFocused(int index) {
+    if (index == _selectedIndex) return;
+    setState(() => _selectedIndex = index);
+    if (index == 1) _favoritesKey.currentState?.reload();
+    if (index == 2) _playlistsKey.currentState?.reload();
+  }
+
+  // --- Recarga tras cambios en las fuentes --------------------------------
+
+  void _onSourcesChanged() {
+    _pendingReload = true;
+    if (_sidebarScope.hasFocus) _applyPendingReload();
+  }
+
+  /// Los datos nuevos se aplican solo con el foco en el menú, nunca mientras
+  /// el usuario navega el contenido.
+  void _applyPendingReload() {
+    if (!_pendingReload || !mounted) return;
+    _pendingReload = false;
+    setState(() => _browserKey = UniqueKey());
+    _favoritesKey.currentState?.reload();
+    _playlistsKey.currentState?.reload();
+  }
+
+  // --- UI -----------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
-    return Shortcuts(
-      shortcuts: <LogicalKeySet, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.arrowUp): const _NavigateUpIntent(),
-        LogicalKeySet(LogicalKeyboardKey.arrowDown): const _NavigateDownIntent(),
-        LogicalKeySet(LogicalKeyboardKey.arrowLeft): const _NavigateLeftIntent(),
-        LogicalKeySet(LogicalKeyboardKey.arrowRight): const _NavigateRightIntent(),
-        LogicalKeySet(LogicalKeyboardKey.select): const ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
+    return PopScope(
+      canPop: _sidebarFocused,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _focusSidebar();
       },
       child: Actions(
         actions: <Type, Action<Intent>>{
-          _NavigateUpIntent: CallbackAction<_NavigateUpIntent>(
-            onInvoke: (_) => _handleUpNavigation(),
-          ),
-          _NavigateDownIntent: CallbackAction<_NavigateDownIntent>(
-            onInvoke: (_) => _handleDownNavigation(),
-          ),
-          _NavigateLeftIntent: CallbackAction<_NavigateLeftIntent>(
-            onInvoke: (_) => _handleLeftNavigation(),
-          ),
-          _NavigateRightIntent: CallbackAction<_NavigateRightIntent>(
-            onInvoke: (_) => _handleRightNavigation(),
-          ),
+          DirectionalFocusIntent: _edgeAction,
         },
         child: Scaffold(
-          backgroundColor: Colors.black,
-          body: Row(
-            children: [
-              // Side Navigation Rail - Custom with Focus support
-              Container(
-                width: 200,
-                color: Colors.grey[900],
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    _buildNavItem(0, Icons.tv, 'Channels'),
-                    _buildNavItem(1, Icons.star, 'Favorites'),
-                    _buildNavItem(2, Icons.search, 'Search'),
-                    _buildNavItem(3, Icons.settings, 'Settings'),
-                  ],
-                ),
-              ),
-              // Vertical Divider
-              const VerticalDivider(thickness: 1, width: 1, color: Colors.grey),
-              // Main Content Area
-              Expanded(
-                child: IndexedStack(
-                  index: _selectedIndex,
-                  children: [
-                    TVChannelBrowser(key: _browserKey),
-                    TVChannelBrowser(
-                      key: _favoritesKey,
-                      favoritesOnly: true,
-                    ),
-                    const TVSearch(),
-                    const TVSettings(),
-                  ],
-                ),
-              ),
-            ],
+          backgroundColor: TvTheme.background,
+          body: Padding(
+            padding: TvTheme.safeArea,
+            child: Row(
+              children: [
+                _buildSidebar(),
+                const SizedBox(width: 8),
+                Expanded(child: _buildContent()),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
-    final isSelected = _selectedIndex == index;
-    final hasFocus = _isNavigationFocused && isSelected;
-
-    return Focus(
-      focusNode: _navFocusNodes[index],
-      autofocus: index == 0,
-      canRequestFocus: true,
-      onFocusChange: (focused) {
-        if (focused) {
-          setState(() {
-            _selectedIndex = index;
-            _isNavigationFocused = true;
-          });
-        }
-      },
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent) {
-          if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
-              event.logicalKey == LogicalKeyboardKey.select ||
-              event.logicalKey == LogicalKeyboardKey.enter) {
-            setState(() {
-              _selectedIndex = index;
-              _isNavigationFocused = false;
-            });
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _getCurrentContentFocusNode().requestFocus();
-            });
-            return KeyEventResult.handled;
-          }
-        }
-        return KeyEventResult.ignored;
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+  Widget _buildSidebar() {
+    return FocusScope(
+      node: _sidebarScope,
+      child: AnimatedContainer(
+        duration: TvTheme.focusDuration,
+        width: _sidebarFocused
+            ? TvTheme.sidebarExpanded
+            : TvTheme.sidebarCollapsed,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
         decoration: BoxDecoration(
-          color: hasFocus
-              ? Colors.blue
-              : (isSelected ? Colors.blue.withOpacity(0.3) : Colors.transparent),
-          borderRadius: BorderRadius.circular(8),
-          border: hasFocus
-              ? Border.all(color: Colors.white, width: 2)
-              : null,
+          color: TvTheme.surface,
+          borderRadius: BorderRadius.circular(TvTheme.radius + 4),
         ),
-        child: Row(
+        child: Column(
           children: [
-            Icon(
-              icon,
-              color: hasFocus || isSelected ? Colors.white : Colors.grey,
-              size: 24,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                color: hasFocus || isSelected ? Colors.white : Colors.grey,
-                fontWeight: hasFocus || isSelected ? FontWeight.bold : FontWeight.normal,
-                fontSize: 16,
+            for (var i = 0; i < _tabs.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _buildNavItem(i),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  void _handleUpNavigation() {
-    if (_isNavigationFocused && _selectedIndex > 0) {
-      setState(() => _selectedIndex--);
-      _navFocusNodes[_selectedIndex].requestFocus();
-    }
+  Widget _buildNavItem(int index) {
+    final (label, icon) = _tabs[index];
+    return TvFocusable(
+      key: ValueKey('tv-nav-$index'),
+      focusNode: _navNodes[index],
+      autofocus: index == 0,
+      scaleOnFocus: false,
+      onFocusChange: (focused) {
+        if (focused) _onNavFocused(index);
+      },
+      onSelect: _enterContent,
+      builder: (context, focused) {
+        final selected = index == _selectedIndex;
+        final color = focused || selected ? Colors.white : TvTheme.textSecondary;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          decoration: BoxDecoration(
+            color: focused
+                ? TvTheme.accent
+                : (selected
+                    ? TvTheme.accent.withValues(alpha: 0.25)
+                    : Colors.transparent),
+            borderRadius: BorderRadius.circular(TvTheme.radius - 2),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 28),
+              if (_sidebarFocused)
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.clip,
+                      style: TextStyle(
+                        fontSize: TvTheme.fontBody,
+                        color: color,
+                        fontWeight:
+                            focused || selected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
-  void _handleDownNavigation() {
-    if (_isNavigationFocused && _selectedIndex < 3) {
-      setState(() => _selectedIndex++);
-      _navFocusNodes[_selectedIndex].requestFocus();
-    }
+  Widget _buildContent() {
+    final addToPlaylist = tvAddToPlaylist(widget.data);
+    final tabs = <Widget>[
+      TVChannelBrowser(
+        key: _browserKey,
+        data: widget.data,
+        onPlay: widget.onPlay,
+        onAddToPlaylist: addToPlaylist,
+      ),
+      TVChannelBrowser(
+        key: _favoritesKey,
+        favoritesOnly: true,
+        data: widget.data,
+        onPlay: widget.onPlay,
+        onAddToPlaylist: addToPlaylist,
+      ),
+      TvUserPlaylistsScreen(
+        key: _playlistsKey,
+        data: widget.data,
+        onPlay: widget.onPlay,
+      ),
+      TVSearch(
+        data: widget.data,
+        onPlay: widget.onPlay,
+        onAddToPlaylist: addToPlaylist,
+      ),
+      TVSettings(data: widget.data),
+    ];
+    return IndexedStack(
+      index: _selectedIndex,
+      children: [
+        for (var i = 0; i < tabs.length; i++)
+          ExcludeFocus(
+            excluding: i != _selectedIndex,
+            child: FocusScope(node: _tabScopes[i], child: tabs[i]),
+          ),
+      ],
+    );
   }
-
-  void _handleLeftNavigation() {
-    if (!_isNavigationFocused) {
-      setState(() => _isNavigationFocused = true);
-      _navFocusNodes[_selectedIndex].requestFocus();
-    }
-  }
-
-  void _handleRightNavigation() {
-    if (_isNavigationFocused) {
-      setState(() => _isNavigationFocused = false);
-      // El contenido manejará su propio focus
-    }
-  }
-}
-
-// Custom Intents for navigation
-class _NavigateUpIntent extends Intent {
-  const _NavigateUpIntent();
-}
-
-class _NavigateDownIntent extends Intent {
-  const _NavigateDownIntent();
-}
-
-class _NavigateLeftIntent extends Intent {
-  const _NavigateLeftIntent();
-}
-
-class _NavigateRightIntent extends Intent {
-  const _NavigateRightIntent();
 }

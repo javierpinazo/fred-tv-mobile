@@ -60,4 +60,14 @@ void main() {
     expect(isFocused(t, const ValueKey('f')), isTrue);
     expect(find.text('hola'), findsOneWidget);
   });
+
+  testWidgets('si el foco se va a otro sitio durante la edición no lo recupera',
+      (t) async {
+    await pumpTv(t, _layout(TextEditingController()));
+    await _ok(t); // modo edición
+    await focusKey(t, 'below'); // p. ej. Atrás lleva el foco al menú
+    await t.pumpAndSettle();
+    expect(isFocused(t, const ValueKey('below')), isTrue);
+    expect(isFocused(t, const ValueKey('f')), isFalse);
+  });
 }

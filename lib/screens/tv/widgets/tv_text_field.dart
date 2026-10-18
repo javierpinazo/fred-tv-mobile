@@ -65,7 +65,9 @@ class _TvTextFieldState extends State<TvTextField> {
   }
 
   void _onFieldFocus() {
-    if (_editing && !_fieldNode.hasFocus) _exitEditing();
+    // El foco se fue a otro sitio (p. ej. Atrás al menú): se sale de edición
+    // sin volver a pedir el foco para no quitárselo a quien lo tiene.
+    if (_editing && !_fieldNode.hasFocus) _exitEditing(refocus: false);
   }
 
   void _startEditing() {
@@ -73,13 +75,19 @@ class _TvTextFieldState extends State<TvTextField> {
       _editing = true;
       _hasEdited = true;
     });
+    // `autofocus` no es fiable dentro de un FocusScope anidado: se pide el
+    // foco de forma explícita cuando el TextField ya está montado.
+    WidgetsBinding.instance.endOfFrame.then((_) {
+      if (mounted && _editing) _fieldNode.requestFocus();
+    });
   }
 
   /// Sale del modo edición y devuelve el foco al modo botón; si se indica
   /// [then], continúa moviendo el foco en esa dirección.
-  void _exitEditing({TraversalDirection? then}) {
+  void _exitEditing({TraversalDirection? then, bool refocus = true}) {
     if (!_editing) return;
     setState(() => _editing = false);
+    if (!refocus) return;
     WidgetsBinding.instance.endOfFrame.then((_) {
       if (!mounted) return;
       _buttonNode.requestFocus();
