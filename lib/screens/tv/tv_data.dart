@@ -110,6 +110,11 @@ class TvData {
   Future<List<Channel>> userPlaylistChannels(int playlistId) =>
       UserPlaylistsSql.channels(playlistId);
 
+  Future<int?> customSourceId() => UserPlaylistsSql.customSourceId();
+
+  Future<void> deleteManualChannel(Channel channel) =>
+      UserPlaylistsSql.deleteManualChannel(channel);
+
   Future<Channel> addManualChannel({
     required String name,
     required String url,

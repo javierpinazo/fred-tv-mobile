@@ -259,6 +259,19 @@ class FakeTvData extends TvData {
   Future<List<Channel>> userPlaylistChannels(int playlistId) async =>
       List.of(playlistItems[playlistId] ?? const <Channel>[]);
 
+  final List<String> deletedManualChannels = [];
+
+  @override
+  Future<int?> customSourceId() async => 0;
+
+  @override
+  Future<void> deleteManualChannel(Channel channel) async {
+    deletedManualChannels.add(channel.name);
+    for (final items in playlistItems.values) {
+      items.removeWhere((c) => _sameChannel(c, channel));
+    }
+  }
+
   @override
   Future<Channel> addManualChannel({
     required String name,

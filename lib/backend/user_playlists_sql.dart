@@ -113,6 +113,32 @@ abstract final class UserPlaylistsSql {
     return rows.map(Sql.rowToChannel).toList();
   }
 
+  /// Id de la fuente `Custom Channels` (o `null` si aún no existe).
+  static Future<int?> customSourceId() async {
+    final db = await DbFactory.db;
+    final row = await db.getOptional(
+        'SELECT id FROM sources WHERE name = ?', [customSourceName]);
+    return row?.columnAt(0);
+  }
+
+  /// Borra un canal manual (solo de la fuente `Custom Channels`) y lo quita de
+  /// todas las listas.
+  static Future<void> deleteManualChannel(Channel c) async {
+    final db = await DbFactory.db;
+    await db.writeTransaction((tx) async {
+      await tx.execute('''
+        DELETE FROM user_playlist_items
+        WHERE source_id = ? AND channel_name = ?
+          AND source_id IN (SELECT id FROM sources WHERE name = ?)
+      ''', [c.sourceId, c.name, customSourceName]);
+      await tx.execute('''
+        DELETE FROM channels
+        WHERE source_id = ? AND name = ?
+          AND source_id IN (SELECT id FROM sources WHERE name = ?)
+      ''', [c.sourceId, c.name, customSourceName]);
+    });
+  }
+
   /// Guarda un canal manual en la fuente `Custom Channels` y lo devuelve.
   static Future<Channel> addManualChannel({
     required String name,

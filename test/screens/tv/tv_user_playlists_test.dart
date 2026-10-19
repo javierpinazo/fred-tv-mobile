@@ -187,6 +187,37 @@ void main() {
     expect(isFocused(t, const ValueKey('tv-playlist-add-url')), isTrue);
   });
 
+  testWidgets('un canal manual se puede eliminar del todo', (t) async {
+    final data = FakeTvData();
+    final id = await data.createUserPlaylist('Lista');
+    final manual =
+        await data.addManualChannel(name: 'Mi canal', url: 'http://x/y.m3u8');
+    await data.addToUserPlaylist(id, manual);
+    await data.addToUserPlaylist(id, fakeChannel(1));
+    await pumpTv(t, TvUserPlaylistsScreen(data: data));
+    expect(find.text('Mi canal'), findsOneWidget);
+
+    await focusKey(t, 'tv-playlist-channel-0');
+    await _long(t);
+    expect(find.text('Eliminar canal'), findsOneWidget);
+    for (var i = 0; i < 4; i++) {
+      await _key(t, LogicalKeyboardKey.arrowDown);
+    }
+    await _ok(t); // Eliminar canal
+    expect(data.deletedManualChannels, ['Mi canal']);
+    expect(find.text('Mi canal'), findsNothing);
+    expect(_ids(data, id), [1]);
+  });
+
+  testWidgets('un canal de una fuente no ofrece "Eliminar canal"', (t) async {
+    final (data, _) = await _seeded();
+    await pumpTv(t, TvUserPlaylistsScreen(data: data));
+    await focusKey(t, 'tv-playlist-channel-0');
+    await _long(t);
+    expect(find.text('Quitar de la lista'), findsOneWidget);
+    expect(find.text('Eliminar canal'), findsNothing);
+  });
+
   group('showAddToPlaylistDialog', () {
     late BuildContext ctx;
     Future<void> host(WidgetTester t, FakeTvData data) => pumpTv(

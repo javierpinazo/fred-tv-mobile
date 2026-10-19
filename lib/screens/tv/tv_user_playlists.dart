@@ -103,6 +103,8 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
   int _request = 0;
   Timer? _debounce;
 
+  int? _customSourceId;
+
   int _columns = 4;
   int _lastGridFocus = 0;
 
@@ -173,6 +175,7 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
     if (mounted) setState(() => _loading = true);
     List<Channel> channels = [];
     try {
+      _customSourceId = await widget.data.customSourceId();
       channels = await widget.data.userPlaylistChannels(playlist.id);
     } catch (e) {
       debugPrint('TvUserPlaylists: error cargando canales: $e');
@@ -334,6 +337,7 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
         ('Mover antes', 'up'),
         ('Mover después', 'down'),
         ('Quitar de la lista', 'remove'),
+        if (channel.sourceId == _customSourceId) ('Eliminar canal', 'delete'),
       ],
     );
     if (choice == null || !mounted) return;
@@ -351,6 +355,11 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
         final newIndex =
             target < 0 || target >= _channels.length ? index : target;
         _focusGrid(newIndex + 1);
+      case 'delete':
+        await widget.data.deleteManualChannel(channel);
+        await reload(selectId: playlist.id);
+        if (!mounted) return;
+        _focusGrid(_channels.isEmpty ? 0 : index.clamp(0, _channels.length - 1) + 1);
       case 'remove':
         await widget.data.removeFromUserPlaylist(playlist.id, channel);
         await reload(selectId: playlist.id);
