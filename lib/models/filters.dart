@@ -12,6 +12,9 @@ class Filters {
   String? groupName;
   bool useKeywords;
 
+  /// Oculta los canales marcados como caídos.
+  bool hideDead;
+
   Filters({
     this.query,
     this.sourceIds,
@@ -22,5 +25,6 @@ class Filters {
     this.groupId,
     this.groupName,
     this.useKeywords = false,
+    this.hideDead = false,
   });
 }

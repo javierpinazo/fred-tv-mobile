@@ -304,6 +304,21 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
     }
   }
 
+  Future<void> _toggleDead(Channel channel) async {
+    final wasDead = channel.dead;
+    if (wasDead) {
+      await widget.data.clearChannelDead(channel);
+    } else {
+      await widget.data.markChannelDead(channel);
+    }
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+      content: Text(wasDead ? 'Marca quitada' : 'Marcado como caído'),
+      duration: const Duration(milliseconds: 800),
+    ));
+  }
+
   Future<void> _openMenu(int index) {
     final channel = _channels[index];
     return showTvChannelMenu(
@@ -317,6 +332,7 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
       onShowGuide: widget.data.hasGuide(channel)
           ? () => showTvGuide(context, data: widget.data, channel: channel)
           : null,
+      onToggleDead: () => _toggleDead(_channels[index]),
     );
   }
 

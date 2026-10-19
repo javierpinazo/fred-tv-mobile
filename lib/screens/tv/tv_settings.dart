@@ -37,6 +37,8 @@ class _TVSettingsState extends State<TVSettings> {
   TvEngineMode _engineMode = TvEngineMode.auto;
   double _textScale = 1.0;
   bool _highContrast = false;
+  bool _hideDead = false;
+  int _deadCount = 0;
   String? _message;
   bool _messageIsError = false;
   final FocusNode _topNode = FocusNode();
@@ -68,6 +70,8 @@ class _TVSettingsState extends State<TVSettings> {
       final engine = await widget.data.videoEngineMode();
       final scale = await widget.data.textScaleSetting();
       final contrast = await widget.data.highContrastSetting();
+      final hideDead = await widget.data.hideDeadSetting();
+      final deadCount = await widget.data.deadChannelCount();
       if (!mounted) return;
       setState(() {
         _entries = entries;
@@ -76,6 +80,8 @@ class _TVSettingsState extends State<TVSettings> {
         _engineMode = engine;
         _textScale = scale;
         _highContrast = contrast;
+        _hideDead = hideDead;
+        _deadCount = deadCount;
       });
     } catch (e) {
       debugPrint('TVSettings: error cargando fuentes: $e');
@@ -136,6 +142,24 @@ class _TVSettingsState extends State<TVSettings> {
     await widget.data.setTextScaleSetting(next);
     TvAppearance.textScale.value = next;
     if (mounted) setState(() => _textScale = next);
+  }
+
+  Future<void> _toggleHideDead() async {
+    final next = !_hideDead;
+    await widget.data.setHideDeadSetting(next);
+    if (mounted) setState(() => _hideDead = next);
+  }
+
+  Future<void> _clearDead() async {
+    if (_deadCount == 0) return;
+    final ok = await showTvConfirm(
+      context,
+      message: '¿Limpiar las marcas de canales caídos?',
+      confirmLabel: 'Limpiar',
+    );
+    if (!ok) return;
+    await widget.data.clearDeadChannels();
+    if (mounted) setState(() => _deadCount = 0);
   }
 
   Future<void> _toggleContrast() async {
@@ -327,6 +351,43 @@ class _TVSettingsState extends State<TVSettings> {
                       ),
                     ),
                     onSelect: _toggleContrast,
+                  ),
+                ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-hidedead'),
+                    icon: Icons.visibility_off,
+                    title: 'Ocultar canales caídos',
+                    subtitle:
+                        'En Canales y Búsqueda (Favoritos siempre los muestra)',
+                    trailing: Text(
+                      _hideDead ? 'Activado' : 'Desactivado',
+                      style: TextStyle(
+                        fontSize: TvTheme.fontBody,
+                        fontWeight: FontWeight.bold,
+                        color:
+                            _hideDead ? TvTheme.success : TvTheme.textSecondary,
+                      ),
+                    ),
+                    onSelect: _toggleHideDead,
+                  ),
+                ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-deadcount'),
+                    icon: Icons.link_off,
+                    title: 'Canales caídos',
+                    subtitle:
+                        'Se saltan al cambiar de canal. OK para limpiar las marcas',
+                    trailing: Text(
+                      _deadCount == 0 ? 'Ninguno' : '$_deadCount marcados',
+                      style: const TextStyle(
+                        fontSize: TvTheme.fontBody,
+                        fontWeight: FontWeight.bold,
+                        color: TvTheme.accent,
+                      ),
+                    ),
+                    onSelect: _clearDead,
                   ),
                 ),
                 const Padding(

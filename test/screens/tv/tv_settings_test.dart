@@ -51,6 +51,8 @@ void main() {
         const ValueKey('tv-settings-engine'),
         const ValueKey('tv-settings-textsize'),
         const ValueKey('tv-settings-contrast'),
+        const ValueKey('tv-settings-hidedead'),
+        const ValueKey('tv-settings-deadcount'),
         const ValueKey('tv-source-1'), const ValueKey('tv-source-2')]) {
       await _key(t, LogicalKeyboardKey.arrowDown);
       expect(isFocused(t, key), isTrue, reason: '$key');
@@ -178,6 +180,34 @@ void main() {
     await _ok(t);
     expect(data.highContrast, isFalse);
     expect(find.text('Desactivado'), findsWidgets);
+  });
+
+  testWidgets('ocultar canales caídos se activa y se recuerda', (t) async {
+    final data = FakeTvData();
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-hidedead');
+    await _ok(t);
+    expect(data.hideDead, isTrue);
+    await _ok(t);
+    expect(data.hideDead, isFalse);
+  });
+
+  testWidgets('canales caídos: muestra la cuenta y limpia con confirmación',
+      (t) async {
+    final data = FakeTvData()..deadCount = 3;
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-deadcount'); // desplaza hasta la fila
+    expect(find.text('3 marcados'), findsOneWidget);
+    await _ok(t);
+    expect(find.text('Limpiar'), findsOneWidget);
+    await _ok(t); // el foco inicial del diálogo es Cancelar
+    expect(data.deadCleared, isFalse);
+    await focusKey(t, 'tv-settings-deadcount');
+    await _ok(t);
+    await _key(t, LogicalKeyboardKey.arrowLeft); // de Cancelar a Limpiar
+    await _ok(t);
+    expect(data.deadCleared, isTrue);
+    expect(find.text('Ninguno'), findsOneWidget);
   });
 
   testWidgets('desactivar una fuente', (t) async {

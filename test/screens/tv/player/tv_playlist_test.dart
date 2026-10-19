@@ -52,6 +52,38 @@ void main() {
     expect(c.current.id, 1);
   });
 
+  test('next y previous saltan los canales caídos', () {
+    final chs = [fakeChannel(1), fakeChannel(2), fakeChannel(3), fakeChannel(4)];
+    chs[1].dead = true;
+    chs[2].dead = true;
+    final c = TvPlaylistCursor(chs, 0);
+    c.next();
+    expect(c.current.id, 4);
+    c.previous();
+    expect(c.current.id, 1);
+    c.previous();
+    expect(c.current.id, 4);
+  });
+
+  test('si todos los demás están caídos, se queda donde está', () {
+    final chs = [fakeChannel(1), fakeChannel(2), fakeChannel(3)];
+    chs[1].dead = true;
+    chs[2].dead = true;
+    final c = TvPlaylistCursor(chs, 0);
+    c.next();
+    expect(c.current.id, 1);
+    c.previous();
+    expect(c.current.id, 1);
+  });
+
+  test('jumpTo sí puede ir a un canal caído (es elección del usuario)', () {
+    final chs = [fakeChannel(1), fakeChannel(2)];
+    chs[1].dead = true;
+    final c = TvPlaylistCursor(chs, 0);
+    expect(c.jumpTo(2), isTrue);
+    expect(c.current.id, 2);
+  });
+
   test('lista vacía o índice fuera de rango lanza ArgumentError', () {
     expect(() => TvPlaylistCursor([], 0), throwsArgumentError);
     expect(() => TvPlaylistCursor([fakeChannel(1)], 1), throwsArgumentError);

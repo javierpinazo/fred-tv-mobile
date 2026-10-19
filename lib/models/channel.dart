@@ -13,6 +13,9 @@ class Channel {
   int? seriesId;
   int? streamId;
 
+  /// Marcado como caído (se calcula al listar; ver `ChannelHealthSql`).
+  bool dead;
+
   Channel({
     this.id,
     required this.name,
@@ -25,5 +28,6 @@ class Channel {
     required this.favorite,
     this.seriesId,
     this.streamId,
+    this.dead = false,
   });
 }

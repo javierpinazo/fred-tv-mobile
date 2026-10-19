@@ -228,6 +228,7 @@ class _TvPlayerState extends State<TvPlayer> {
       _hasError = true;
       _overlayVisible = true;
     });
+    unawaited(_reportFailure(_channel));
     // Con el error en pantalla no se reintenta solo: los reintentos en segundo
     // plano devolvían el foco a "Reintentar" y se comían las pulsaciones.
     _overlayTimer?.cancel();
@@ -250,6 +251,7 @@ class _TvPlayerState extends State<TvPlayer> {
 
   void _onFirstFrame(void _) {
     _frameShown = true;
+    unawaited(_reportSuccess(_channel));
     _firstFrameTimer?.cancel();
     _liveReconnects = 0;
     if (mounted && (_loading || _hasError)) {
@@ -257,6 +259,24 @@ class _TvPlayerState extends State<TvPlayer> {
         _loading = false;
         _hasError = false;
       });
+    }
+  }
+
+  /// Cuenta el fallo; si el canal ya cuenta como caído, el zapping lo saltará.
+  Future<void> _reportFailure(Channel channel) async {
+    try {
+      channel.dead = await widget.data.reportChannelFailure(channel);
+    } catch (e) {
+      debugPrint('TvPlayer: no se pudo guardar el fallo: $e');
+    }
+  }
+
+  Future<void> _reportSuccess(Channel channel) async {
+    channel.dead = false;
+    try {
+      await widget.data.reportChannelSuccess(channel);
+    } catch (e) {
+      debugPrint('TvPlayer: no se pudo guardar el éxito: $e');
     }
   }
 

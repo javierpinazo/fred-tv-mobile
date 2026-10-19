@@ -313,6 +313,22 @@ void main() {
     expect(find.text('Recientes'), findsNothing);
   });
 
+  testWidgets('"Marcar como caído" marca el canal y la tarjeta lo muestra',
+      (t) async {
+    final data = _fake();
+    await pumpTv(t, TVChannelBrowser(data: data));
+    await focusKey(t, 'tv-channel-0');
+    await _longPress(t);
+    expect(find.text('Marcar como caído'), findsOneWidget);
+    await focusKey(t, 'tv-option-2');
+    await _ok(t);
+    expect(data.markedDead.single.name, data.channels.first.name);
+    expect(find.byIcon(Icons.link_off), findsOneWidget);
+    await focusKey(t, 'tv-channel-0');
+    await _longPress(t);
+    expect(find.text('Quitar marca de caído'), findsOneWidget);
+  });
+
   testWidgets('un canal sin guía no ofrece "Ver programación"', (t) async {
     await pumpTv(t, TVChannelBrowser(data: _fake()));
     await focusKey(t, 'tv-channel-0');

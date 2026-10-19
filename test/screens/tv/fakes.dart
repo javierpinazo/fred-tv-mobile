@@ -221,6 +221,47 @@ class FakeTvData extends TvData {
   Future<void> setChannelEngine(String url, TvEngineKind kind) async =>
       channelEngines[url] = kind;
 
+  bool hideDead = false;
+  int deadCount = 0;
+  bool deadCleared = false;
+  final List<Channel> markedDead = [];
+  final List<Channel> reportedFailures = [];
+  final List<Channel> reportedSuccesses = [];
+
+  @override
+  Future<bool> hideDeadSetting() async => hideDead;
+
+  @override
+  Future<void> setHideDeadSetting(bool value) async => hideDead = value;
+
+  @override
+  Future<int> deadChannelCount() async => deadCount;
+
+  @override
+  Future<void> clearDeadChannels() async {
+    deadCleared = true;
+    deadCount = 0;
+  }
+
+  @override
+  Future<void> markChannelDead(Channel channel) async {
+    channel.dead = true;
+    markedDead.add(channel);
+  }
+
+  @override
+  Future<void> clearChannelDead(Channel channel) async => channel.dead = false;
+
+  @override
+  Future<bool> reportChannelFailure(Channel channel) async {
+    reportedFailures.add(channel);
+    return false;
+  }
+
+  @override
+  Future<void> reportChannelSuccess(Channel channel) async =>
+      reportedSuccesses.add(channel);
+
   double textScale = 1.0;
   bool highContrast = false;
 

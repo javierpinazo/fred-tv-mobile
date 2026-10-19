@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
+import 'package:open_tv/backend/channel_health_sql.dart';
 import 'package:open_tv/backend/db_factory.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/channel_http_headers.dart';
@@ -165,13 +166,16 @@ class Sql {
         ? query.split(" ").map((f) => "%$f%").toList()
         : ["%$query%"];
     var sqlQuery = '''
-        SELECT * FROM channels 
+        SELECT *, ${ChannelHealthSql.deadSql()} AS dead FROM channels 
         WHERE (${getKeywordsSql(keywords.length)})
         AND media_type IN (${generatePlaceholders(mediaTypes.length)})
         AND source_id IN (${generatePlaceholders(filters.sourceIds!.length)})
         AND url IS NOT NULL
     ''';
     List<Object> params = [];
+    if (filters.hideDead) {
+      sqlQuery += "\nAND NOT ${ChannelHealthSql.deadSql()}";
+    }
     if (filters.viewType == ViewType.favorites && filters.seriesId == null) {
       sqlQuery += "\nAND favorite = 1";
     }
@@ -244,6 +248,7 @@ class Sql {
       favorite: row.columnAt(7) == 1,
       seriesId: row.columnAt(8),
       groupId: row.columnAt(9),
+      dead: row.containsKey('dead') && row['dead'] == 1,
     );
   }
 

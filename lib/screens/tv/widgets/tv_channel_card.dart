@@ -27,6 +27,12 @@ class TvChannelCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
+          if (channel.dead)
+            const Positioned(
+              left: 8,
+              top: 8,
+              child: Icon(Icons.link_off, color: TvTheme.error, size: 22),
+            ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

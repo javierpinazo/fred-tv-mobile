@@ -1,3 +1,4 @@
+import 'package:open_tv/backend/channel_health_sql.dart';
 import 'package:open_tv/backend/iptv_org_catalog.dart';
 import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/backend/sql.dart';
@@ -18,6 +19,7 @@ import 'package:open_tv/screens/tv/tv_appearance.dart';
 const String _autoRefreshKey = 'tvAutoRefresh';
 const String _bufferKey = 'tvBufferSecs';
 const String _engineKey = 'tvEngine';
+const String _hideDeadKey = 'tvHideDead';
 const String _textScaleKey = 'tvTextScale';
 const String _contrastKey = 'tvHighContrast';
 const String _channelEnginePrefix = 'tvEngine:';
@@ -50,7 +52,38 @@ class TvData {
   Future<List<int>> enabledSourceIds() async =>
       (await Sql.getEnabledSourcesMinimal()).map((x) => x.id).toList();
 
-  Future<List<Channel>> searchChannels(Filters f) => Sql.search(f);
+  Future<List<Channel>> searchChannels(Filters f) async {
+    // Solo Canales y Búsqueda ocultan los caídos; Favoritos e historial no.
+    if (f.viewType == ViewType.all) f.hideDead = await hideDeadSetting();
+    return Sql.search(f);
+  }
+
+  // --- Estado de los canales ----------------------------------------------
+
+  Future<bool> hideDeadSetting() async =>
+      await Sql.getSetting(_hideDeadKey) == '1';
+
+  Future<void> setHideDeadSetting(bool value) =>
+      Sql.setSetting(_hideDeadKey, value ? '1' : '0');
+
+  /// Cuenta un fallo de reproducción; `true` si el canal ya cuenta como caído.
+  Future<bool> reportChannelFailure(Channel channel) async {
+    await ChannelHealthSql.recordFailure(channel.sourceId, channel.name);
+    return ChannelHealthSql.isDead(channel.sourceId, channel.name);
+  }
+
+  Future<void> reportChannelSuccess(Channel channel) =>
+      ChannelHealthSql.recordSuccess(channel.sourceId, channel.name);
+
+  Future<void> markChannelDead(Channel channel) =>
+      ChannelHealthSql.markDead(channel.sourceId, channel.name);
+
+  Future<void> clearChannelDead(Channel channel) =>
+      ChannelHealthSql.clear(channel.sourceId, channel.name);
+
+  Future<int> deadChannelCount() => ChannelHealthSql.deadCount();
+
+  Future<void> clearDeadChannels() => ChannelHealthSql.clearAll();
 
   /// Si hay canales vistos recientemente (historial de hasta 36).
   Future<bool> hasRecents() async {

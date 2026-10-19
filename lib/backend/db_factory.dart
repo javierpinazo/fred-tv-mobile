@@ -1,11 +1,24 @@
+import 'package:flutter/foundation.dart';
 import 'package:open_tv/backend/utils.dart';
 import 'package:sqlite_async/sqlite_async.dart';
 
 class DbFactory {
   static SqliteDatabase? _db;
 
+  /// Solo para pruebas: usa esta ruta en vez del directorio de la app.
+  @visibleForTesting
+  static String? debugPath;
+
+  /// Solo para pruebas: cierra y olvida la base abierta.
+  @visibleForTesting
+  static Future<void> debugReset() async {
+    await _db?.close();
+    _db = null;
+  }
+
   static Future<SqliteDatabase> _createDB() async {
-    var db = SqliteDatabase(path: "${await Utils.appDir}/db.sqlite");
+    var db =
+        SqliteDatabase(path: debugPath ?? "${await Utils.appDir}/db.sqlite");
     var migrations = SqliteMigrations()
       ..add(SqliteMigration(1, (tx) async {
         await tx.execute('''
@@ -148,6 +161,18 @@ class DbFactory {
         ''');
         await tx.execute('''
           UPDATE sources SET source_type = 2 WHERE name = 'Custom Channels';
+        ''');
+      }))
+      ..add(SqliteMigration(5, (tx) async {
+        await tx.execute('''
+          CREATE TABLE "channel_health" (
+            "source_id" integer NOT NULL,
+            "name" varchar(100) NOT NULL,
+            "failed_at" integer NOT NULL,
+            "fail_count" integer NOT NULL DEFAULT 1,
+            "manual" integer NOT NULL DEFAULT 0,
+            PRIMARY KEY (source_id, name)
+          );
         ''');
       }));
     await migrations.migrate(db);

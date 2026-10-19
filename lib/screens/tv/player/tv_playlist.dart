@@ -27,9 +27,22 @@ class TvPlaylistCursor {
     _index = index;
   }
 
-  void next() => _moveTo((_index + 1) % channels.length);
+  /// Avanza o retrocede saltando los canales caídos; si todos los demás lo
+  /// están, se queda donde está.
+  void _step(int direction) {
+    final n = channels.length;
+    for (var i = 1; i < n; i++) {
+      final candidate = (_index + direction * i % n + n) % n;
+      if (!channels[candidate].dead) {
+        _moveTo(candidate);
+        return;
+      }
+    }
+  }
 
-  void previous() => _moveTo((_index - 1 + channels.length) % channels.length);
+  void next() => _step(1);
+
+  void previous() => _step(-1);
 
   /// Salta al canal [number] (base 1). `false` si no existe.
   bool jumpTo(int number) {
