@@ -263,6 +263,14 @@ class FakeTvData extends TvData {
   @override
   Future<String?> pickBackupFile() async => pickedFile;
 
+  bool zeroCopy = false;
+
+  @override
+  Future<bool> mpvZeroCopySetting() async => zeroCopy;
+
+  @override
+  Future<void> setMpvZeroCopySetting(bool value) async => zeroCopy = value;
+
   int guideWarmUps = 0;
   String? epgUrl;
 

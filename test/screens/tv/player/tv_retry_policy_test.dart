@@ -78,6 +78,27 @@ void main() {
     expect(tvFallbackUserAgent, 'VLC/3.0.21 LibVLC/3.0.21');
   });
 
+  test('sin copia: se prueba primero y se cae a mpv normal y a software', () {
+    final plan = TvRetryPolicy.plan('rtmp://x/live', zeroCopy: true);
+    expect(plan.map((a) => (a.engine, a.zeroCopy, a.hardwareDecoding)).toList(), [
+      (TvEngineKind.mpv, true, true),
+      (TvEngineKind.mpv, false, true),
+      (TvEngineKind.mpv, false, false),
+    ]);
+  });
+
+  test('sin copia no cambia el primer intento de ExoPlayer', () {
+    final plan = TvRetryPolicy.plan('http://x/a.m3u8', zeroCopy: true);
+    expect(plan.first.engine, TvEngineKind.exo);
+    expect(plan[1].zeroCopy, isTrue);
+    expect(plan, hasLength(4));
+  });
+
+  test('por defecto ningún intento es sin copia', () {
+    final plan = TvRetryPolicy.plan('http://x/a.m3u8');
+    expect(plan.any((a) => a.zeroCopy), isFalse);
+  });
+
   test('etiquetas de motor y modo', () {
     expect(TvEngineKind.exo.label, 'ExoPlayer');
     expect(TvEngineKind.mpv.label, 'mpv');

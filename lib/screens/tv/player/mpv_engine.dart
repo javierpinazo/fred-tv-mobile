@@ -6,6 +6,13 @@ import 'package:open_tv/screens/tv/player/tv_buffer.dart';
 import 'package:open_tv/screens/tv/player/tv_engine.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 
+/// Valor de `hwdec` de mpv: automático (`mediacodec-copy` en esta TV), sin copia
+/// (`mediacodec`, experimental) o por software.
+String mpvHwdecFor({required bool zeroCopy, required bool hardwareDecoding}) {
+  if (!hardwareDecoding) return 'no';
+  return zeroCopy ? 'mediacodec' : 'auto-safe';
+}
+
 /// Opciones de mpv según la URL. En HLS se desactivan las conexiones
 /// persistentes: algunos servidores las cierran y el demuxer da el directo por
 /// terminado al recargar la lista (el canal se reiniciaba cada ~8 s).
@@ -53,7 +60,10 @@ class MpvEngine implements TvEngine {
     final platform = _player.platform;
     if (platform is mk.NativePlayer) {
       await platform.setProperty(
-          'hwdec', media.hardwareDecoding ? 'auto-safe' : 'no');
+          'hwdec',
+          mpvHwdecFor(
+              zeroCopy: media.zeroCopy,
+              hardwareDecoding: media.hardwareDecoding));
       await platform.setProperty('network-timeout', '15');
       for (final e in TvBuffer.mpvOptions(media.bufferSecs).entries) {
         await platform.setProperty(e.key, e.value);
@@ -123,5 +133,18 @@ class MpvEngine implements TvEngine {
       );
 
   @override
-  Future<void> dispose() => _player.dispose();
+  Future<void> dispose() async {
+    // Fotogramas perdidos de la sesión: sirve para comparar modos de decodificación.
+    final platform = _player.platform;
+    if (platform is mk.NativePlayer) {
+      try {
+        final dropped = await platform.getProperty('frame-drop-count');
+        final decoderDropped =
+            await platform.getProperty('decoder-frame-drop-count');
+        debugPrint('MpvEngine: fotogramas perdidos vo=$dropped '
+            'decodificador=$decoderDropped');
+      } catch (_) {}
+    }
+    await _player.dispose();
+  }
 }

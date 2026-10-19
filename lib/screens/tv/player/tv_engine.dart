@@ -11,6 +11,7 @@ class TvMedia {
     this.start,
     this.bufferSecs = 2,
     this.hardwareDecoding = true,
+    this.zeroCopy = false,
   });
 
   final String url;
@@ -25,6 +26,9 @@ class TvMedia {
 
   /// Solo mpv.
   final bool hardwareDecoding;
+
+  /// Solo mpv: decodificación sin copia (experimental).
+  final bool zeroCopy;
 }
 
 /// Motor de reproducción detrás de `TvPlayer`: ExoPlayer o mpv.

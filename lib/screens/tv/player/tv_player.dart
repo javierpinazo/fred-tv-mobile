@@ -160,8 +160,9 @@ class _TvPlayerState extends State<TvPlayer> {
         final mode = await widget.data.videoEngineMode();
         // Lo que el usuario eligió para este canal manda sobre el ajuste.
         _preferEngine ??= await widget.data.channelEngine(channel.url!);
+        final zeroCopy = await widget.data.mpvZeroCopySetting();
         _plan = TvRetryPolicy.plan(channel.url!,
-            mode: mode, prefer: _preferEngine);
+            mode: mode, prefer: _preferEngine, zeroCopy: zeroCopy);
       }
       final attempt = _plan[attemptIndex];
       final bufferSecs = await widget.data.bufferSeconds();
@@ -180,6 +181,7 @@ class _TvPlayerState extends State<TvPlayer> {
             start: seconds != null ? Duration(seconds: seconds) : null,
             bufferSecs: bufferSecs,
             hardwareDecoding: attempt.hardwareDecoding,
+            zeroCopy: attempt.zeroCopy,
           ))
           .timeout(timeout);
       if (!mounted || generation != _generation) return;

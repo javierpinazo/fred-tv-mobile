@@ -41,6 +41,7 @@ class _TVSettingsState extends State<TVSettings> {
   bool _highContrast = false;
   bool _hideDead = false;
   bool _hideAdult = false;
+  bool _zeroCopy = false;
   String? _epgUrl;
   bool _hasPin = false;
   int _deadCount = 0;
@@ -77,6 +78,7 @@ class _TVSettingsState extends State<TVSettings> {
       final contrast = await widget.data.highContrastSetting();
       final hideDead = await widget.data.hideDeadSetting();
       final hideAdult = await widget.data.hideAdultSetting();
+      final zeroCopy = await widget.data.mpvZeroCopySetting();
       final epgUrl = await widget.data.epgUrlSetting();
       final hasPin = await widget.data.parentalPinSet();
       final deadCount = await widget.data.deadChannelCount();
@@ -90,6 +92,7 @@ class _TVSettingsState extends State<TVSettings> {
         _highContrast = contrast;
         _hideDead = hideDead;
         _hideAdult = hideAdult;
+        _zeroCopy = zeroCopy;
         _epgUrl = epgUrl;
         _hasPin = hasPin;
         _deadCount = deadCount;
@@ -307,6 +310,12 @@ class _TVSettingsState extends State<TVSettings> {
     if (mounted) setState(() => _epgUrl = url);
   }
 
+  Future<void> _toggleZeroCopy() async {
+    final next = !_zeroCopy;
+    await widget.data.setMpvZeroCopySetting(next);
+    if (mounted) setState(() => _zeroCopy = next);
+  }
+
   Future<void> _toggleHideDead() async {
     final next = !_hideDead;
     await widget.data.setHideDeadSetting(next);
@@ -477,6 +486,25 @@ class _TVSettingsState extends State<TVSettings> {
                       ),
                     ),
                     onSelect: _toggleEngine,
+                  ),
+                ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-zerocopy'),
+                    icon: Icons.speed,
+                    title: 'Decodificación de video (mpv)',
+                    subtitle: _zeroCopy
+                        ? 'Experimental: sin copiar fotogramas; si no da imagen, vuelve a la automática'
+                        : 'Si un canal 1080p va a tirones con mpv, prueba "Sin copia"',
+                    trailing: Text(
+                      _zeroCopy ? 'Sin copia' : 'Automática',
+                      style: TextStyle(
+                        fontSize: TvTheme.fontBody,
+                        fontWeight: FontWeight.bold,
+                        color: _zeroCopy ? TvTheme.favorite : TvTheme.accent,
+                      ),
+                    ),
+                    onSelect: _toggleZeroCopy,
                   ),
                 ),
                 _gap(

@@ -50,6 +50,7 @@ void main() {
     for (final key in [_m3u, _refresh, _auto,
         const ValueKey('tv-settings-buffer'),
         const ValueKey('tv-settings-engine'),
+        const ValueKey('tv-settings-zerocopy'),
         const ValueKey('tv-settings-textsize'),
         const ValueKey('tv-settings-contrast'),
         const ValueKey('tv-settings-hidedead'),
@@ -164,8 +165,8 @@ void main() {
   testWidgets('el tamaño de letra rota y se guarda', (t) async {
     final data = FakeTvData();
     await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-textsize'); // desplaza hasta la fila
     expect(find.text('100 %'), findsOneWidget);
-    await focusKey(t, 'tv-settings-textsize');
     await _ok(t);
     expect(data.textScale, 1.15);
     expect(find.text('115 %'), findsOneWidget);
@@ -414,6 +415,19 @@ void main() {
     await _ok(t); // Guardar
     expect(data.epgUrl, 'http://epg.test/guia.xml.gz');
     expect(find.text('Definida'), findsOneWidget);
+  });
+
+  testWidgets('decodificación sin copia (experimental) se activa y desactiva',
+      (t) async {
+    final data = FakeTvData();
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-zerocopy');
+    expect(find.text('Automática'), findsOneWidget);
+    await _ok(t);
+    expect(data.zeroCopy, isTrue);
+    expect(find.text('Sin copia'), findsOneWidget);
+    await _ok(t);
+    expect(data.zeroCopy, isFalse);
   });
 
   testWidgets('desactivar una fuente', (t) async {

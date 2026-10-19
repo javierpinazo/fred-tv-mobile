@@ -32,6 +32,7 @@ const String _autoRefreshKey = 'tvAutoRefresh';
 const String _bufferKey = 'tvBufferSecs';
 const String _engineKey = 'tvEngine';
 const String _hideDeadKey = 'tvHideDead';
+const String _zeroCopyKey = 'tvMpvZeroCopy';
 const String _epgUrlKey = 'tvEpgUrl';
 const String _epgShareBase = 'https://epgshare01.online/epgshare01/epg_ripper_';
 const String _hideAdultKey = 'tvHideAdult';
@@ -346,6 +347,15 @@ class TvData {
 
   Future<void> setChannelEngine(String url, TvEngineKind kind) =>
       Sql.setSetting('$_channelEnginePrefix$url', kind.name);
+
+  // --- mpv ----------------------------------------------------------------
+
+  /// Decodificación sin copia (`hwdec=mediacodec`), experimental.
+  Future<bool> mpvZeroCopySetting() async =>
+      await Sql.getSetting(_zeroCopyKey) == '1';
+
+  Future<void> setMpvZeroCopySetting(bool value) =>
+      Sql.setSetting(_zeroCopyKey, value ? '1' : '0');
 
   // --- Accesibilidad ------------------------------------------------------
 

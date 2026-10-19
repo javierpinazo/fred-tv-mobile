@@ -10,6 +10,14 @@ void main() {
         {'demuxer-lavf-o': 'http_persistent=0'});
   });
 
+  test('hwdec según el intento: automático, sin copia o software', () {
+    expect(mpvHwdecFor(zeroCopy: false, hardwareDecoding: true), 'auto-safe');
+    expect(mpvHwdecFor(zeroCopy: false, hardwareDecoding: false), 'no');
+    expect(mpvHwdecFor(zeroCopy: true, hardwareDecoding: true), 'mediacodec');
+    // Sin copia nunca se activa con la decodificación por software.
+    expect(mpvHwdecFor(zeroCopy: true, hardwareDecoding: false), 'no');
+  });
+
   test('otras URLs no llevan opciones extra', () {
     expect(mpvUrlOptions('http://x.test/stream.ts'), isEmpty);
     expect(mpvUrlOptions('rtmp://x.test/live'), isEmpty);

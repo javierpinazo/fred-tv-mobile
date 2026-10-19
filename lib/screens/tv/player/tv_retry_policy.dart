@@ -25,12 +25,20 @@ enum TvEngineMode {
 }
 
 class TvPlaybackAttempt {
-  const TvPlaybackAttempt({required this.engine, this.hardwareDecoding = true});
+  const TvPlaybackAttempt({
+    required this.engine,
+    this.hardwareDecoding = true,
+    this.zeroCopy = false,
+  });
 
   final TvEngineKind engine;
 
   /// Solo aplica a mpv.
   final bool hardwareDecoding;
+
+  /// Solo mpv: `hwdec=mediacodec` (sin copiar los fotogramas por CPU).
+  /// Experimental.
+  final bool zeroCopy;
 }
 
 /// Política de reproducción: ExoPlayer primero (HLS/DASH/progresivo por
@@ -53,6 +61,8 @@ abstract final class TvRetryPolicy {
       TvPlaybackAttempt(engine: TvEngineKind.exo);
   static const TvPlaybackAttempt _mpvHw =
       TvPlaybackAttempt(engine: TvEngineKind.mpv);
+  static const TvPlaybackAttempt _mpvZeroCopy =
+      TvPlaybackAttempt(engine: TvEngineKind.mpv, zeroCopy: true);
   static const TvPlaybackAttempt _mpvSw =
       TvPlaybackAttempt(engine: TvEngineKind.mpv, hardwareDecoding: false);
 
@@ -69,12 +79,16 @@ abstract final class TvRetryPolicy {
     String url, {
     TvEngineMode mode = TvEngineMode.auto,
     TvEngineKind? prefer,
+    bool zeroCopy = false,
   }) {
     final wantsExo = prefer != null
         ? prefer == TvEngineKind.exo
         : mode == TvEngineMode.auto;
-    if (wantsExo && exoCanOpen(url)) return const [_exo, _mpvHw, _mpvSw];
-    return const [_mpvHw, _mpvSw];
+    final mpv = zeroCopy
+        ? const [_mpvZeroCopy, _mpvHw, _mpvSw]
+        : const [_mpvHw, _mpvSw];
+    if (wantsExo && exoCanOpen(url)) return [_exo, ...mpv];
+    return mpv;
   }
 
   /// Intento siguiente al que acaba de fallar, o `null` si ya no quedan.
