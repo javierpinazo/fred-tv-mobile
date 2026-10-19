@@ -6,6 +6,14 @@ import 'package:open_tv/screens/tv/player/tv_buffer.dart';
 import 'package:open_tv/screens/tv/player/tv_engine.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 
+/// Opciones de mpv según la URL. En HLS se desactivan las conexiones
+/// persistentes: algunos servidores las cierran y el demuxer da el directo por
+/// terminado al recargar la lista (el canal se reiniciaba cada ~8 s).
+Map<String, String> mpvUrlOptions(String url) =>
+    url.toLowerCase().contains('.m3u8')
+        ? const {'demuxer-lavf-o': 'http_persistent=0'}
+        : const {};
+
 /// Motor mpv (FFmpeg) vía media_kit: el más compatible con streams raros.
 class MpvEngine implements TvEngine {
   MpvEngine() : _player = mk.Player() {
@@ -48,6 +56,9 @@ class MpvEngine implements TvEngine {
           'hwdec', media.hardwareDecoding ? 'auto-safe' : 'no');
       await platform.setProperty('network-timeout', '15');
       for (final e in TvBuffer.mpvOptions(media.bufferSecs).entries) {
+        await platform.setProperty(e.key, e.value);
+      }
+      for (final e in mpvUrlOptions(media.url).entries) {
         await platform.setProperty(e.key, e.value);
       }
     }

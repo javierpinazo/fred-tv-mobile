@@ -185,6 +185,15 @@ class FakeTvData extends TvData {
   @override
   Future<void> setVideoEngineMode(TvEngineMode mode) async => engineMode = mode;
 
+  final Map<String, TvEngineKind> channelEngines = {};
+
+  @override
+  Future<TvEngineKind?> channelEngine(String url) async => channelEngines[url];
+
+  @override
+  Future<void> setChannelEngine(String url, TvEngineKind kind) async =>
+      channelEngines[url] = kind;
+
   int bufferSecs = 2;
 
   @override

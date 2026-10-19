@@ -14,6 +14,7 @@ import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 const String _autoRefreshKey = 'tvAutoRefresh';
 const String _bufferKey = 'tvBufferSecs';
 const String _engineKey = 'tvEngine';
+const String _channelEnginePrefix = 'tvEngine:';
 
 /// Fachada inyectable sobre el backend para las pantallas de TV.
 class TvData {
@@ -96,6 +97,20 @@ class TvData {
 
   Future<void> setBufferSeconds(int seconds) =>
       Sql.setSetting(_bufferKey, '$seconds');
+
+  /// Motor elegido para un canal concreto (p. ej. uno con audio que
+  /// ExoPlayer no decodifica); `null` si sigue el ajuste general.
+  Future<TvEngineKind?> channelEngine(String url) async {
+    final raw = await Sql.getSetting('$_channelEnginePrefix$url');
+    return switch (raw) {
+      'exo' => TvEngineKind.exo,
+      'mpv' => TvEngineKind.mpv,
+      _ => null,
+    };
+  }
+
+  Future<void> setChannelEngine(String url, TvEngineKind kind) =>
+      Sql.setSetting('$_channelEnginePrefix$url', kind.name);
 
   Future<TvEngineMode> videoEngineMode() async =>
       TvEngineMode.fromName(await Sql.getSetting(_engineKey));

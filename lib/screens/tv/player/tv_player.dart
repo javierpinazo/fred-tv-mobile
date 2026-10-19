@@ -151,6 +151,8 @@ class _TvPlayerState extends State<TvPlayer> {
       if (attemptIndex == 0) {
         await widget.data.addToHistory(id);
         final mode = await widget.data.videoEngineMode();
+        // Lo que el usuario eligió para este canal manda sobre el ajuste.
+        _preferEngine ??= await widget.data.channelEngine(channel.url!);
         _plan = TvRetryPolicy.plan(channel.url!,
             mode: mode, prefer: _preferEngine);
         // Un HLS que declara solo video deja a ExoPlayer sin audio: va a mpv,
@@ -469,6 +471,7 @@ class _TvPlayerState extends State<TvPlayer> {
       case 'to-exo':
         _preferEngine =
             choice == 'to-mpv' ? TvEngineKind.mpv : TvEngineKind.exo;
+        await widget.data.setChannelEngine(channel.url!, _preferEngine!);
         _liveReconnects = 0;
         unawaited(_play(0));
     }
