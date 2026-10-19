@@ -7,7 +7,6 @@ import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/id_data.dart';
 import 'package:open_tv/models/media_type.dart';
 import 'package:open_tv/screens/tv/player/exo_engine.dart';
-import 'package:open_tv/screens/tv/player/hls_probe.dart';
 import 'package:open_tv/screens/tv/player/mpv_engine.dart';
 import 'package:open_tv/screens/tv/player/tv_engine.dart';
 import 'package:open_tv/screens/tv/player/tv_player_keys.dart';
@@ -155,17 +154,6 @@ class _TvPlayerState extends State<TvPlayer> {
         _preferEngine ??= await widget.data.channelEngine(channel.url!);
         _plan = TvRetryPolicy.plan(channel.url!,
             mode: mode, prefer: _preferEngine);
-        // Un HLS que declara solo video deja a ExoPlayer sin audio: va a mpv,
-        // salvo que el usuario haya elegido ExoPlayer para este canal.
-        if (_plan.first.engine == TvEngineKind.exo &&
-            _preferEngine != TvEngineKind.exo &&
-            await exoWouldDropAudio(channel.url!,
-                userAgent: userAgent, headers: extraHeaders)) {
-          if (!mounted || generation != _generation) return;
-          debugPrint('TvPlayer: HLS sin audio declarado, se usa mpv');
-          _plan = TvRetryPolicy.plan(channel.url!,
-              mode: TvEngineMode.mpv, prefer: TvEngineKind.mpv);
-        }
       }
       final attempt = _plan[attemptIndex];
       final bufferSecs = await widget.data.bufferSeconds();

@@ -47,50 +47,49 @@ void main() {
     });
   });
 
-  group('exoWouldDropAudio', () {
-    const solo = '#EXTM3U\n'
-        '#EXT-X-STREAM-INF:BANDWIDTH=1,CODECS="avc1.640029"\nv.m3u8\n';
+  group('fetchHlsMaster', () {
+    const body = '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nv.m3u8\n';
 
-    test('descarga el manifiesto con el User-Agent y detecta video sin audio',
-        () async {
-      String? ua;
+    test('descarga el manifiesto con el User-Agent y las cabeceras', () async {
+      Map<String, String>? sent;
       final client = MockClient((req) async {
-        ua = req.headers['User-Agent'];
-        return http.Response(solo, 200);
+        sent = req.headers;
+        return http.Response(body, 200);
       });
-      final r = await exoWouldDropAudio('https://x.test/a/index.m3u8',
-          userAgent: 'UA-TEST', client: client);
-      expect(r, isTrue);
-      expect(ua, 'UA-TEST');
+      final r = await fetchHlsMaster('https://x.test/a/index.m3u8',
+          userAgent: 'UA-TEST', headers: {'Referer': 'R'}, client: client);
+      expect(r, body);
+      expect(sent!['User-Agent'], 'UA-TEST');
+      expect(sent!['Referer'], 'R');
     });
 
     test('una URL que no es .m3u8 no se descarga', () async {
       var calls = 0;
       final client = MockClient((req) async {
         calls++;
-        return http.Response(solo, 200);
+        return http.Response(body, 200);
       });
       expect(
-          await exoWouldDropAudio('https://x.test/video.mp4',
+          await fetchHlsMaster('https://x.test/video.mp4',
               userAgent: 'UA', client: client),
-          isFalse);
+          isNull);
       expect(calls, 0);
     });
 
-    test('si falla la descarga no bloquea ExoPlayer', () async {
+    test('si falla la descarga devuelve null', () async {
       final client = MockClient((req) async => throw http.ClientException('x'));
       expect(
-          await exoWouldDropAudio('https://x.test/a.m3u8',
+          await fetchHlsMaster('https://x.test/a.m3u8',
               userAgent: 'UA', client: client),
-          isFalse);
+          isNull);
     });
 
-    test('una respuesta 404 no bloquea ExoPlayer', () async {
+    test('una respuesta 404 devuelve null', () async {
       final client = MockClient((req) async => http.Response('no', 404));
       expect(
-          await exoWouldDropAudio('https://x.test/a.m3u8',
+          await fetchHlsMaster('https://x.test/a.m3u8',
               userAgent: 'UA', client: client),
-          isFalse);
+          isNull);
     });
   });
 }

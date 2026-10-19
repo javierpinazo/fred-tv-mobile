@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:open_tv/models/id_data.dart';
+import 'package:open_tv/screens/tv/player/hls_audio_fix.dart';
 import 'package:open_tv/screens/tv/player/tv_engine.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:video_player/video_player.dart';
@@ -20,6 +21,7 @@ VideoFormat? exoFormatHint(String url) {
 /// por hardware optimizada para Android. No permite elegir pistas.
 class ExoEngine implements TvEngine {
   VideoPlayerController? _controller;
+  HlsAudioFix? _fix;
   final ValueNotifier<int> _tick = ValueNotifier(0);
 
   final StreamController<void> _firstFrame = StreamController.broadcast();
@@ -75,11 +77,24 @@ class ExoEngine implements TvEngine {
     if (!_disposed) _tick.value++;
   }
 
+  Future<void> _closeFix() async {
+    final fix = _fix;
+    _fix = null;
+    await fix?.close();
+  }
+
   @override
   Future<void> open(TvMedia media) async {
     await _release();
+    await _closeFix();
+    // HLS que declara solo video: se sirve la lista corregida en local para que
+    // ExoPlayer cree la pista de audio.
+    final fix = await HlsAudioFix.prepare(media.url,
+        userAgent: media.userAgent, headers: media.headers);
+    _fix = fix;
+    if (fix != null) debugPrint('ExoEngine: lista HLS corregida (audio)');
     final controller = VideoPlayerController.networkUrl(
-      Uri.parse(media.url),
+      Uri.parse(fix?.url ?? media.url),
       formatHint: exoFormatHint(media.url),
       httpHeaders: {...media.headers, 'User-Agent': media.userAgent},
     );
@@ -193,6 +208,7 @@ class ExoEngine implements TvEngine {
   Future<void> dispose() async {
     if (_disposed) return;
     await _release();
+    await _closeFix();
     _disposed = true;
     unawaited(WakelockPlus.disable());
     _tick.dispose();
