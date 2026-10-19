@@ -263,6 +263,18 @@ class FakeTvData extends TvData {
   @override
   Future<String?> pickBackupFile() async => pickedFile;
 
+  int guideWarmUps = 0;
+  String? epgUrl;
+
+  @override
+  Future<void> warmUpGuide() async => guideWarmUps++;
+
+  @override
+  Future<String?> epgUrlSetting() async => epgUrl;
+
+  @override
+  Future<void> setEpgUrlSetting(String? url) async => epgUrl = url;
+
   bool hideAdult = false;
   String? pin;
 

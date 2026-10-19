@@ -47,6 +47,13 @@ void main() {
     expect(data.refreshCalls.single.onlySourceId, isNull);
   });
 
+  testWidgets('al entrar al home precalienta la guía de programación', (t) async {
+    final data = FakeTvData();
+    await _pumpBootstrap(t, data, () async {});
+    await t.pumpAndSettle();
+    expect(data.guideWarmUps, 1);
+  });
+
   testWidgets('con la actualización automática desactivada no refresca',
       (t) async {
     final data = FakeTvData()..autoRefresh = false;

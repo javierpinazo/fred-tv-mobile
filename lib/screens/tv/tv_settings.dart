@@ -41,6 +41,7 @@ class _TVSettingsState extends State<TVSettings> {
   bool _highContrast = false;
   bool _hideDead = false;
   bool _hideAdult = false;
+  String? _epgUrl;
   bool _hasPin = false;
   int _deadCount = 0;
   String? _message;
@@ -76,6 +77,7 @@ class _TVSettingsState extends State<TVSettings> {
       final contrast = await widget.data.highContrastSetting();
       final hideDead = await widget.data.hideDeadSetting();
       final hideAdult = await widget.data.hideAdultSetting();
+      final epgUrl = await widget.data.epgUrlSetting();
       final hasPin = await widget.data.parentalPinSet();
       final deadCount = await widget.data.deadChannelCount();
       if (!mounted) return;
@@ -88,6 +90,7 @@ class _TVSettingsState extends State<TVSettings> {
         _highContrast = contrast;
         _hideDead = hideDead;
         _hideAdult = hideAdult;
+        _epgUrl = epgUrl;
         _hasPin = hasPin;
         _deadCount = deadCount;
       });
@@ -287,6 +290,21 @@ class _TVSettingsState extends State<TVSettings> {
       _setMessage('No se pudo importar la copia', error: true);
     }
     if (mounted) _load();
+  }
+
+  Future<void> _editEpgUrl() async {
+    final url = await showTvTextPrompt(
+      context,
+      title: 'Guía personalizada (XMLTV)',
+      label: 'Dirección (.xml o .xml.gz); vacío para quitarla',
+      initial: _epgUrl ?? '',
+    );
+    // `null` = cancelado (el prompt devuelve null también con texto vacío: se
+    // trata como "quitar" solo si ya había una).
+    if (!mounted) return;
+    if (url == null && _epgUrl == null) return;
+    await widget.data.setEpgUrlSetting(url);
+    if (mounted) setState(() => _epgUrl = url);
   }
 
   Future<void> _toggleHideDead() async {
@@ -581,6 +599,24 @@ class _TVSettingsState extends State<TVSettings> {
                     subtitle:
                         'Exporta o importa favoritos, listas propias y ajustes',
                     onSelect: _backupMenu,
+                  ),
+                ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-epgurl'),
+                    icon: Icons.calendar_month,
+                    title: 'Guía personalizada (XMLTV)',
+                    subtitle:
+                        'Más canales con guía; se suma a la de tus países',
+                    trailing: Text(
+                      _epgUrl == null ? 'Sin definir' : 'Definida',
+                      style: const TextStyle(
+                        fontSize: TvTheme.fontBody,
+                        fontWeight: FontWeight.bold,
+                        color: TvTheme.accent,
+                      ),
+                    ),
+                    onSelect: _editEpgUrl,
                   ),
                 ),
                 const Padding(

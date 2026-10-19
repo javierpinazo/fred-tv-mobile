@@ -127,7 +127,7 @@ void main() {
             headers: {'content-type': 'text/html; charset=utf-8'});
       });
       final guide = TvPeruGuide(client: client);
-      final programs = await guide.day(day);
+      final programs = await guide.day(_ch('TV Peru (1080p)'), day);
       expect(programs, hasLength(4));
       expect(url.toString(),
           'https://www.tvperu.gob.pe/programacion?fecha=19-10-2026');
@@ -141,10 +141,10 @@ void main() {
         return http.Response(_html, 200);
       });
       final guide = TvPeruGuide(client: client);
-      await guide.day(day);
-      await guide.day(day);
+      await guide.day(_ch('TV Peru'), day);
+      await guide.day(_ch('TV Peru'), day);
       expect(calls, 1);
-      await guide.day(DateTime(2026, 10, 20));
+      await guide.day(_ch('TV Peru'), DateTime(2026, 10, 20));
       expect(calls, 2);
     });
 
@@ -155,8 +155,9 @@ void main() {
         return calls == 1 ? http.Response('no', 403) : http.Response(_html, 200);
       });
       final guide = TvPeruGuide(client: client);
-      await expectLater(guide.day(day), throwsA(isA<GuideException>()));
-      expect(await guide.day(day), hasLength(4));
+      await expectLater(
+          guide.day(_ch('TV Peru'), day), throwsA(isA<GuideException>()));
+      expect(await guide.day(_ch('TV Peru'), day), hasLength(4));
     });
   });
 

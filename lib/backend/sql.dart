@@ -220,6 +220,17 @@ class Sql {
     return results.map(rowToChannel).toList();
   }
 
+  /// Países (hasta 4) de los canales que el usuario sigue (favoritos o vistos).
+  static Future<List<String>> watchedCountries() async {
+    final db = await DbFactory.db;
+    final rows = await db.getAll('''
+      SELECT country, COUNT(*) AS n FROM channels
+      WHERE country IS NOT NULL AND (favorite = 1 OR last_watched IS NOT NULL)
+      GROUP BY country ORDER BY n DESC, country LIMIT 4
+    ''');
+    return rows.map((r) => r['country'] as String).toList();
+  }
+
   /// Países con canales de TV en directo, de más a menos canales.
   static Future<List<({String code, int count})>> countries(
       List<int> sourceIds) async {

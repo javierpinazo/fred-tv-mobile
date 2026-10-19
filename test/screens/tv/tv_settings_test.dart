@@ -57,6 +57,7 @@ void main() {
         const ValueKey('tv-settings-hideadult'),
         const ValueKey('tv-settings-pin'),
         const ValueKey('tv-settings-backup'),
+        const ValueKey('tv-settings-epgurl'),
         const ValueKey('tv-source-1'), const ValueKey('tv-source-2')]) {
       await _key(t, LogicalKeyboardKey.arrowDown);
       expect(isFocused(t, key), isTrue, reason: '$key');
@@ -399,6 +400,20 @@ void main() {
     await focusKey(t, 'tv-option-1'); // archivo del dispositivo
     await _ok(t);
     expect(data.importedFiles, ['/storage/copia.json']);
+  });
+
+  testWidgets('la guía personalizada guarda la URL y se puede borrar', (t) async {
+    final data = FakeTvData();
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-epgurl');
+    expect(find.text('Sin definir'), findsOneWidget);
+    await _ok(t);
+    await _ok(t); // abre el teclado propio del campo
+    await typeOnTvKeyboard(t, 'http://epg.test/guia.xml.gz');
+    await _key(t, LogicalKeyboardKey.arrowDown);
+    await _ok(t); // Guardar
+    expect(data.epgUrl, 'http://epg.test/guia.xml.gz');
+    expect(find.text('Definida'), findsOneWidget);
   });
 
   testWidgets('desactivar una fuente', (t) async {

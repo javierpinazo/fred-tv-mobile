@@ -19,11 +19,15 @@ class GuideProgram {
     required this.start,
     required this.title,
     this.description,
+    this.end,
   });
 
   final DateTime start;
   final String title;
   final String? description;
+
+  /// Fin del programa (UTC), si la fuente lo da.
+  final DateTime? end;
 
   /// Hora de inicio en Lima como `02:00 PM`.
   String get timeLabel => formatLimaTime(start);
@@ -69,9 +73,9 @@ GuideNowNext guideNowNext(List<GuideProgram> day, DateTime nowUtc) {
 abstract class GuideProvider {
   bool matches(Channel channel);
 
-  /// Programas del día [limaDay] (fecha de Lima, sin hora). Lanza
+  /// Programas de [channel] el día [limaDay] (fecha de Lima, sin hora). Lanza
   /// [GuideException] si no se pudo obtener.
-  Future<List<GuideProgram>> day(DateTime limaDay);
+  Future<List<GuideProgram>> day(Channel channel, DateTime limaDay);
 }
 
 /// Guía de varias fuentes: devuelve la del proveedor que reconoce el canal.
@@ -94,7 +98,8 @@ class TvGuide {
     if (provider == null) return null;
     final instant = (now ?? DateTime.now()).toUtc();
     try {
-      return guideNowNext(await provider.day(limaDay(instant)), instant);
+      return guideNowNext(
+          await provider.day(channel, limaDay(instant)), instant);
     } catch (e) {
       debugPrint('TvGuide: no se pudo cargar la guía de ${channel.name}: $e');
       return null;
@@ -110,7 +115,8 @@ final RegExp _titleRe =
     RegExp(r'<h3>(?:<a[^>]*>)?(.*?)(?:</a>)?</h3>', dotAll: true);
 final RegExp _descRe = RegExp(r'<p>(.*?)(?:</br>|</p>|<a\s)', dotAll: true);
 
-String _clean(String raw) {
+/// Quita etiquetas, decodifica entidades HTML y colapsa los espacios.
+String cleanHtmlText(String raw) {
   var s = raw.replaceAll(RegExp(r'<[^>]*>'), '');
   s = s
       .replaceAll('&nbsp;', ' ')
@@ -138,10 +144,10 @@ List<GuideProgram> parseTvPeruDay(String html, DateTime limaDay) {
     final afterTime = row.substring(time.end);
     final title = _titleRe.firstMatch(afterTime);
     if (title == null) continue;
-    final titleText = _clean(title.group(1)!);
+    final titleText = cleanHtmlText(title.group(1)!);
     if (titleText.isEmpty) continue;
     final desc = _descRe.firstMatch(afterTime.substring(title.end));
-    final descText = desc == null ? '' : _clean(desc.group(1)!);
+    final descText = desc == null ? '' : cleanHtmlText(desc.group(1)!);
 
     var hour = int.parse(time.group(1)!) % 12;
     if (time.group(3)!.toUpperCase() == 'PM') hour += 12;
@@ -158,9 +164,9 @@ List<GuideProgram> parseTvPeruDay(String html, DateTime limaDay) {
 }
 
 /// Nombre sin calidad, tildes ni signos, para comparar canales.
-String _normalizeName(String name) {
+String normalizeChannelName(String name) {
   const accents = {'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u'};
-  var s = name.toLowerCase();
+  var s = name.toLowerCase().replaceAll('+', ' plus ');
   s = s.replaceAll(RegExp(r'\([^)]*\)|\[[^\]]*\]'), ' ');
   accents.forEach((k, v) => s = s.replaceAll(k, v));
   s = s.replaceAll(RegExp(r'[^a-z0-9ñ]+'), ' ');
@@ -185,12 +191,12 @@ class TvPeruGuide implements GuideProvider {
 
   @override
   bool matches(Channel channel) {
-    final n = _normalizeName(channel.name);
+    final n = normalizeChannelName(channel.name);
     return n == 'tv peru' || n == 'tvperu';
   }
 
   @override
-  Future<List<GuideProgram>> day(DateTime limaDay) async {
+  Future<List<GuideProgram>> day(Channel channel, DateTime limaDay) async {
     final key = '${limaDay.day.toString().padLeft(2, '0')}-'
         '${limaDay.month.toString().padLeft(2, '0')}-${limaDay.year}';
     final cached = _cache[key];

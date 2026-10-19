@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -21,6 +22,7 @@ import 'package:open_tv/models/view_type.dart';
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/user_playlist.dart';
 import 'package:open_tv/screens/tv/guide/tv_guide.dart';
+import 'package:open_tv/screens/tv/guide/xmltv_guide.dart';
 import 'package:open_tv/screens/tv/player/tv_buffer.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:open_tv/screens/tv/tv_appearance.dart';
@@ -30,6 +32,8 @@ const String _autoRefreshKey = 'tvAutoRefresh';
 const String _bufferKey = 'tvBufferSecs';
 const String _engineKey = 'tvEngine';
 const String _hideDeadKey = 'tvHideDead';
+const String _epgUrlKey = 'tvEpgUrl';
+const String _epgShareBase = 'https://epgshare01.online/epgshare01/epg_ripper_';
 const String _hideAdultKey = 'tvHideAdult';
 const String _pinKey = 'tvParentalPin';
 const String _textScaleKey = 'tvTextScale';
@@ -41,7 +45,43 @@ class TvData {
   const TvData();
 
   static final IptvOrgCatalog _catalog = IptvOrgCatalog();
-  static final TvGuide _guide = TvGuide();
+  static final XmltvGuide _xmltv = XmltvGuide(urls: _epgUrls);
+  static final TvGuide _guide = TvGuide(providers: [TvPeruGuide(), _xmltv]);
+
+  /// XMLTV a descargar: el de cada país de tus favoritos y vistos (por defecto
+  /// Perú) y la URL personalizada, si la hay.
+  static Future<List<String>> _epgUrls() async {
+    final countries = await Sql.watchedCountries();
+    final urls = [
+      for (final c in countries.isEmpty ? const ['pe'] : countries)
+        '$_epgShareBase${c.toUpperCase()}1.xml.gz',
+    ];
+    final custom = (await Sql.getSetting(_epgUrlKey))?.trim();
+    if (custom != null && custom.isNotEmpty) urls.add(custom);
+    return urls;
+  }
+
+  /// Descarga y prepara las guías en segundo plano (no lanza).
+  Future<void> warmUpGuide() async {
+    try {
+      await _xmltv.load();
+    } catch (e) {
+      debugPrint('TvData: no se pudo preparar la guía: $e');
+    }
+  }
+
+  Future<String?> epgUrlSetting() async {
+    final v = (await Sql.getSetting(_epgUrlKey))?.trim();
+    return v == null || v.isEmpty ? null : v;
+  }
+
+  /// Guarda la URL XMLTV personalizada (`null` la quita) y recarga las guías.
+  Future<void> setEpgUrlSetting(String? url) async {
+    await Sql.setSetting(_epgUrlKey, url?.trim() ?? '');
+    unawaited(_xmltv.load(force: true).catchError((Object e) {
+      debugPrint('TvData: no se pudo recargar la guía: $e');
+    }));
+  }
 
   // --- Guía de programación -----------------------------------------------
 
@@ -52,7 +92,7 @@ class TvData {
   /// [GuideException] si no se pudo cargar.
   Future<List<GuideProgram>> guideDay(Channel channel, DateTime limaDay) async {
     final provider = _guide.providerFor(channel);
-    return provider == null ? const [] : provider.day(limaDay);
+    return provider == null ? const [] : provider.day(channel, limaDay);
   }
 
   /// Programa actual y siguiente; `null` si no hay guía o no se pudo cargar.
