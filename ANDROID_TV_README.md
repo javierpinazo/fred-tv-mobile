@@ -70,6 +70,7 @@ Conecta la TV por ADB y ejecuta `flutter run` con la TV como dispositivo.
 - **El control remoto no responde**: reinicia la app o prueba con otro control (o la app de control remoto del celular).
 - **Se ve la interfaz de teléfono en la TV**: la detección usa el modo de UI de Android; fuérzalo con `--dart-define=FORCE_TV=true`.
 - **Un canal no reproduce**: muchos canales gratuitos caen o tienen bloqueo geográfico. Prueba *Siguiente canal* o actualiza la lista.
+- **Motor de video**: en *Ajustes → Motor de video* eliges *Automático* (ExoPlayer y, si falla o no da imagen en 10 s, mpv con hardware y luego por software) o *Solo mpv*. ExoPlayer no permite elegir audio/subtítulos ni usa el buffer configurable; en las opciones del reproductor (mantén OK) puedes pasar ese canal a mpv.
 - **La lista de iptv-org no carga**: revisa la conexión; el catálogo se descarga de `iptv-org.github.io`.
 
 ## Roadmap
@@ -78,4 +79,4 @@ Conecta la TV por ADB y ejecuta `flutter run` con la TV como dispositivo.
 - [ ] Búsqueda por voz
 - [ ] Integración con Android TV Channels
 - [ ] Picture-in-Picture (PiP)
-- [ ] Reproductor ExoPlayer nativo
+- [x] Reproductor ExoPlayer nativo (con mpv de respaldo)
