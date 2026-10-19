@@ -73,6 +73,40 @@ void main() {
     expect(data.guideDayCalls.single, DateTime(2026, 10, 19));
   });
 
+  testWidgets('con muchos programas el foco llega igual al que se emite ahora',
+      (t) async {
+    // 40 programas de media hora; "ahora" cae en el número 30 (lejos de la
+    // pantalla): la lista debe desplazarse hasta él y enfocarlo.
+    final data = FakeTvData()
+      ..guidePrograms = [
+        for (var i = 0; i < 40; i++)
+          GuideProgram(
+            start: DateTime.utc(2026, 10, 19, 5).add(Duration(minutes: 30 * i)),
+            title: 'Programa $i',
+            description: 'Descripción del programa $i que ocupa un par de líneas.',
+          ),
+      ];
+    await pumpTv(
+      t,
+      Builder(
+        builder: (context) => Center(
+          child: ElevatedButton(
+            onPressed: () => showTvGuide(context,
+                data: data,
+                channel: _channel,
+                // 05:00 UTC + 15 h = 20:00 UTC → programa 30 (hora de Lima 15:00).
+                clock: () => DateTime.utc(2026, 10, 19, 20, 10)),
+            child: const Text('abrir'),
+          ),
+        ),
+      ),
+    );
+    await t.tap(find.text('abrir'));
+    await t.pumpAndSettle();
+    expect(isFocused(t, const ValueKey('tv-guide-item-30')), isTrue);
+    expect(find.text('Programa 30'), findsOneWidget);
+  });
+
   testWidgets('el foco empieza en el programa que se emite ahora', (t) async {
     final data = FakeTvData()..guidePrograms = _programs();
     await _open(t, data);

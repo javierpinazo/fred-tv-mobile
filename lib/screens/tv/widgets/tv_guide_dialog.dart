@@ -277,11 +277,15 @@ class _GuideDialogState extends State<_GuideDialog> {
       );
     }
     final now = _offset == 0 ? guideNowNext(_programs, _now()).now : null;
-    return ListView.builder(
-      shrinkWrap: true,
-      itemCount: _programs.length,
-      itemBuilder: (context, i) =>
-          _row(i, _programs[i], identical(_programs[i], now)),
+    // Sin carga perezosa: un día tiene unas decenas de filas y todas deben
+    // existir para poder enfocar la que se emite ahora aunque quede lejos.
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          for (var i = 0; i < _programs.length; i++)
+            _row(i, _programs[i], identical(_programs[i], now)),
+        ],
+      ),
     );
   }
 
