@@ -29,10 +29,8 @@ Future<void> _long(WidgetTester t) async {
 
 /// Rellena el diálogo de texto (el foco inicial está en el campo) y confirma.
 Future<void> _fillPrompt(WidgetTester t, String text) async {
-  await _ok(t); // modo edición
-  await t.enterText(find.byType(TextField), text);
-  await t.testTextInput.receiveAction(TextInputAction.done);
-  await t.pumpAndSettle();
+  await _ok(t); // abre el teclado propio
+  await typeOnTvKeyboard(t, text);
   await _key(t, LogicalKeyboardKey.arrowDown);
   await _ok(t); // botón de confirmar
 }

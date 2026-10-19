@@ -126,12 +126,30 @@ void main() {
     expect(isFocused(t, _nav(0)), isTrue);
   });
 
-  testWidgets('Atrás con el campo de búsqueda en edición vuelve al menú',
+  testWidgets('Atrás con el teclado abierto lo cierra y otro Atrás vuelve al menú',
       (t) async {
     await _home(t, _fake());
     await _goToTab(t, 3);
     await _key(t, LogicalKeyboardKey.arrowRight);
-    await _ok(t); // modo edición
+    await _ok(t); // abre el teclado propio
+    expect(find.byKey(const ValueKey('tv-key-q')), findsOneWidget);
+    await t.binding.handlePopRoute();
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('tv-key-q')), findsNothing);
+    expect(isFocused(t, const ValueKey('tv-search-field')), isTrue);
+    await t.binding.handlePopRoute();
+    await t.pumpAndSettle();
+    expect(isFocused(t, _nav(3)), isTrue);
+  });
+
+  testWidgets('Atrás con el teclado de sistema en edición vuelve al menú',
+      (t) async {
+    await _home(t, _fake());
+    await _goToTab(t, 3);
+    await _key(t, LogicalKeyboardKey.arrowRight);
+    await _ok(t);
+    await focusKey(t, 'tv-key-system');
+    await _ok(t); // pasa al teclado de sistema
     expect(t.testTextInput.isVisible, isTrue);
     await t.binding.handlePopRoute();
     await t.pumpAndSettle();

@@ -50,10 +50,8 @@ void main() {
     await _host(t);
     final f = showTvTextPrompt(_ctx, title: 'Nueva lista', label: 'Nombre');
     await t.pumpAndSettle();
-    await _ok(t); // entra a edición
-    await t.enterText(find.byType(TextField), ' Mi lista ');
-    await t.testTextInput.receiveAction(TextInputAction.done);
-    await t.pumpAndSettle();
+    await _ok(t); // abre el teclado propio
+    await typeOnTvKeyboard(t, ' Mi lista ');
     await _press(t, LogicalKeyboardKey.arrowDown);
     expect(isFocused(t, const ValueKey('tv-prompt-confirm')), isTrue);
     await _ok(t);

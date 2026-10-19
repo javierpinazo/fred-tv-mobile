@@ -21,9 +21,7 @@ Future<void> _ok(WidgetTester t) async {
 Future<void> _type(WidgetTester t, String key, String text) async {
   await focusKey(t, key);
   await _ok(t);
-  await t.enterText(find.byType(TextField), text);
-  await t.testTextInput.receiveAction(TextInputAction.done);
-  await t.pumpAndSettle();
+  await typeOnTvKeyboard(t, text);
 }
 
 Color? _colorOf(WidgetTester t, String text) =>

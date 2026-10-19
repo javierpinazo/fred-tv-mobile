@@ -26,10 +26,8 @@ Future<void> _key(WidgetTester t, LogicalKeyboardKey k) async {
 
 /// Escribe [text] en el campo (que debe tener el foco) y lo envía.
 Future<void> _typeAndSubmit(WidgetTester t, String text) async {
-  await _ok(t); // entra al modo edición
-  await t.enterText(find.byType(TextField), text);
-  await t.testTextInput.receiveAction(TextInputAction.search);
-  await t.pumpAndSettle();
+  await _ok(t); // abre el teclado propio
+  await typeOnTvKeyboard(t, text);
 }
 
 FakeTvData _fake([int n = 10]) =>
@@ -99,10 +97,13 @@ void main() {
     expect(find.text('Sin resultados para "xyz"'), findsOneWidget);
   });
 
-  testWidgets('escribir busca solo tras el debounce de 400 ms', (t) async {
+  testWidgets('con el teclado de sistema busca tras el debounce de 400 ms',
+      (t) async {
     final data = _fake();
     await pumpTv(t, TVSearch(data: data));
     await focusKey(t, 'tv-search-field');
+    await _ok(t);
+    await focusKey(t, 'tv-key-system');
     await _ok(t);
     await t.enterText(find.byType(TextField), 'canal');
     await t.pump(const Duration(milliseconds: 300));

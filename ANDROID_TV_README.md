@@ -16,6 +16,9 @@ Fred TV detecta automáticamente Android TV (modo televisión o `leanback`) y mu
 
 Pestañas del menú: **Canales**, **Favoritos**, **Mis listas**, **Buscar**, **Ajustes**.
 
+### Escribir texto (búsqueda, nombres, URLs)
+Al pulsar OK en un campo de texto se abre un **teclado propio** que se maneja con el D-pad: mueve el foco por las teclas y pulsa OK para escribir. Incluye números, `. - _ : / @`, **Mayús**, **Espacio**, **Borrar**, **Limpiar** y el botón principal (**Buscar**/**Listo**). Atrás cancela sin cambiar el texto. La tecla **Voz / sistema** abre el teclado de Android (voz, teclado físico o el de tu celular). La búsqueda se ejecuta al pulsar **Buscar**.
+
 ### Reproductor
 | Tecla | En vivo | Película / VOD |
 |---|---|---|

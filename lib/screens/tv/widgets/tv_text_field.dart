@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
+import 'package:open_tv/screens/tv/widgets/tv_keyboard.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
 /// Campo de texto apto para D-pad. Por defecto se comporta como un botón
@@ -70,6 +71,29 @@ class _TvTextFieldState extends State<TvTextField> {
     if (_editing && !_fieldNode.hasFocus) _exitEditing(refocus: false);
   }
 
+  /// OK abre el teclado propio (navegable con el D-pad). "Voz / sistema" pasa
+  /// al teclado de Android con el texto ya escrito.
+  Future<void> _openKeyboard() async {
+    final result = await showTvKeyboard(
+      context,
+      label: widget.label,
+      initial: widget.controller.text,
+      doneLabel:
+          widget.textInputAction == TextInputAction.search ? 'Buscar' : 'Listo',
+    );
+    if (!mounted || result == null) return;
+    widget.controller.value = TextEditingValue(
+      text: result.text,
+      selection: TextSelection.collapsed(offset: result.text.length),
+    );
+    if (result.useSystem) {
+      _startEditing();
+      return;
+    }
+    widget.onChanged?.call(result.text);
+    widget.onSubmitted?.call(result.text);
+  }
+
   void _startEditing() {
     setState(() {
       _editing = true;
@@ -97,13 +121,19 @@ class _TvTextFieldState extends State<TvTextField> {
 
   KeyEventResult _onEditingKey(FocusNode node, KeyEvent event) {
     if (event is KeyDownEvent || event is KeyRepeatEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      final key = event.logicalKey;
+      // ↑ sale del modo edición.
+      if (key == LogicalKeyboardKey.arrowUp) {
         _exitEditing(then: TraversalDirection.up);
         return KeyEventResult.handled;
       }
-      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        _exitEditing(then: TraversalDirection.down);
-        return KeyEventResult.handled;
+      // ↓ ← → son para navegar el teclado en pantalla de Android TV: se
+      // devuelven a la plataforma sin marcarlos como manejados (si no, el
+      // TextField los usa para mover el cursor y el teclado nunca los recibe).
+      if (key == LogicalKeyboardKey.arrowDown ||
+          key == LogicalKeyboardKey.arrowLeft ||
+          key == LogicalKeyboardKey.arrowRight) {
+        return KeyEventResult.skipRemainingHandlers;
       }
     }
     return KeyEventResult.ignored;
@@ -115,7 +145,7 @@ class _TvTextFieldState extends State<TvTextField> {
     return TvFocusable(
       focusNode: _buttonNode,
       autofocus: widget.autofocus && !_hasEdited,
-      onSelect: _startEditing,
+      onSelect: _openKeyboard,
       scaleOnFocus: false,
       builder: (context, focused) {
         final text = widget.controller.text;

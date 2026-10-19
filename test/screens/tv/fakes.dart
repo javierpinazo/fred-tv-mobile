@@ -324,3 +324,36 @@ Future<void> focusKey(WidgetTester t, String key) async {
   t.state<TvFocusableState>(f.first).focusNode.requestFocus();
   await t.pump();
 }
+
+/// Escribe [text] en el teclado propio de TV (debe estar abierto) y pulsa
+/// "Listo/Buscar". Con [clear] borra antes lo que hubiera.
+Future<void> typeOnTvKeyboard(
+  WidgetTester t,
+  String text, {
+  bool clear = true,
+  bool submit = true,
+}) async {
+  Future<void> press(String id) async {
+    await focusKey(t, 'tv-key-$id');
+    await t.sendKeyDownEvent(LogicalKeyboardKey.select);
+    await t.sendKeyUpEvent(LogicalKeyboardKey.select);
+    await t.pump();
+  }
+
+  if (clear) await press('clear');
+  for (final ch in text.split('')) {
+    if (ch == ' ') {
+      await press('space');
+    } else if (ch != ch.toLowerCase()) {
+      await press('shift');
+      await press(ch.toLowerCase());
+      await press('shift');
+    } else {
+      await press(ch);
+    }
+  }
+  if (submit) {
+    await press('done');
+    await t.pumpAndSettle();
+  }
+}
