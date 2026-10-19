@@ -8,6 +8,7 @@ import 'package:open_tv/backend/sql.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/id_data.dart';
 import 'package:open_tv/models/media_type.dart';
+import 'package:open_tv/screens/tv/player/tv_buffer.dart';
 import 'package:open_tv/screens/tv/player/tv_player_keys.dart';
 import 'package:open_tv/screens/tv/player/tv_playlist.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
@@ -146,6 +147,7 @@ class _TvPlayerState extends State<TvPlayer> {
       if (attemptIndex == 0) {
         await widget.data.addToHistory(id);
       }
+      final bufferSecs = await widget.data.bufferSeconds();
       final headers = await widget.data.channelHeaders(id);
       final seconds = channel.mediaType == MediaType.movie
           ? await Sql.getPosition(id)
@@ -157,6 +159,9 @@ class _TvPlayerState extends State<TvPlayer> {
         await platform.setProperty(
             'hwdec', attempt.hardwareDecoding ? 'auto-safe' : 'no');
         await platform.setProperty('network-timeout', '15');
+        for (final e in TvBuffer.mpvOptions(bufferSecs).entries) {
+          await platform.setProperty(e.key, e.value);
+        }
       }
       await _player.open(
         mk.Media(

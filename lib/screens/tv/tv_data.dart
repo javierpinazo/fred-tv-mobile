@@ -8,8 +8,10 @@ import 'package:open_tv/models/channel_http_headers.dart';
 import 'package:open_tv/models/filters.dart';
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/user_playlist.dart';
+import 'package:open_tv/screens/tv/player/tv_buffer.dart';
 
 const String _autoRefreshKey = 'tvAutoRefresh';
+const String _bufferKey = 'tvBufferSecs';
 
 /// Fachada inyectable sobre el backend para las pantallas de TV.
 class TvData {
@@ -84,6 +86,14 @@ class TvData {
 
   Future<void> setAutoRefreshEnabled(bool value) =>
       Sql.setSetting(_autoRefreshKey, value ? '1' : '0');
+
+  Future<int> bufferSeconds() async {
+    final raw = await Sql.getSetting(_bufferKey);
+    return int.tryParse(raw ?? '') ?? TvBuffer.defaultSeconds;
+  }
+
+  Future<void> setBufferSeconds(int seconds) =>
+      Sql.setSetting(_bufferKey, '$seconds');
 
   IptvOrgCatalog get catalog => _catalog;
 

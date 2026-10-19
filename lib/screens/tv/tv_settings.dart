@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/backend/sql.dart' show customSourceName;
 import 'package:open_tv/models/source.dart';
+import 'package:open_tv/screens/tv/player/tv_buffer.dart';
 import 'package:open_tv/screens/tv/tv_add_m3u_screen.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/tv_iptv_org_screen.dart';
@@ -30,6 +31,7 @@ class TVSettings extends StatefulWidget {
 class _TVSettingsState extends State<TVSettings> {
   List<_SourceEntry> _entries = [];
   bool _autoRefresh = true;
+  int _bufferSecs = TvBuffer.defaultSeconds;
   String? _message;
   bool _messageIsError = false;
   final FocusNode _topNode = FocusNode();
@@ -57,10 +59,12 @@ class _TVSettingsState extends State<TVSettings> {
         entries.add(_SourceEntry(s, await widget.data.lastRefresh(s.id!)));
       }
       final auto = await widget.data.autoRefreshEnabled();
+      final buffer = await widget.data.bufferSeconds();
       if (!mounted) return;
       setState(() {
         _entries = entries;
         _autoRefresh = auto;
+        _bufferSecs = buffer;
       });
     } catch (e) {
       debugPrint('TVSettings: error cargando fuentes: $e');
@@ -107,6 +111,12 @@ class _TVSettingsState extends State<TVSettings> {
     final value = !_autoRefresh;
     await widget.data.setAutoRefreshEnabled(value);
     if (mounted) setState(() => _autoRefresh = value);
+  }
+
+  Future<void> _cycleBuffer() async {
+    final value = TvBuffer.next(_bufferSecs);
+    await widget.data.setBufferSeconds(value);
+    if (mounted) setState(() => _bufferSecs = value);
   }
 
   Future<void> _openSourceMenu(_SourceEntry entry) async {
@@ -196,6 +206,23 @@ class _TVSettingsState extends State<TVSettings> {
                   ),
                 ),
                 onSelect: _toggleAuto,
+              ),
+            ),
+            _gap(
+              TvListRow(
+                key: const ValueKey('tv-settings-buffer'),
+                icon: Icons.speed,
+                title: 'Buffer de reproducción',
+                subtitle: 'Más segundos = menos tirones; empieza algo más tarde',
+                trailing: Text(
+                  TvBuffer.label(_bufferSecs),
+                  style: const TextStyle(
+                    fontSize: TvTheme.fontBody,
+                    fontWeight: FontWeight.bold,
+                    color: TvTheme.accent,
+                  ),
+                ),
+                onSelect: _cycleBuffer,
               ),
             ),
             if (_message != null)

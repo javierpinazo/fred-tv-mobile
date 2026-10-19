@@ -46,6 +46,7 @@ void main() {
     await focusKey(t, 'tv-settings-iptv');
     expect(isFocused(t, _iptv), isTrue);
     for (final key in [_m3u, _refresh, _auto,
+        const ValueKey('tv-settings-buffer'),
         const ValueKey('tv-source-1'), const ValueKey('tv-source-2')]) {
       await _key(t, LogicalKeyboardKey.arrowDown);
       expect(isFocused(t, key), isTrue, reason: '$key');
@@ -112,6 +113,24 @@ void main() {
     await _ok(t);
     expect(data.autoRefresh, isFalse);
     expect(find.text('Desactivada'), findsOneWidget);
+  });
+
+  testWidgets('el buffer de reproducción cambia con OK y se recuerda',
+      (t) async {
+    final data = FakeTvData();
+    await pumpTv(t, TVSettings(data: data));
+    expect(find.text('2 s'), findsOneWidget);
+    await focusKey(t, 'tv-settings-buffer');
+    await _ok(t);
+    expect(data.bufferSecs, 5);
+    expect(find.text('5 s'), findsOneWidget);
+    await _ok(t);
+    expect(data.bufferSecs, 10);
+    await _ok(t);
+    expect(data.bufferSecs, 0);
+    expect(find.text('Desactivado'), findsOneWidget);
+    await _ok(t);
+    expect(data.bufferSecs, 2);
   });
 
   testWidgets('desactivar una fuente', (t) async {

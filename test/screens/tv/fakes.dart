@@ -176,6 +176,14 @@ class FakeTvData extends TvData {
   @override
   Future<DateTime?> lastRefresh(int sourceId) async => lastRefreshes[sourceId];
 
+  int bufferSecs = 2;
+
+  @override
+  Future<int> bufferSeconds() async => bufferSecs;
+
+  @override
+  Future<void> setBufferSeconds(int seconds) async => bufferSecs = seconds;
+
   @override
   Future<bool> autoRefreshEnabled() async => autoRefresh;
 
