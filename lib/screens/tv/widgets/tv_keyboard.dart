@@ -223,7 +223,7 @@ class _TvKeyboardDialogState extends State<_TvKeyboardDialog> {
         children: [
           Text(
             widget.label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: TvTheme.fontSmall,
               color: TvTheme.textSecondary,
             ),

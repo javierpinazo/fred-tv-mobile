@@ -49,6 +49,8 @@ void main() {
     for (final key in [_m3u, _refresh, _auto,
         const ValueKey('tv-settings-buffer'),
         const ValueKey('tv-settings-engine'),
+        const ValueKey('tv-settings-textsize'),
+        const ValueKey('tv-settings-contrast'),
         const ValueKey('tv-source-1'), const ValueKey('tv-source-2')]) {
       await _key(t, LogicalKeyboardKey.arrowDown);
       expect(isFocused(t, key), isTrue, reason: '$key');
@@ -130,7 +132,11 @@ void main() {
     expect(data.bufferSecs, 10);
     await _ok(t);
     expect(data.bufferSecs, 0);
-    expect(find.text('Desactivado'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('tv-settings-buffer')),
+            matching: find.text('Desactivado')),
+        findsOneWidget);
     await _ok(t);
     expect(data.bufferSecs, 2);
   });
@@ -146,6 +152,32 @@ void main() {
     expect(find.text('Solo mpv'), findsOneWidget);
     await _ok(t);
     expect(data.engineMode, TvEngineMode.auto);
+  });
+
+  testWidgets('el tamaño de letra rota y se guarda', (t) async {
+    final data = FakeTvData();
+    await pumpTv(t, TVSettings(data: data));
+    expect(find.text('100 %'), findsOneWidget);
+    await focusKey(t, 'tv-settings-textsize');
+    await _ok(t);
+    expect(data.textScale, 1.15);
+    expect(find.text('115 %'), findsOneWidget);
+    await _ok(t);
+    expect(data.textScale, 1.3);
+    await _ok(t);
+    expect(data.textScale, 1.0);
+  });
+
+  testWidgets('el alto contraste se activa y desactiva', (t) async {
+    final data = FakeTvData();
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-contrast');
+    await _ok(t);
+    expect(data.highContrast, isTrue);
+    expect(find.text('Activado'), findsOneWidget);
+    await _ok(t);
+    expect(data.highContrast, isFalse);
+    expect(find.text('Desactivado'), findsWidgets);
   });
 
   testWidgets('desactivar una fuente', (t) async {

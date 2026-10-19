@@ -246,7 +246,7 @@ class _TvIptvOrgScreenState extends State<TvIptvOrgScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'No se pudo cargar el catálogo. Revisa tu conexión.',
               textAlign: TextAlign.center,
               style: TextStyle(

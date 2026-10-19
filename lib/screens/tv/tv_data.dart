@@ -11,10 +11,13 @@ import 'package:open_tv/models/user_playlist.dart';
 import 'package:open_tv/screens/tv/guide/tv_guide.dart';
 import 'package:open_tv/screens/tv/player/tv_buffer.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
+import 'package:open_tv/screens/tv/tv_appearance.dart';
 
 const String _autoRefreshKey = 'tvAutoRefresh';
 const String _bufferKey = 'tvBufferSecs';
 const String _engineKey = 'tvEngine';
+const String _textScaleKey = 'tvTextScale';
+const String _contrastKey = 'tvHighContrast';
 const String _channelEnginePrefix = 'tvEngine:';
 
 /// Fachada inyectable sobre el backend para las pantallas de TV.
@@ -129,6 +132,20 @@ class TvData {
 
   Future<void> setChannelEngine(String url, TvEngineKind kind) =>
       Sql.setSetting('$_channelEnginePrefix$url', kind.name);
+
+  // --- Accesibilidad ------------------------------------------------------
+
+  Future<double> textScaleSetting() async =>
+      TvAppearance.parseScale(await Sql.getSetting(_textScaleKey));
+
+  Future<void> setTextScaleSetting(double value) =>
+      Sql.setSetting(_textScaleKey, '$value');
+
+  Future<bool> highContrastSetting() async =>
+      await Sql.getSetting(_contrastKey) == '1';
+
+  Future<void> setHighContrastSetting(bool value) =>
+      Sql.setSetting(_contrastKey, value ? '1' : '0');
 
   Future<TvEngineMode> videoEngineMode() async =>
       TvEngineMode.fromName(await Sql.getSetting(_engineKey));

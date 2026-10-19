@@ -12,7 +12,9 @@ import 'package:open_tv/models/settings.dart';
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/source_type.dart';
 import 'package:open_tv/setup.dart';
+import 'package:open_tv/screens/tv/tv_appearance.dart';
 import 'package:open_tv/screens/tv/tv_bootstrap.dart';
+import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:media_kit/media_kit.dart';
 
 /// Detecta si la app corre en un Android TV (UiMode televisión o leanback).
@@ -78,6 +80,9 @@ Future<void> main() async {
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+    final data = const TvData();
+    TvAppearance.textScale.value = await data.textScaleSetting();
+    TvAppearance.applyHighContrast(await data.highContrastSetting());
     runApp(MyApp(skipSetup: true, settings: Settings(), isTv: true));
     return;
   }
@@ -110,8 +115,32 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final app = _buildApp();
+    if (!isTv) return app;
+    // Tamaño de letra (sin reconstruir) y alto contraste (reconstruye todo el
+    // árbol porque los colores se leen al construir cada widget).
+    return ValueListenableBuilder<int>(
+      valueListenable: TvAppearance.epoch,
+      builder: (context, epoch, _) => KeyedSubtree(
+        key: ValueKey(epoch),
+        child: _buildApp(),
+      ),
+    );
+  }
+
+  Widget _buildApp() {
     return MaterialApp(
       title: 'Fred TV',
+      builder: isTv
+          ? (context, child) => ValueListenableBuilder<double>(
+                valueListenable: TvAppearance.textScale,
+                builder: (context, scale, _) => MediaQuery(
+                  data: MediaQuery.of(context)
+                      .copyWith(textScaler: TextScaler.linear(scale)),
+                  child: child!,
+                ),
+              )
+          : null,
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,

@@ -6,9 +6,14 @@ abstract final class TvTheme {
   static const Color surface = Color(0xFF1C1C22);
   static const Color surfaceRaised = Color(0xFF2A2A33);
   static const Color accent = Color(0xFF3D8BFF);
-  static const Color focusBorder = Colors.white;
+  /// Alto contraste: se activa desde Ajustes (ver `TvAppearance`).
+  static bool highContrast = false;
+
+  static Color get focusBorder =>
+      highContrast ? const Color(0xFFFFEB3B) : Colors.white;
   static const Color textPrimary = Colors.white;
-  static const Color textSecondary = Color(0xFFB4B4BE);
+  static Color get textSecondary =>
+      highContrast ? const Color(0xFFF0F0F5) : const Color(0xFFB4B4BE);
   static const Color success = Color(0xFF4CAF50);
   static const Color error = Color(0xFFEF5350);
   static const Color favorite = Color(0xFFFFC107);
@@ -18,7 +23,7 @@ abstract final class TvTheme {
       EdgeInsets.symmetric(horizontal: 48, vertical: 27);
 
   static const double focusScale = 1.06;
-  static const double focusBorderWidth = 3.0;
+  static double get focusBorderWidth => highContrast ? 5.0 : 3.0;
   static const Duration focusDuration = Duration(milliseconds: 150);
   static const double radius = 10.0;
 

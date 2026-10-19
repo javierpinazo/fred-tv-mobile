@@ -440,7 +440,7 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
 
   Widget _buildContent() {
     if (_playlists.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(32),
           child: Text(
@@ -458,7 +458,7 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
     return Column(
       children: [
         if (_channels.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(24, 16, 24, 0),
             child: Text(
               'Esta lista está vacía. Mantén OK sobre cualquier canal y elige «Agregar a una lista…».',

@@ -622,7 +622,7 @@ class _TvPlayerState extends State<TvPlayer> {
                 const SizedBox(width: 16),
                 Text(
                   _cursor.positionLabel,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: TvTheme.fontBody,
                     color: TvTheme.textSecondary,
                   ),
@@ -637,7 +637,7 @@ class _TvPlayerState extends State<TvPlayer> {
                 if (_status().isNotEmpty) _status(),
                 if (_engine != null) _engine!.kind.label,
               ].join('  ·  '),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: TvTheme.fontBody,
                 color: TvTheme.textSecondary,
               ),
@@ -659,7 +659,7 @@ class _TvPlayerState extends State<TvPlayer> {
             const SizedBox(height: 10),
             Text(
               _keyHint(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: TvTheme.fontSmall,
                 color: TvTheme.textSecondary,
               ),
@@ -728,7 +728,7 @@ class _TvPlayerState extends State<TvPlayer> {
           const SizedBox(height: 6),
           Text(
             _channel.name,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: TvTheme.fontBody,
               color: TvTheme.textSecondary,
             ),

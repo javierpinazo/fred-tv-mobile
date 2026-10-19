@@ -4,6 +4,7 @@ import 'package:open_tv/backend/sql.dart' show customSourceName;
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/screens/tv/player/tv_buffer.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
+import 'package:open_tv/screens/tv/tv_appearance.dart';
 import 'package:open_tv/screens/tv/tv_add_m3u_screen.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/tv_iptv_org_screen.dart';
@@ -34,6 +35,8 @@ class _TVSettingsState extends State<TVSettings> {
   bool _autoRefresh = true;
   int _bufferSecs = TvBuffer.defaultSeconds;
   TvEngineMode _engineMode = TvEngineMode.auto;
+  double _textScale = 1.0;
+  bool _highContrast = false;
   String? _message;
   bool _messageIsError = false;
   final FocusNode _topNode = FocusNode();
@@ -63,12 +66,16 @@ class _TVSettingsState extends State<TVSettings> {
       final auto = await widget.data.autoRefreshEnabled();
       final buffer = await widget.data.bufferSeconds();
       final engine = await widget.data.videoEngineMode();
+      final scale = await widget.data.textScaleSetting();
+      final contrast = await widget.data.highContrastSetting();
       if (!mounted) return;
       setState(() {
         _entries = entries;
         _autoRefresh = auto;
         _bufferSecs = buffer;
         _engineMode = engine;
+        _textScale = scale;
+        _highContrast = contrast;
       });
     } catch (e) {
       debugPrint('TVSettings: error cargando fuentes: $e');
@@ -84,7 +91,8 @@ class _TVSettingsState extends State<TVSettings> {
   }
 
   Future<void> _open(Widget screen) async {
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+    await Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => screen));
     if (mounted) _load();
   }
 
@@ -121,6 +129,20 @@ class _TVSettingsState extends State<TVSettings> {
     final value = TvBuffer.next(_bufferSecs);
     await widget.data.setBufferSeconds(value);
     if (mounted) setState(() => _bufferSecs = value);
+  }
+
+  Future<void> _cycleTextScale() async {
+    final next = TvAppearance.nextScale(_textScale);
+    await widget.data.setTextScaleSetting(next);
+    TvAppearance.textScale.value = next;
+    if (mounted) setState(() => _textScale = next);
+  }
+
+  Future<void> _toggleContrast() async {
+    final next = !_highContrast;
+    await widget.data.setHighContrastSetting(next);
+    if (mounted) setState(() => _highContrast = next);
+    TvAppearance.applyHighContrast(next);
   }
 
   Future<void> _toggleEngine() async {
@@ -172,123 +194,166 @@ class _TVSettingsState extends State<TVSettings> {
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          children: [
-            _gap(
-              TvListRow(
-                key: const ValueKey('tv-settings-iptv'),
-                focusNode: _topNode,
-                icon: Icons.public,
-                title: 'Agregar desde iptv-org',
-                onSelect: () => _open(TvIptvOrgScreen(data: widget.data)),
-              ),
-            ),
-            _gap(
-              TvListRow(
-                key: const ValueKey('tv-settings-m3u'),
-                icon: Icons.link,
-                title: 'Agregar lista M3U por URL',
-                onSelect: () => _open(TvAddM3uScreen(data: widget.data)),
-              ),
-            ),
-            _gap(
-              TvListRow(
-                key: const ValueKey('tv-settings-refresh'),
-                icon: Icons.refresh,
-                title: 'Actualizar listas ahora',
-                onSelect: _refreshNow,
-              ),
-            ),
-            _gap(
-              TvListRow(
-                key: const ValueKey('tv-settings-auto'),
-                icon: Icons.autorenew,
-                title: 'Actualización automática (cada 24 h)',
-                trailing: Text(
-                  _autoRefresh ? 'Activada' : 'Desactivada',
-                  style: TextStyle(
-                    fontSize: TvTheme.fontBody,
-                    fontWeight: FontWeight.bold,
-                    color: _autoRefresh
-                        ? TvTheme.success
-                        : TvTheme.textSecondary,
-                  ),
-                ),
-                onSelect: _toggleAuto,
-              ),
-            ),
-            _gap(
-              TvListRow(
-                key: const ValueKey('tv-settings-buffer'),
-                icon: Icons.speed,
-                title: 'Buffer de reproducción',
-                subtitle: 'Más segundos = menos tirones; empieza algo más tarde',
-                trailing: Text(
-                  TvBuffer.label(_bufferSecs),
-                  style: const TextStyle(
-                    fontSize: TvTheme.fontBody,
-                    fontWeight: FontWeight.bold,
-                    color: TvTheme.accent,
-                  ),
-                ),
-                onSelect: _cycleBuffer,
-              ),
-            ),
-            _gap(
-              TvListRow(
-                key: const ValueKey('tv-settings-engine'),
-                icon: Icons.memory,
-                title: 'Motor de video',
-                subtitle: _engineMode == TvEngineMode.auto
-                    ? 'ExoPlayer y, si falla, mpv'
-                    : 'Solo mpv (el más compatible)',
-                trailing: Text(
-                  _engineMode.label,
-                  style: const TextStyle(
-                    fontSize: TvTheme.fontBody,
-                    fontWeight: FontWeight.bold,
-                    color: TvTheme.accent,
-                  ),
-                ),
-                onSelect: _toggleEngine,
-              ),
-            ),
-            if (_message != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  _message!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: TvTheme.fontBody,
-                    color: _messageIsError ? TvTheme.error : TvTheme.success,
-                  ),
-                ),
-              ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(4, 20, 4, 10),
+        child: Column(children: [
+          // El estado va fijo arriba: con tantas filas quedaba fuera de pantalla.
+          if (_message != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Text(
-                'Mis fuentes',
+                _message!,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: TvTheme.fontTitle,
-                  fontWeight: FontWeight.bold,
-                  color: TvTheme.textPrimary,
+                  fontSize: TvTheme.fontBody,
+                  color: _messageIsError ? TvTheme.error : TvTheme.success,
                 ),
               ),
             ),
-            for (final entry in _entries)
-              _gap(
-                TvListRow(
-                  key: ValueKey('tv-source-${entry.source.id}'),
-                  icon: Icons.playlist_play,
-                  title: entry.source.name,
-                  subtitle: _subtitle(entry),
-                  onSelect: () => _openSourceMenu(entry),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              children: [
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-iptv'),
+                    focusNode: _topNode,
+                    icon: Icons.public,
+                    title: 'Agregar desde iptv-org',
+                    onSelect: () => _open(TvIptvOrgScreen(data: widget.data)),
+                  ),
                 ),
-              ),
-          ],
-        ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-m3u'),
+                    icon: Icons.link,
+                    title: 'Agregar lista M3U por URL',
+                    onSelect: () => _open(TvAddM3uScreen(data: widget.data)),
+                  ),
+                ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-refresh'),
+                    icon: Icons.refresh,
+                    title: 'Actualizar listas ahora',
+                    onSelect: _refreshNow,
+                  ),
+                ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-auto'),
+                    icon: Icons.autorenew,
+                    title: 'Actualización automática (cada 24 h)',
+                    trailing: Text(
+                      _autoRefresh ? 'Activada' : 'Desactivada',
+                      style: TextStyle(
+                        fontSize: TvTheme.fontBody,
+                        fontWeight: FontWeight.bold,
+                        color: _autoRefresh
+                            ? TvTheme.success
+                            : TvTheme.textSecondary,
+                      ),
+                    ),
+                    onSelect: _toggleAuto,
+                  ),
+                ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-buffer'),
+                    icon: Icons.speed,
+                    title: 'Buffer de reproducción',
+                    subtitle:
+                        'Más segundos = menos tirones; empieza algo más tarde',
+                    trailing: Text(
+                      TvBuffer.label(_bufferSecs),
+                      style: const TextStyle(
+                        fontSize: TvTheme.fontBody,
+                        fontWeight: FontWeight.bold,
+                        color: TvTheme.accent,
+                      ),
+                    ),
+                    onSelect: _cycleBuffer,
+                  ),
+                ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-engine'),
+                    icon: Icons.memory,
+                    title: 'Motor de video',
+                    subtitle: _engineMode == TvEngineMode.auto
+                        ? 'ExoPlayer y, si falla, mpv'
+                        : 'Solo mpv (el más compatible)',
+                    trailing: Text(
+                      _engineMode.label,
+                      style: const TextStyle(
+                        fontSize: TvTheme.fontBody,
+                        fontWeight: FontWeight.bold,
+                        color: TvTheme.accent,
+                      ),
+                    ),
+                    onSelect: _toggleEngine,
+                  ),
+                ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-textsize'),
+                    icon: Icons.format_size,
+                    title: 'Tamaño de letra',
+                    subtitle: 'Agranda los textos de toda la interfaz',
+                    trailing: Text(
+                      TvAppearance.scaleLabel(_textScale),
+                      style: const TextStyle(
+                        fontSize: TvTheme.fontBody,
+                        fontWeight: FontWeight.bold,
+                        color: TvTheme.accent,
+                      ),
+                    ),
+                    onSelect: _cycleTextScale,
+                  ),
+                ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-contrast'),
+                    icon: Icons.contrast,
+                    title: 'Alto contraste',
+                    subtitle:
+                        'Texto más claro y borde de foco amarillo más grueso',
+                    trailing: Text(
+                      _highContrast ? 'Activado' : 'Desactivado',
+                      style: TextStyle(
+                        fontSize: TvTheme.fontBody,
+                        fontWeight: FontWeight.bold,
+                        color: _highContrast
+                            ? TvTheme.success
+                            : TvTheme.textSecondary,
+                      ),
+                    ),
+                    onSelect: _toggleContrast,
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(4, 20, 4, 10),
+                  child: Text(
+                    'Mis fuentes',
+                    style: TextStyle(
+                      fontSize: TvTheme.fontTitle,
+                      fontWeight: FontWeight.bold,
+                      color: TvTheme.textPrimary,
+                    ),
+                  ),
+                ),
+                for (final entry in _entries)
+                  _gap(
+                    TvListRow(
+                      key: ValueKey('tv-source-${entry.source.id}'),
+                      icon: Icons.playlist_play,
+                      title: entry.source.name,
+                      subtitle: _subtitle(entry),
+                      onSelect: () => _openSourceMenu(entry),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ]),
       ),
     );
   }

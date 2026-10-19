@@ -214,6 +214,22 @@ class FakeTvData extends TvData {
   Future<void> setChannelEngine(String url, TvEngineKind kind) async =>
       channelEngines[url] = kind;
 
+  double textScale = 1.0;
+  bool highContrast = false;
+
+  @override
+  Future<double> textScaleSetting() async => textScale;
+
+  @override
+  Future<void> setTextScaleSetting(double value) async => textScale = value;
+
+  @override
+  Future<bool> highContrastSetting() async => highContrast;
+
+  @override
+  Future<void> setHighContrastSetting(bool value) async =>
+      highContrast = value;
+
   int bufferSecs = 2;
 
   @override

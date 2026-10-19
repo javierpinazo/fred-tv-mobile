@@ -73,7 +73,7 @@ class TvListRow extends StatelessWidget {
                       subtitle!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: TvTheme.fontSmall,
                         color: TvTheme.textSecondary,
                       ),

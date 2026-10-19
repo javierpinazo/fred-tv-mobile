@@ -327,7 +327,7 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
             ],
           ),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(top: 8, bottom: 4),
           child: Text(
             'OK Reproducir  ·  Mantén OK Opciones  ·  ← Menú',
@@ -416,7 +416,7 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
                 ? 'Aún no tienes favoritos. Mantén presionado OK sobre un canal para agregarlo.'
                 : 'No hay canales en este grupo',
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: TvTheme.fontBody,
               color: TvTheme.textSecondary,
             ),

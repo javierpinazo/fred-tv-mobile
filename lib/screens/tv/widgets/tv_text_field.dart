@@ -223,7 +223,7 @@ class _TvTextFieldState extends State<TvTextField> {
               children: [
                 Text(
                   widget.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: TvTheme.fontSmall,
                     color: TvTheme.textSecondary,
                   ),

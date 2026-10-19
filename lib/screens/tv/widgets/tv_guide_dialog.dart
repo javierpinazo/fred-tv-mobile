@@ -202,7 +202,7 @@ class _GuideDialogState extends State<_GuideDialog> {
                           p.description!,
                           maxLines: focused ? 4 : 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: TvTheme.fontSmall,
                             color: TvTheme.textSecondary,
                           ),
@@ -263,7 +263,7 @@ class _GuideDialogState extends State<_GuideDialog> {
       );
     }
     if (_programs.isEmpty) {
-      return const SizedBox(
+      return SizedBox(
         height: 120,
         child: Center(
           child: Text(

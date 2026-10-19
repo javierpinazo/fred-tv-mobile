@@ -15,7 +15,7 @@ class TvChannelCard extends StatelessWidget {
   final bool focused;
 
   Widget _fallbackIcon() =>
-      const Icon(Icons.live_tv, color: TvTheme.textSecondary, size: 40);
+      Icon(Icons.live_tv, color: TvTheme.textSecondary, size: 40);
 
   @override
   Widget build(BuildContext context) {
