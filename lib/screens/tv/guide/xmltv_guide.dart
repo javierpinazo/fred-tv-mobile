@@ -109,8 +109,11 @@ bool _parenthesesAreCompatible(String name) {
 
 /// Empareja nombres de canal de iptv-org con los de un XMLTV.
 class XmltvIndex {
-  XmltvIndex(Map<String, List<String>> names) {
+  /// [onlyIds] limita el índice a los canales que tienen datos (no tiene
+  /// sentido ofrecer una guía vacía).
+  XmltvIndex(Map<String, List<String>> names, {Set<String>? onlyIds}) {
     names.forEach((id, list) {
+      if (onlyIds != null && !onlyIds.contains(id)) return;
       for (final name in list) {
         // "NOMBRE (ALIAS)": se prueban las dos partes.
         final outer = name.replaceAll(RegExp(r'\([^)]*\)'), ' ');
@@ -229,7 +232,7 @@ class XmltvGuide implements GuideProvider {
     }
     if (list.isEmpty || anyOk) {
       _data = merged;
-      _index = XmltvIndex(merged.names);
+      _index = XmltvIndex(merged.names, onlyIds: merged.programs.keys.toSet());
       _matchCache.clear();
       _loadedAt = DateTime.now();
     }

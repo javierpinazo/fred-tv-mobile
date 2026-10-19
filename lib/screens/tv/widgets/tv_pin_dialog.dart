@@ -78,8 +78,9 @@ class _PinDialogState extends State<_PinDialog> {
             ? Icon(icon, color: TvTheme.textPrimary)
             : Text(
                 label,
-                style: const TextStyle(
-                  fontSize: TvTheme.fontTitle,
+                style: TextStyle(
+                  // Los dígitos grandes; "Cancelar" en letra normal para que quepa.
+                  fontSize: label.length > 1 ? TvTheme.fontSmall : TvTheme.fontTitle,
                   color: TvTheme.textPrimary,
                 ),
               ),

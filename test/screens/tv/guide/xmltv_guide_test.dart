@@ -92,6 +92,12 @@ void main() {
     final data = parseXmltv(_xml);
     final index = XmltvIndex(data.names);
 
+    test('onlyIds limita el índice a esos canales', () {
+      final only = XmltvIndex(data.names, onlyIds: {'ATV.(ATV).pe'});
+      expect(only.match('ATV (1080p)'), 'ATV.(ATV).pe');
+      expect(only.match('A&E (720p)'), isNull);
+    });
+
     test('un canal de iptv-org empareja con el XMLTV por sus palabras', () {
       expect(index.match('HBO 2 Latin America HD (1080p)'),
           'HBO.2.HD.(HBO.2.HD).pe');
@@ -185,6 +191,16 @@ void main() {
     test('también acepta XML sin comprimir', () async {
       final g = guide(MockClient((_) async => http.Response.bytes(utf8.encode(_xml), 200)));
       await g.load();
+      expect(g.matches(_ch('ATV (1080p)')), isTrue);
+    });
+
+    test('un canal del XMLTV sin programas no se ofrece (no hay guía que ver)',
+        () async {
+      final g = guide(MockClient((_) async => http.Response.bytes(utf8.encode(_xml), 200)));
+      await g.load();
+      // A&E, FOX SPORTS y FOX SPORTS 2 están en el XML pero no tienen programas.
+      expect(g.matches(_ch('A&E (720p)')), isFalse);
+      expect(g.matches(_ch('Fox Sports (720p)')), isFalse);
       expect(g.matches(_ch('ATV (1080p)')), isTrue);
     });
 
