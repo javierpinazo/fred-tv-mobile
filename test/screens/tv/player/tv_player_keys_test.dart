@@ -8,6 +8,19 @@ TvPlayerCommand _vod(LogicalKeyboardKey k) =>
     mapTvPlayerKey(k, isLive: false);
 
 void main() {
+  test('los dígitos del control (y del teclado numérico) se reconocen', () {
+    expect(digitForKey(LogicalKeyboardKey.digit0), 0);
+    expect(digitForKey(LogicalKeyboardKey.digit7), 7);
+    expect(digitForKey(LogicalKeyboardKey.numpad3), 3);
+    expect(digitForKey(LogicalKeyboardKey.keyA), isNull);
+    expect(digitForKey(LogicalKeyboardKey.select), isNull);
+  });
+
+  test('la tecla "último canal" solo actúa en directo', () {
+    expect(_live(LogicalKeyboardKey.mediaLast), TvPlayerCommand.lastChannel);
+    expect(_vod(LogicalKeyboardKey.mediaLast), TvPlayerCommand.none);
+  });
+
   test('arriba/abajo y CH+/CH-', () {
     expect(_live(LogicalKeyboardKey.arrowUp), TvPlayerCommand.previousChannel);
     expect(_live(LogicalKeyboardKey.channelDown), TvPlayerCommand.previousChannel);

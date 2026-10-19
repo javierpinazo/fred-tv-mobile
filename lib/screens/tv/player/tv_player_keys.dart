@@ -12,6 +12,7 @@ enum TvPlayerCommand {
   showOverlay,
   toggleOverlay,
   openOptions,
+  lastChannel,
   exit,
 }
 
@@ -21,6 +22,39 @@ final Set<LogicalKeyboardKey> _okKeys = {
   LogicalKeyboardKey.numpadEnter,
   LogicalKeyboardKey.gameButtonA,
 };
+
+/// Dígito (0‑9) de una tecla del control o del teclado numérico; `null` si no
+/// es un dígito.
+int? digitForKey(LogicalKeyboardKey key) {
+  const digits = [
+    LogicalKeyboardKey.digit0,
+    LogicalKeyboardKey.digit1,
+    LogicalKeyboardKey.digit2,
+    LogicalKeyboardKey.digit3,
+    LogicalKeyboardKey.digit4,
+    LogicalKeyboardKey.digit5,
+    LogicalKeyboardKey.digit6,
+    LogicalKeyboardKey.digit7,
+    LogicalKeyboardKey.digit8,
+    LogicalKeyboardKey.digit9,
+  ];
+  const pad = [
+    LogicalKeyboardKey.numpad0,
+    LogicalKeyboardKey.numpad1,
+    LogicalKeyboardKey.numpad2,
+    LogicalKeyboardKey.numpad3,
+    LogicalKeyboardKey.numpad4,
+    LogicalKeyboardKey.numpad5,
+    LogicalKeyboardKey.numpad6,
+    LogicalKeyboardKey.numpad7,
+    LogicalKeyboardKey.numpad8,
+    LogicalKeyboardKey.numpad9,
+  ];
+  final i = digits.indexOf(key);
+  if (i >= 0) return i;
+  final j = pad.indexOf(key);
+  return j >= 0 ? j : null;
+}
 
 /// Convierte una tecla del control remoto en un comando del reproductor TV.
 ///
@@ -47,6 +81,9 @@ TvPlayerCommand mapTvPlayerKey(LogicalKeyboardKey key, {required bool isLive}) {
   }
   if (key == LogicalKeyboardKey.arrowRight) {
     return isLive ? TvPlayerCommand.showOverlay : TvPlayerCommand.seekForward;
+  }
+  if (key == LogicalKeyboardKey.mediaLast) {
+    return isLive ? TvPlayerCommand.lastChannel : TvPlayerCommand.none;
   }
   if (key == LogicalKeyboardKey.mediaRewind) {
     return isLive ? TvPlayerCommand.none : TvPlayerCommand.seekBack;

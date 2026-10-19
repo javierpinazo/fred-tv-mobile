@@ -9,6 +9,7 @@ import 'package:open_tv/models/media_type.dart';
 import 'package:open_tv/screens/tv/guide/tv_guide.dart';
 import 'package:open_tv/screens/tv/player/exo_engine.dart';
 import 'package:open_tv/screens/tv/player/mpv_engine.dart';
+import 'package:open_tv/screens/tv/player/tv_channel_number.dart';
 import 'package:open_tv/screens/tv/player/tv_engine.dart';
 import 'package:open_tv/screens/tv/player/tv_player_keys.dart';
 import 'package:open_tv/screens/tv/player/tv_playlist.dart';
@@ -64,6 +65,8 @@ class _TvPlayerState extends State<TvPlayer> {
   List<TvPlaybackAttempt> _plan = const [];
   TvEngineKind? _preferEngine;
   GuideNowNext? _guideNow;
+  final TvChannelNumberBuffer _number = TvChannelNumberBuffer();
+  Timer? _numberTimer;
   bool _frameShown = false;
   final FocusNode _focus = FocusNode();
   final FocusNode _retryFocus = FocusNode();
@@ -100,6 +103,7 @@ class _TvPlayerState extends State<TvPlayer> {
   @override
   void dispose() {
     _overlayTimer?.cancel();
+    _numberTimer?.cancel();
     _firstFrameTimer?.cancel();
     _stallTimer?.cancel();
     _reconnectTimer?.cancel();
@@ -342,13 +346,46 @@ class _TvPlayerState extends State<TvPlayer> {
     }
   }
 
-  void _zap(bool forward) {
-    forward ? _cursor.next() : _cursor.previous();
+  void _zap(bool forward) =>
+      _switchChannel(() => forward ? _cursor.next() : _cursor.previous());
+
+  /// Cambia de canal con [move] (que mueve el cursor) y arranca el nuevo.
+  void _switchChannel(VoidCallback move) {
+    move();
     _preferEngine = null;
     _liveReconnects = 0;
     setState(() {});
     _play(0);
     _showOverlay();
+  }
+
+  void _onDigit(int digit) {
+    _number.add(digit);
+    _numberTimer?.cancel();
+    _numberTimer = Timer(TvChannelNumberBuffer.timeout, _commitNumber);
+    setState(() {});
+    _showOverlay();
+  }
+
+  /// Salta al número tecleado (si existe en la lista) y limpia el buffer.
+  void _commitNumber() {
+    _numberTimer?.cancel();
+    final index = _number.resolve(_cursor.channels.length);
+    _number.clear();
+    if (!mounted) return;
+    if (index != null && index != _cursor.index) {
+      _switchChannel(() => _cursor.jumpTo(index + 1));
+    } else {
+      setState(() {});
+    }
+  }
+
+  void _goLast() {
+    if (!_cursor.hasLast) {
+      _showOverlay();
+      return;
+    }
+    _switchChannel(_cursor.goToLast);
   }
 
   void _seek(Duration delta) {
@@ -378,6 +415,8 @@ class _TvPlayerState extends State<TvPlayer> {
         _zap(false);
       case TvPlayerCommand.nextChannel:
         _zap(true);
+      case TvPlayerCommand.lastChannel:
+        _goLast();
       case TvPlayerCommand.showOverlay:
         _showOverlay();
       case TvPlayerCommand.toggleOverlay:
@@ -424,12 +463,22 @@ class _TvPlayerState extends State<TvPlayer> {
         final wasLong = _okLong;
         _okPressed = false;
         _okLong = false;
-        if (!wasLong) _run(mapTvPlayerKey(key, isLive: _isLive));
+        if (!wasLong) {
+          // Con un número a medias, OK lo confirma en vez de mostrar el overlay.
+          _number.isEmpty
+              ? _run(mapTvPlayerKey(key, isLive: _isLive))
+              : _commitNumber();
+        }
         return KeyEventResult.handled;
       }
     }
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
+    }
+    final digit = digitForKey(key);
+    if (digit != null && _isLive && event is KeyDownEvent) {
+      _onDigit(digit);
+      return KeyEventResult.handled;
     }
     final command = mapTvPlayerKey(key, isLive: _isLive);
     if (command == TvPlayerCommand.none) return KeyEventResult.ignored;
@@ -449,6 +498,7 @@ class _TvPlayerState extends State<TvPlayer> {
       options: [
         if (engine?.supportsTracks == true) ('Audio', 'audio'),
         if (engine?.supportsTracks == true) ('Subtítulos', 'subs'),
+        if (_cursor.hasLast) ('Volver al canal anterior', 'last'),
         ('Ajustar imagen', 'fit'),
         if (widget.data.hasGuide(channel)) ('Ver programación', 'guide'),
         (
@@ -467,6 +517,8 @@ class _TvPlayerState extends State<TvPlayer> {
       case 'subs':
         await _openTrackModal(
             'Subtítulos', engine!.subtitleTracks(), engine.selectSubtitle);
+      case 'last':
+        _goLast();
       case 'guide':
         await showTvGuide(context, data: widget.data, channel: channel);
       case 'fit':
@@ -569,6 +621,28 @@ class _TvPlayerState extends State<TvPlayer> {
                 ),
               if (_hasError) _buildError(),
               if (_overlayVisible && !_hasError) _buildOverlay(),
+              if (!_number.isEmpty)
+                Positioned(
+                  top: 32,
+                  right: 48,
+                  child: Container(
+                    key: const ValueKey('tv-player-number'),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(TvTheme.radius),
+                    ),
+                    child: Text(
+                      'Canal ${_number.value}',
+                      style: const TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: TvTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

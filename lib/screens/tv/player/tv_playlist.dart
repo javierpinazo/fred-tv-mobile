@@ -13,13 +13,38 @@ class TvPlaylistCursor {
 
   final List<Channel> channels;
   int _index;
+  int? _last;
 
   int get index => _index;
   Channel get current => channels[_index];
 
-  void next() => _index = (_index + 1) % channels.length;
+  /// Si hay un canal visto antes del actual al que volver.
+  bool get hasLast => _last != null;
 
-  void previous() => _index = (_index - 1 + channels.length) % channels.length;
+  void _moveTo(int index) {
+    if (index == _index) return;
+    _last = _index;
+    _index = index;
+  }
+
+  void next() => _moveTo((_index + 1) % channels.length);
+
+  void previous() => _moveTo((_index - 1 + channels.length) % channels.length);
+
+  /// Salta al canal [number] (base 1). `false` si no existe.
+  bool jumpTo(int number) {
+    if (number < 1 || number > channels.length) return false;
+    _moveTo(number - 1);
+    return true;
+  }
+
+  /// Alterna con el canal visto justo antes. `false` si no hay ninguno.
+  bool goToLast() {
+    final last = _last;
+    if (last == null) return false;
+    _moveTo(last);
+    return true;
+  }
 
   String get positionLabel => '${_index + 1} / ${channels.length}';
 }
