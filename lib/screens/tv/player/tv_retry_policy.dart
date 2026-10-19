@@ -40,6 +40,15 @@ abstract final class TvRetryPolicy {
   static const int maxLiveReconnects = 3;
   static const Duration reconnectDelay = Duration(seconds: 2);
 
+  /// Espera tras un error "transitorio" antes de comprobar si la imagen se paró.
+  static const Duration stallCheckDelay = Duration(seconds: 4);
+
+  /// mpv avisa de cortes de conexión sueltos (`tcp: ffurl_read returned EOF`)
+  /// que él mismo recupera; reiniciar el canal por cada uno provoca tirones.
+  /// ExoPlayer, en cambio, queda parado tras un error.
+  static bool errorIsTransientWhilePlaying(TvEngineKind engine) =>
+      engine == TvEngineKind.mpv;
+
   static const TvPlaybackAttempt _exo =
       TvPlaybackAttempt(engine: TvEngineKind.exo);
   static const TvPlaybackAttempt _mpvHw =

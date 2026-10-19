@@ -7,6 +7,7 @@ import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/id_data.dart';
 import 'package:open_tv/models/media_type.dart';
 import 'package:open_tv/screens/tv/player/exo_engine.dart';
+import 'package:open_tv/screens/tv/player/hls_probe.dart';
 import 'package:open_tv/screens/tv/player/mpv_engine.dart';
 import 'package:open_tv/screens/tv/player/tv_engine.dart';
 import 'package:open_tv/screens/tv/player/tv_player_keys.dart';
@@ -67,6 +68,7 @@ class _TvPlayerState extends State<TvPlayer> {
 
   Timer? _overlayTimer;
   Timer? _firstFrameTimer;
+  Timer? _stallTimer;
   Timer? _reconnectTimer;
 
   bool _exiting = false;
@@ -97,6 +99,7 @@ class _TvPlayerState extends State<TvPlayer> {
   void dispose() {
     _overlayTimer?.cancel();
     _firstFrameTimer?.cancel();
+    _stallTimer?.cancel();
     _reconnectTimer?.cancel();
     for (final s in _engineSubs) {
       s.cancel();
@@ -116,6 +119,7 @@ class _TvPlayerState extends State<TvPlayer> {
     _attemptIndex = attemptIndex;
     _frameShown = false;
     _firstFrameTimer?.cancel();
+    _stallTimer?.cancel();
     _reconnectTimer?.cancel();
     if (mounted) {
       final hadError = _hasError;
@@ -138,15 +142,31 @@ class _TvPlayerState extends State<TvPlayer> {
         _showError();
         return;
       }
+      final headers = await widget.data.channelHeaders(id);
+      final userAgent = headers?.userAgent ?? tvFallbackUserAgent;
+      final extraHeaders = {
+        if (headers?.referrer != null) 'Referer': headers!.referrer!,
+        if (headers?.httpOrigin != null) 'Origin': headers!.httpOrigin!,
+      };
       if (attemptIndex == 0) {
         await widget.data.addToHistory(id);
         final mode = await widget.data.videoEngineMode();
         _plan = TvRetryPolicy.plan(channel.url!,
             mode: mode, prefer: _preferEngine);
+        // Un HLS que declara solo video deja a ExoPlayer sin audio: va a mpv,
+        // salvo que el usuario haya elegido ExoPlayer para este canal.
+        if (_plan.first.engine == TvEngineKind.exo &&
+            _preferEngine != TvEngineKind.exo &&
+            await exoWouldDropAudio(channel.url!,
+                userAgent: userAgent, headers: extraHeaders)) {
+          if (!mounted || generation != _generation) return;
+          debugPrint('TvPlayer: HLS sin audio declarado, se usa mpv');
+          _plan = TvRetryPolicy.plan(channel.url!,
+              mode: TvEngineMode.mpv, prefer: TvEngineKind.mpv);
+        }
       }
       final attempt = _plan[attemptIndex];
       final bufferSecs = await widget.data.bufferSeconds();
-      final headers = await widget.data.channelHeaders(id);
       final seconds = channel.mediaType == MediaType.movie
           ? await Sql.getPosition(id)
           : null;
@@ -157,11 +177,8 @@ class _TvPlayerState extends State<TvPlayer> {
       await _engine!
           .open(TvMedia(
             url: channel.url!,
-            userAgent: headers?.userAgent ?? tvFallbackUserAgent,
-            headers: {
-              if (headers?.referrer != null) 'Referer': headers!.referrer!,
-              if (headers?.httpOrigin != null) 'Origin': headers!.httpOrigin!,
-            },
+            userAgent: userAgent,
+            headers: extraHeaders,
             start: seconds != null ? Duration(seconds: seconds) : null,
             bufferSecs: bufferSecs,
             hardwareDecoding: attempt.hardwareDecoding,
@@ -251,8 +268,33 @@ class _TvPlayerState extends State<TvPlayer> {
     if (_loading) {
       _onFailure(_generation);
     } else if (_isLive) {
-      _reconnectLive();
+      final engine = _engine;
+      if (engine != null &&
+          TvRetryPolicy.errorIsTransientWhilePlaying(engine.kind)) {
+        _checkStall(engine);
+      } else {
+        _reconnectLive();
+      }
     }
+  }
+
+  /// Tras un error de mpv con imagen en pantalla: solo se reconecta si la
+  /// reproducción realmente se detuvo (la posición no avanzó).
+  void _checkStall(TvEngine engine) {
+    if (_stallTimer?.isActive == true) return;
+    final before = engine.position;
+    final generation = _generation;
+    _stallTimer = Timer(TvRetryPolicy.stallCheckDelay, () {
+      if (!mounted ||
+          _exiting ||
+          _hasError ||
+          _loading ||
+          generation != _generation ||
+          !identical(engine, _engine)) {
+        return;
+      }
+      if (engine.position <= before) _reconnectLive();
+    });
   }
 
   void _onCompleted(bool completed) {

@@ -93,4 +93,11 @@ void main() {
     expect(TvEngineMode.fromName(null), TvEngineMode.auto);
     expect(TvEngineMode.fromName('zzz'), TvEngineMode.auto);
   });
+
+  test('con imagen en pantalla, un error de mpv es transitorio y de ExoPlayer no',
+      () {
+    expect(TvRetryPolicy.errorIsTransientWhilePlaying(TvEngineKind.mpv), isTrue);
+    expect(TvRetryPolicy.errorIsTransientWhilePlaying(TvEngineKind.exo), isFalse);
+    expect(TvRetryPolicy.stallCheckDelay, const Duration(seconds: 4));
+  });
 }
