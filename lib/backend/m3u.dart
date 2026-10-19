@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:open_tv/backend/sql.dart';
 import 'package:open_tv/backend/utils.dart';
+import 'package:open_tv/backend/countries.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/channel_http_headers.dart';
 import 'package:open_tv/models/channel_preserve.dart';
@@ -87,10 +88,25 @@ MediaType getMediaType(String url) {
   return MediaType.livestream;
 }
 
+/// País (`pe`) del `tvg-id` de iptv-org (`Nombre.pe@SD`); `null` si el sufijo
+/// no es un país conocido.
+String? countryFromTvgId(String? tvgId) {
+  if (tvgId == null) return null;
+  final at = tvgId.indexOf('@');
+  final base = at >= 0 ? tvgId.substring(0, at) : tvgId;
+  final dot = base.lastIndexOf('.');
+  if (dot < 0) return null;
+  final code = base.substring(dot + 1).toLowerCase();
+  return countryNames.containsKey(code) ? code : null;
+}
+
 Channel? getChannelFromLines(String l1, String last) {
   var name = getName(l1)?.trim();
   if (name == null) return null;
+  final tvgId = idRegex.firstMatch(l1)?[1]?.trim();
   return Channel(
+      tvgId: tvgId != null && tvgId.isNotEmpty ? tvgId : null,
+      country: countryFromTvgId(tvgId),
       name: name,
       group: groupRegex.firstMatch(l1)?[1]?.trim(),
       image: logoRegex.firstMatch(l1)?[1]?.trim(),

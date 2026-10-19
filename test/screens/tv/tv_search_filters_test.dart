@@ -13,6 +13,14 @@ void main() {
     expect(f.sourceIds, [1, 2]);
   });
 
+  test('con país elegido se puede buscar sin texto', () {
+    final f = buildTvSearchFilters('', [1], country: 'pe')!;
+    expect(f.country, 'pe');
+    expect(f.query, '');
+    expect(buildTvSearchFilters(' a ', [1], country: 'pe'), isNotNull);
+    expect(buildTvSearchFilters('', [1]), isNull);
+  });
+
   test('null con menos de 2 letras',
       () => expect(buildTvSearchFilters(' a ', [1]), isNull));
 

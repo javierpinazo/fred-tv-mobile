@@ -58,6 +58,10 @@ class TvData {
     return Sql.search(f);
   }
 
+  /// Países con canales (de más a menos), para el filtro de Búsqueda.
+  Future<List<({String code, int count})>> countries() async =>
+      Sql.countries(await enabledSourceIds());
+
   // --- Estado de los canales ----------------------------------------------
 
   Future<bool> hideDeadSetting() async =>

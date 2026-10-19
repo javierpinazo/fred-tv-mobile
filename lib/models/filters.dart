@@ -15,6 +15,9 @@ class Filters {
   /// Oculta los canales marcados como caídos.
   bool hideDead;
 
+  /// Solo canales de este país (código en minúsculas).
+  String? country;
+
   Filters({
     this.query,
     this.sourceIds,
@@ -26,5 +29,6 @@ class Filters {
     this.groupName,
     this.useKeywords = false,
     this.hideDead = false,
+    this.country,
   });
 }

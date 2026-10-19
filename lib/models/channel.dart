@@ -12,6 +12,10 @@ class Channel {
   bool favorite;
   int? seriesId;
   int? streamId;
+  String? tvgId;
+
+  /// País en minúsculas (`pe`), derivado del `tvg-id`.
+  String? country;
 
   /// Marcado como caído (se calcula al listar; ver `ChannelHealthSql`).
   bool dead;
@@ -28,6 +32,8 @@ class Channel {
     required this.favorite,
     this.seriesId,
     this.streamId,
+    this.tvgId,
+    this.country,
     this.dead = false,
   });
 }

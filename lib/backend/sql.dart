@@ -37,10 +37,12 @@ class Sql {
       insertChannel(Channel channel) {
     return (SqliteWriteContext tx, Map<String, String> memory) async {
       await tx.execute('''
-        INSERT INTO channels (name, image, url, source_id, media_type, series_id, favorite, stream_id, group_name)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO channels (name, image, url, source_id, media_type, series_id, favorite, stream_id, group_name, tvg_id, country)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (name, source_id)
         DO UPDATE SET
+          tvg_id = excluded.tvg_id,
+          country = excluded.country,
           url = excluded.url,
           group_name = excluded.group_name,
           media_type = excluded.media_type,
@@ -58,7 +60,9 @@ class Sql {
         channel.seriesId,
         channel.favorite,
         channel.streamId,
-        channel.group
+        channel.group,
+        channel.tvgId,
+        channel.country
       ]);
       memory['lastChannelId'] =
           (await tx.get("SELECT last_insert_rowid()")).columnAt(0).toString();
@@ -176,6 +180,9 @@ class Sql {
     if (filters.hideDead) {
       sqlQuery += "\nAND NOT ${ChannelHealthSql.deadSql()}";
     }
+    if (filters.country != null) {
+      sqlQuery += "\nAND country = ?";
+    }
     if (filters.viewType == ViewType.favorites && filters.seriesId == null) {
       sqlQuery += "\nAND favorite = 1";
     }
@@ -194,6 +201,7 @@ class Sql {
     params.addAll(keywords);
     params.addAll(mediaTypes);
     params.addAll(filters.sourceIds!);
+    if (filters.country != null) params.add(filters.country!);
     if (filters.seriesId != null) {
       params.add(filters.seriesId!);
     } else if (filters.groupId != null) {
@@ -205,6 +213,22 @@ class Sql {
     params.add(pageSize);
     var results = await db.getAll(sqlQuery, params);
     return results.map(rowToChannel).toList();
+  }
+
+  /// Países con canales de TV en directo, de más a menos canales.
+  static Future<List<({String code, int count})>> countries(
+      List<int> sourceIds) async {
+    if (sourceIds.isEmpty) return const [];
+    final db = await DbFactory.db;
+    final rows = await db.getAll('''
+      SELECT country, COUNT(*) AS n FROM channels
+      WHERE country IS NOT NULL AND url IS NOT NULL AND media_type = ?
+        AND source_id IN (${generatePlaceholders(sourceIds.length)})
+      GROUP BY country ORDER BY n DESC, country
+    ''', [MediaType.livestream.index, ...sourceIds]);
+    return rows
+        .map((r) => (code: r['country'] as String, count: r['n'] as int))
+        .toList();
   }
 
   /// Grupos fusionados por nombre entre fuentes (para la UI de TV).

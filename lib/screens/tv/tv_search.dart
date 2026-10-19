@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:open_tv/backend/countries.dart';
 import 'package:open_tv/backend/sql.dart' show pageSize;
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/filters.dart';
@@ -12,6 +13,7 @@ import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/tv_search_filters.dart';
 import 'package:open_tv/screens/tv/widgets/tv_channel_card.dart';
 import 'package:open_tv/screens/tv/widgets/tv_channel_menu.dart';
+import 'package:open_tv/screens/tv/widgets/tv_dialogs.dart';
 import 'package:open_tv/screens/tv/widgets/tv_guide_dialog.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_text_field.dart';
@@ -51,6 +53,7 @@ class _TVSearchState extends State<TVSearch> {
 
   _SearchStatus _status = _SearchStatus.idle;
   String _query = '';
+  String? _country;
   List<Channel> _results = [];
   bool _hasMore = false;
   bool _loadingMore = false;
@@ -70,6 +73,30 @@ class _TVSearchState extends State<TVSearch> {
 
   FocusNode _node(int i) => _nodes.putIfAbsent(i, FocusNode.new);
 
+  Future<void> _pickCountry() async {
+    final countries = await widget.data.countries();
+    if (!mounted) return;
+    if (countries.isEmpty) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
+        content: Text('Actualiza las listas para ver los países'),
+        duration: Duration(seconds: 3),
+      ));
+      return;
+    }
+    final choice = await showTvOptions<String>(
+      context,
+      title: 'País',
+      options: [
+        ('Todos los países', ''),
+        for (final c in countries)
+          ('${countryName(c.code)} (${c.count})', c.code),
+      ],
+    );
+    if (choice == null || !mounted) return;
+    setState(() => _country = choice.isEmpty ? null : choice);
+    await _search(_controller.text);
+  }
+
   void _onChanged(String text) {
     _debounce?.cancel();
     _debounce = Timer(
@@ -85,7 +112,7 @@ class _TVSearchState extends State<TVSearch> {
 
   Future<Filters?> _filters(String text, int page) async {
     final ids = await widget.data.enabledSourceIds();
-    final filters = buildTvSearchFilters(text, ids);
+    final filters = buildTvSearchFilters(text, ids, country: _country);
     filters?.page = page;
     return filters;
   }
@@ -94,7 +121,7 @@ class _TVSearchState extends State<TVSearch> {
     final request = ++_request;
     _focusFirstOnResults = focusFirst;
     final query = text.trim();
-    if (query.length < tvSearchMinChars) {
+    if (query.length < tvSearchMinChars && _country == null) {
       setState(() {
         _status = _SearchStatus.idle;
         _results = [];
@@ -248,13 +275,15 @@ class _TVSearchState extends State<TVSearch> {
   String _statusText() {
     switch (_status) {
       case _SearchStatus.idle:
-        return 'Escribe al menos 2 letras';
+        return 'Escribe al menos 2 letras o elige un país';
       case _SearchStatus.searching:
         return 'Buscando…';
       case _SearchStatus.results:
         return '${_results.length} resultados';
       case _SearchStatus.empty:
-        return 'Sin resultados para "$_query"';
+        return _query.isEmpty
+            ? 'Sin canales de este país'
+            : 'Sin resultados para "$_query"';
       case _SearchStatus.error:
         return 'Error al buscar. Intenta de nuevo.';
     }
@@ -279,15 +308,49 @@ class _TVSearchState extends State<TVSearch> {
               }
               return KeyEventResult.ignored;
             },
-            child: TvTextField(
-              key: const ValueKey('tv-search-field'),
-              controller: _controller,
-              label: 'Buscar canales',
-              hint: 'Presiona OK para escribir',
-              icon: Icons.search,
-              textInputAction: TextInputAction.search,
-              onChanged: _onChanged,
-              onSubmitted: _onSubmitted,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TvTextField(
+                    key: const ValueKey('tv-search-field'),
+                    controller: _controller,
+                    label: 'Buscar canales',
+                    hint: 'Presiona OK para escribir',
+                    icon: Icons.search,
+                    textInputAction: TextInputAction.search,
+                    onChanged: _onChanged,
+                    onSubmitted: _onSubmitted,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                TvFocusable(
+                  key: const ValueKey('tv-search-country'),
+                  scaleOnFocus: false,
+                  onSelect: _pickCountry,
+                  builder: (context, focused) => Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 22),
+                    decoration: BoxDecoration(
+                      color: focused ? TvTheme.surfaceRaised : TvTheme.surface,
+                      borderRadius: BorderRadius.circular(TvTheme.radius),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.public, color: TvTheme.textPrimary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'País: ${_country == null ? 'Todos' : countryName(_country!)}',
+                          style: const TextStyle(
+                            fontSize: TvTheme.fontBody,
+                            color: TvTheme.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Padding(

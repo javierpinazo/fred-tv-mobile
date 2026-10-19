@@ -34,6 +34,55 @@ FakeTvData _fake([int n = 10]) =>
     FakeTvData(channels: List.generate(n, (i) => fakeChannel(i + 1)));
 
 void main() {
+  testWidgets('elegir un país busca solo en ese país, incluso sin texto',
+      (t) async {
+    final data = FakeTvData(channels: [
+      fakeChannel(1)..country = 'pe',
+      fakeChannel(2)..country = 'pe',
+      fakeChannel(3)..country = 'us',
+    ]);
+    data.countryList = [(code: 'pe', count: 2), (code: 'us', count: 1)];
+    await pumpTv(t, TVSearch(data: data));
+    expect(find.text('País: Todos'), findsOneWidget);
+    await focusKey(t, 'tv-search-country');
+    await _ok(t);
+    expect(find.text('Perú (2)'), findsOneWidget);
+    expect(find.text('Estados Unidos (1)'), findsOneWidget);
+    await focusKey(t, 'tv-option-1'); // la 0 es "Todos los países"
+    await _ok(t);
+    expect(find.text('País: Perú'), findsOneWidget);
+    expect(data.channelCalls.last.country, 'pe');
+    expect(find.byKey(_res(0)), findsOneWidget);
+    expect(find.byKey(_res(1)), findsOneWidget);
+    expect(find.byKey(_res(2)), findsNothing);
+  });
+
+  testWidgets('"Todos los países" quita el filtro', (t) async {
+    final data = FakeTvData(channels: [fakeChannel(1)..country = 'pe']);
+    data.countryList = [(code: 'pe', count: 1)];
+    await pumpTv(t, TVSearch(data: data));
+    await focusKey(t, 'tv-search-country');
+    await _ok(t);
+    await focusKey(t, 'tv-option-1');
+    await _ok(t);
+    expect(find.text('País: Perú'), findsOneWidget);
+    await focusKey(t, 'tv-search-country');
+    await _ok(t);
+    await focusKey(t, 'tv-option-0');
+    await _ok(t);
+    expect(find.text('País: Todos'), findsOneWidget);
+    expect(find.byKey(_res(0)), findsNothing);
+  });
+
+  testWidgets('sin países cargados avisa que hay que actualizar las listas',
+      (t) async {
+    await pumpTv(t, TVSearch(data: _fake()));
+    await focusKey(t, 'tv-search-country');
+    await _ok(t);
+    expect(find.text('Actualiza las listas para ver los países'),
+        findsOneWidget);
+  });
+
   testWidgets('buscar muestra resultados (regresión H1)', (t) async {
     final data = _fake();
     await pumpTv(t, TVSearch(data: data));
@@ -83,11 +132,11 @@ void main() {
   testWidgets('menos de 2 letras no consulta', (t) async {
     final data = _fake();
     await pumpTv(t, TVSearch(data: data));
-    expect(find.text('Escribe al menos 2 letras'), findsOneWidget);
+    expect(find.text('Escribe al menos 2 letras o elige un país'), findsOneWidget);
     await focusKey(t, 'tv-search-field');
     await _typeAndSubmit(t, 'a');
     expect(data.channelCalls, isEmpty);
-    expect(find.text('Escribe al menos 2 letras'), findsOneWidget);
+    expect(find.text('Escribe al menos 2 letras o elige un país'), findsOneWidget);
   });
 
   testWidgets('sin coincidencias muestra el mensaje', (t) async {

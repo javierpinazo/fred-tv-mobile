@@ -68,6 +68,11 @@ class FakeTvData extends TvData {
   @override
   Future<bool> hasRecents() async => recents.isNotEmpty;
 
+  List<({String code, int count})> countryList = [];
+
+  @override
+  Future<List<({String code, int count})>> countries() async => countryList;
+
   final List<Filters> channelCalls = [];
   final List<Filters> groupCalls = [];
   final List<(int, bool)> favoriteCalls = [];
@@ -99,6 +104,7 @@ class FakeTvData extends TvData {
     if (f.viewType == ViewType.history) return List.of(recents);
     Iterable<Channel> r = channels;
     if (f.groupName != null) r = r.where((c) => c.group == f.groupName);
+    if (f.country != null) r = r.where((c) => c.country == f.country);
     if (f.viewType == ViewType.favorites) r = r.where((c) => c.favorite);
     final words = (f.query ?? '')
         .toLowerCase()

@@ -174,6 +174,15 @@ class DbFactory {
             PRIMARY KEY (source_id, name)
           );
         ''');
+      }))
+      ..add(SqliteMigration(6, (tx) async {
+        await tx.execute('ALTER TABLE channels ADD COLUMN tvg_id varchar(100);');
+        await tx.execute('ALTER TABLE channels ADD COLUMN country varchar(8);');
+        await tx.execute(
+            'CREATE INDEX index_channels_country ON channels(country);');
+        // Los canales ya guardados no tienen país: se fuerza a refrescar las
+        // listas (la próxima vez que se abra la app) para rellenarlo.
+        await tx.execute("DELETE FROM settings WHERE key LIKE 'lastRefresh_%';");
       }));
     await migrations.migrate(db);
     return db;
