@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/media_type.dart';
 import 'package:open_tv/models/view_type.dart';
+import 'package:open_tv/screens/tv/guide/tv_guide.dart';
 import 'package:open_tv/screens/tv/tv_channel_browser.dart';
 
 import 'fakes.dart';
@@ -263,5 +264,28 @@ void main() {
     await _ok(t);
     expect(data.favoriteCalls, isEmpty);
     expect(find.text('Este canal ya no está disponible'), findsOneWidget);
+  });
+
+  testWidgets('un canal con guía ofrece "Ver programación" y la abre', (t) async {
+    final data = _fake();
+    data.guideChannels.addAll(data.channels.map((c) => c.name));
+    data.guidePrograms = [
+      GuideProgram(start: DateTime.utc(2026, 10, 19, 13), title: 'Primera hora'),
+    ];
+    await pumpTv(t, TVChannelBrowser(data: data));
+    await focusKey(t, 'tv-channel-0');
+    await _longPress(t);
+    expect(find.text('Ver programación'), findsOneWidget);
+    await focusKey(t, 'tv-option-2');
+    await _ok(t);
+    expect(find.text('Primera hora'), findsOneWidget);
+  });
+
+  testWidgets('un canal sin guía no ofrece "Ver programación"', (t) async {
+    await pumpTv(t, TVChannelBrowser(data: _fake()));
+    await focusKey(t, 'tv-channel-0');
+    await _longPress(t);
+    expect(find.text('Agregar a favoritos'), findsOneWidget);
+    expect(find.text('Ver programación'), findsNothing);
   });
 }

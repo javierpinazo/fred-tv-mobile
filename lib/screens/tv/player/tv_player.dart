@@ -6,6 +6,7 @@ import 'package:open_tv/backend/sql.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/id_data.dart';
 import 'package:open_tv/models/media_type.dart';
+import 'package:open_tv/screens/tv/guide/tv_guide.dart';
 import 'package:open_tv/screens/tv/player/exo_engine.dart';
 import 'package:open_tv/screens/tv/player/mpv_engine.dart';
 import 'package:open_tv/screens/tv/player/tv_engine.dart';
@@ -14,6 +15,7 @@ import 'package:open_tv/screens/tv/player/tv_playlist.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/widgets/tv_dialogs.dart';
+import 'package:open_tv/screens/tv/widgets/tv_guide_dialog.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 import 'package:open_tv/select_dialog.dart';
@@ -61,6 +63,7 @@ class _TvPlayerState extends State<TvPlayer> {
   final List<StreamSubscription<dynamic>> _engineSubs = [];
   List<TvPlaybackAttempt> _plan = const [];
   TvEngineKind? _preferEngine;
+  GuideNowNext? _guideNow;
   bool _frameShown = false;
   final FocusNode _focus = FocusNode();
   final FocusNode _retryFocus = FocusNode();
@@ -148,6 +151,7 @@ class _TvPlayerState extends State<TvPlayer> {
         if (headers?.httpOrigin != null) 'Origin': headers!.httpOrigin!,
       };
       if (attemptIndex == 0) {
+        unawaited(_loadGuide(channel));
         await widget.data.addToHistory(id);
         final mode = await widget.data.videoEngineMode();
         // Lo que el usuario eligió para este canal manda sobre el ajuste.
@@ -305,9 +309,24 @@ class _TvPlayerState extends State<TvPlayer> {
 
   // --- Comandos -----------------------------------------------------------
 
+  /// Programa actual y siguiente (solo canales con guía); falla en silencio.
+  Future<void> _loadGuide(Channel channel) async {
+    if (!widget.data.hasGuide(channel)) {
+      if (_guideNow != null && mounted) setState(() => _guideNow = null);
+      return;
+    }
+    final result = await widget.data.guideNowNext(channel);
+    if (mounted && identical(channel, _channel)) {
+      setState(() => _guideNow = result);
+    }
+  }
+
   void _showOverlay() {
     _overlayTimer?.cancel();
-    if (!_overlayVisible && mounted) setState(() => _overlayVisible = true);
+    if (!_overlayVisible && mounted) {
+      unawaited(_loadGuide(_channel));
+      setState(() => _overlayVisible = true);
+    }
     if (_hasError) return;
     _overlayTimer = Timer(_overlayDuration, () {
       if (mounted && !_hasError) setState(() => _overlayVisible = false);
@@ -431,6 +450,7 @@ class _TvPlayerState extends State<TvPlayer> {
         if (engine?.supportsTracks == true) ('Audio', 'audio'),
         if (engine?.supportsTracks == true) ('Subtítulos', 'subs'),
         ('Ajustar imagen', 'fit'),
+        if (widget.data.hasGuide(channel)) ('Ver programación', 'guide'),
         (
           channel.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos',
           'fav'
@@ -447,6 +467,8 @@ class _TvPlayerState extends State<TvPlayer> {
       case 'subs':
         await _openTrackModal(
             'Subtítulos', engine!.subtitleTracks(), engine.selectSubtitle);
+      case 'guide':
+        await showTvGuide(context, data: widget.data, channel: channel);
       case 'fit':
         setState(() => _fill = !_fill);
       case 'fav':
@@ -554,6 +576,16 @@ class _TvPlayerState extends State<TvPlayer> {
     );
   }
 
+  /// "Ahora: X  ·  08:30 AM: Y" o `null` si el canal no tiene guía.
+  String? _guideLine() {
+    final g = _guideNow;
+    if (g == null || (g.now == null && g.next == null)) return null;
+    return [
+      if (g.now != null) 'Ahora: ${g.now!.title}',
+      if (g.next != null) '${g.next!.timeLabel}: ${g.next!.title}',
+    ].join('  ·  ');
+  }
+
   Widget _buildOverlay() {
     final channel = _channel;
     return Positioned(
@@ -610,6 +642,19 @@ class _TvPlayerState extends State<TvPlayer> {
                 color: TvTheme.textSecondary,
               ),
             ),
+            if (_guideLine() != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  _guideLine()!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: TvTheme.fontBody,
+                    color: TvTheme.textPrimary,
+                  ),
+                ),
+              ),
             if (!_isLive) _buildProgress(),
             const SizedBox(height: 10),
             Text(

@@ -8,6 +8,7 @@ import 'package:open_tv/models/channel_http_headers.dart';
 import 'package:open_tv/models/filters.dart';
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/user_playlist.dart';
+import 'package:open_tv/screens/tv/guide/tv_guide.dart';
 import 'package:open_tv/screens/tv/player/tv_buffer.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 
@@ -21,6 +22,23 @@ class TvData {
   const TvData();
 
   static final IptvOrgCatalog _catalog = IptvOrgCatalog();
+  static final TvGuide _guide = TvGuide();
+
+  // --- Guía de programación -----------------------------------------------
+
+  /// Si algún proveedor de guía reconoce el canal.
+  bool hasGuide(Channel channel) => _guide.providerFor(channel) != null;
+
+  /// Programas del día [limaDay] (fecha de Lima, sin hora). Lanza
+  /// [GuideException] si no se pudo cargar.
+  Future<List<GuideProgram>> guideDay(Channel channel, DateTime limaDay) async {
+    final provider = _guide.providerFor(channel);
+    return provider == null ? const [] : provider.day(limaDay);
+  }
+
+  /// Programa actual y siguiente; `null` si no hay guía o no se pudo cargar.
+  Future<GuideNowNext?> guideNowNext(Channel channel) =>
+      _guide.nowNext(channel);
 
   // --- Canales ------------------------------------------------------------
 

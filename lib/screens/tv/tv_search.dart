@@ -12,6 +12,7 @@ import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/tv_search_filters.dart';
 import 'package:open_tv/screens/tv/widgets/tv_channel_card.dart';
 import 'package:open_tv/screens/tv/widgets/tv_channel_menu.dart';
+import 'package:open_tv/screens/tv/widgets/tv_guide_dialog.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_text_field.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
@@ -222,6 +223,9 @@ class _TVSearchState extends State<TVSearch> {
       onAddToPlaylist: widget.onAddToPlaylist == null
           ? null
           : () => widget.onAddToPlaylist!(context, channel),
+      onShowGuide: widget.data.hasGuide(channel)
+          ? () => showTvGuide(context, data: widget.data, channel: channel)
+          : null,
     );
   }
 

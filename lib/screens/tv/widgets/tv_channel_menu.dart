@@ -9,6 +9,7 @@ Future<void> showTvChannelMenu(
   required VoidCallback onPlay,
   required VoidCallback onToggleFavorite,
   VoidCallback? onAddToPlaylist,
+  VoidCallback? onShowGuide,
 }) async {
   final choice = await showTvOptions<int>(
     context,
@@ -17,6 +18,7 @@ Future<void> showTvChannelMenu(
       ('Reproducir', 0),
       (channel.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos', 1),
       if (onAddToPlaylist != null) ('Agregar a una lista…', 2),
+      if (onShowGuide != null) ('Ver programación', 3),
     ],
   );
   switch (choice) {
@@ -26,5 +28,7 @@ Future<void> showTvChannelMenu(
       onToggleFavorite();
     case 2:
       onAddToPlaylist?.call();
+    case 3:
+      onShowGuide?.call();
   }
 }

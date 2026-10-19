@@ -11,6 +11,7 @@ import 'package:open_tv/models/media_type.dart';
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/user_playlist.dart';
 import 'package:open_tv/models/view_type.dart';
+import 'package:open_tv/screens/tv/guide/tv_guide.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
@@ -184,6 +185,25 @@ class FakeTvData extends TvData {
 
   @override
   Future<void> setVideoEngineMode(TvEngineMode mode) async => engineMode = mode;
+
+  final Set<String> guideChannels = {};
+  List<GuideProgram> guidePrograms = [];
+  bool guideFails = false;
+  final List<DateTime> guideDayCalls = [];
+  GuideNowNext? guideNowValue;
+
+  @override
+  bool hasGuide(Channel channel) => guideChannels.contains(channel.name);
+
+  @override
+  Future<List<GuideProgram>> guideDay(Channel channel, DateTime limaDay) async {
+    guideDayCalls.add(limaDay);
+    if (guideFails) throw GuideException('fallo de prueba');
+    return guidePrograms;
+  }
+
+  @override
+  Future<GuideNowNext?> guideNowNext(Channel channel) async => guideNowValue;
 
   final Map<String, TvEngineKind> channelEngines = {};
 
