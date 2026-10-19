@@ -410,7 +410,11 @@ class Sql {
       await db.execute('''
         INSERT INTO sources (name, source_type, url, enabled) VALUES (?, ?, ?, ?)
       ''', [customSourceName, SourceType.m3u.index, "", 1]);
-      sourceId = (await db.get("SELECT last_insert_rowid()")).columnAt(0);
+      // `last_insert_rowid()` en una conexión de lectura puede dar 0: se busca
+      // por nombre.
+      sourceId = (await db.get(
+              "SELECT id FROM sources WHERE name = ?", [customSourceName]))
+          .columnAt(0);
     }
 
     // Insert the channel

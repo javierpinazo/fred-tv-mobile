@@ -4,6 +4,7 @@ import 'package:open_tv/backend/sql.dart' show customSourceName;
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/screens/tv/player/tv_buffer.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
+import 'package:open_tv/backend/backup_sql.dart';
 import 'package:open_tv/screens/tv/tv_appearance.dart';
 import 'package:open_tv/screens/tv/widgets/tv_pin_dialog.dart';
 import 'package:open_tv/screens/tv/tv_add_m3u_screen.dart';
@@ -207,6 +208,85 @@ class _TVSettingsState extends State<TVSettings> {
     if (pin == null) return;
     await widget.data.setParentalPin(pin);
     _setMessage('PIN guardado');
+  }
+
+  static String _fileName(String path) => path.split(RegExp(r'[\\/]')).last;
+
+  Future<void> _backupMenu() async {
+    final choice = await showTvOptions<String>(
+      context,
+      title: 'Copia de seguridad',
+      options: const [
+        ('Exportar copia', 'export'),
+        ('Importar copia…', 'import'),
+      ],
+    );
+    if (choice == 'export') await _exportBackup();
+    if (choice == 'import') await _importBackupMenu();
+  }
+
+  Future<void> _exportBackup() async {
+    try {
+      final path = await widget.data.exportBackupToFile();
+      _setMessage('Copia guardada en $path');
+    } catch (e) {
+      debugPrint('TVSettings: error exportando: $e');
+      _setMessage('No se pudo guardar la copia', error: true);
+    }
+  }
+
+  Future<void> _importBackupMenu() async {
+    List<String> files = const [];
+    try {
+      files = await widget.data.listBackupFiles();
+    } catch (e) {
+      debugPrint('TVSettings: error listando copias: $e');
+    }
+    if (!mounted) return;
+    final choice = await showTvOptions<String>(
+      context,
+      title: 'Importar copia',
+      options: [
+        for (final f in files) (_fileName(f), 'file:$f'),
+        ('Desde una URL…', 'url'),
+        ('Desde un archivo del dispositivo…', 'picker'),
+      ],
+    );
+    if (choice == null || !mounted) return;
+    if (choice.startsWith('file:')) {
+      await _runImport(
+          () => widget.data.importBackupFromFile(choice.substring(5)));
+    } else if (choice == 'url') {
+      final url = await showTvTextPrompt(
+        context,
+        title: 'Importar desde una URL',
+        label: 'Dirección de la copia (.json)',
+        confirmLabel: 'Importar',
+      );
+      if (url == null || !mounted) return;
+      await _runImport(() => widget.data.importBackupFromUrl(url));
+    } else {
+      final path = await widget.data.pickBackupFile();
+      if (path == null || !mounted) {
+        _setMessage('No se eligió ningún archivo', error: true);
+        return;
+      }
+      await _runImport(() => widget.data.importBackupFromFile(path));
+    }
+  }
+
+  Future<void> _runImport(Future<BackupResult> Function() run) async {
+    _setMessage('Importando…');
+    try {
+      final result = await run();
+      _setMessage('Copia importada: ${result.summary}');
+    } on BackupFormatException catch (e) {
+      _setMessage(e.message, error: true);
+    } catch (e) {
+      debugPrint('TVSettings: error importando: $e');
+      _setMessage('No se pudo importar la copia', error: true);
+    }
+    if (mounted) _load();
   }
 
   Future<void> _toggleHideDead() async {
@@ -491,6 +571,16 @@ class _TVSettingsState extends State<TVSettings> {
                       ),
                     ),
                     onSelect: _managePin,
+                  ),
+                ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-backup'),
+                    icon: Icons.save_alt,
+                    title: 'Copia de seguridad',
+                    subtitle:
+                        'Exporta o importa favoritos, listas propias y ajustes',
+                    onSelect: _backupMenu,
                   ),
                 ),
                 const Padding(

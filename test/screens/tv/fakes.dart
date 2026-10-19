@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:open_tv/backend/backup_sql.dart';
 import 'package:open_tv/backend/iptv_org_catalog.dart';
 import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/backend/sql.dart' show pageSize;
@@ -226,6 +227,41 @@ class FakeTvData extends TvData {
   @override
   Future<void> setChannelEngine(String url, TvEngineKind kind) async =>
       channelEngines[url] = kind;
+
+  String exportPath = '/sdcard/backups/copia.json';
+  bool exportFails = false;
+  List<String> backupFiles = [];
+  final List<String> importedFiles = [];
+  final List<String> importedUrls = [];
+  String? pickedFile;
+  Object? importError;
+  BackupResult importResult = const BackupResult(favoritesApplied: 3);
+
+  @override
+  Future<String> exportBackupToFile() async {
+    if (exportFails) throw StateError('sin espacio');
+    return exportPath;
+  }
+
+  @override
+  Future<List<String>> listBackupFiles() async => backupFiles;
+
+  @override
+  Future<BackupResult> importBackupFromFile(String path) async {
+    importedFiles.add(path);
+    if (importError != null) throw importError!;
+    return importResult;
+  }
+
+  @override
+  Future<BackupResult> importBackupFromUrl(String url) async {
+    importedUrls.add(url);
+    if (importError != null) throw importError!;
+    return importResult;
+  }
+
+  @override
+  Future<String?> pickBackupFile() async => pickedFile;
 
   bool hideAdult = false;
   String? pin;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:open_tv/backend/backup_sql.dart';
 import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/backend/sql.dart' show customSourceName;
 import 'package:open_tv/models/source.dart';
@@ -55,6 +56,7 @@ void main() {
         const ValueKey('tv-settings-deadcount'),
         const ValueKey('tv-settings-hideadult'),
         const ValueKey('tv-settings-pin'),
+        const ValueKey('tv-settings-backup'),
         const ValueKey('tv-source-1'), const ValueKey('tv-source-2')]) {
       await _key(t, LogicalKeyboardKey.arrowDown);
       expect(isFocused(t, key), isTrue, reason: '$key');
@@ -318,6 +320,85 @@ void main() {
     expect(find.text('PIN incorrecto'), findsOneWidget);
     expect(find.text('Quitar PIN'), findsNothing);
     expect(data.pin, '1234');
+  });
+
+  testWidgets('exportar la copia la guarda y dice dónde', (t) async {
+    final data = FakeTvData();
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-backup');
+    await _ok(t);
+    expect(find.text('Exportar copia'), findsOneWidget);
+    await _ok(t); // la primera opción
+    expect(find.textContaining('/sdcard/backups/copia.json'), findsOneWidget);
+  });
+
+  testWidgets('si exportar falla lo avisa', (t) async {
+    final data = FakeTvData()..exportFails = true;
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-backup');
+    await _ok(t);
+    await _ok(t);
+    expect(find.text('No se pudo guardar la copia'), findsOneWidget);
+  });
+
+  testWidgets('importar: elegir una copia guardada la importa y resume',
+      (t) async {
+    final data = FakeTvData()
+      ..backupFiles = ['/sdcard/backups/fred-tv-2026-10-19.json'];
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-backup');
+    await _ok(t);
+    await focusKey(t, 'tv-option-1'); // Importar copia…
+    await _ok(t);
+    expect(find.text('fred-tv-2026-10-19.json'), findsOneWidget);
+    await focusKey(t, 'tv-option-0');
+    await _ok(t);
+    expect(data.importedFiles, ['/sdcard/backups/fred-tv-2026-10-19.json']);
+    expect(find.textContaining('Copia importada: 3 favoritos'), findsOneWidget);
+  });
+
+  testWidgets('importar desde una URL pide la dirección', (t) async {
+    final data = FakeTvData();
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-backup');
+    await _ok(t);
+    await focusKey(t, 'tv-option-1');
+    await _ok(t);
+    // Sin copias guardadas: 0 = URL, 1 = archivo del dispositivo.
+    expect(find.text('Desde una URL…'), findsOneWidget);
+    await focusKey(t, 'tv-option-0');
+    await _ok(t);
+    await _ok(t); // abre el teclado propio del campo
+    await typeOnTvKeyboard(t, 'http://x.test/c.json');
+    await _key(t, LogicalKeyboardKey.arrowDown);
+    await _ok(t); // botón Importar
+    expect(data.importedUrls, ['http://x.test/c.json']);
+  });
+
+  testWidgets('un archivo con formato inválido muestra el motivo', (t) async {
+    final data = FakeTvData()
+      ..backupFiles = ['/a/b.json']
+      ..importError = BackupFormatException('El archivo no es una copia de Fred TV');
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-backup');
+    await _ok(t);
+    await focusKey(t, 'tv-option-1');
+    await _ok(t);
+    await focusKey(t, 'tv-option-0');
+    await _ok(t);
+    expect(find.text('El archivo no es una copia de Fred TV'), findsOneWidget);
+  });
+
+  testWidgets('elegir un archivo del dispositivo importa el elegido', (t) async {
+    final data = FakeTvData()..pickedFile = '/storage/copia.json';
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-backup');
+    await _ok(t);
+    await focusKey(t, 'tv-option-1');
+    await _ok(t);
+    await focusKey(t, 'tv-option-1'); // archivo del dispositivo
+    await _ok(t);
+    expect(data.importedFiles, ['/storage/copia.json']);
   });
 
   testWidgets('desactivar una fuente', (t) async {

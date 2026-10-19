@@ -1,3 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:open_tv/models/source_type.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_tv/backend/backup_sql.dart';
 import 'package:open_tv/backend/channel_health_sql.dart';
 import 'package:open_tv/backend/iptv_org_catalog.dart';
 import 'package:open_tv/backend/source_refresher.dart';
@@ -60,6 +69,93 @@ class TvData {
     if (f.viewType == ViewType.all) f.hideDead = await hideDeadSetting();
     f.hideAdult = await hideAdultSetting();
     return Sql.search(f);
+  }
+
+  // --- Copia de seguridad -------------------------------------------------
+
+  /// Carpeta de copias: la externa de la app (accesible desde un PC o un
+  /// gestor de archivos) o, si no hay, la interna.
+  Future<Directory> _backupDir() async {
+    Directory? base;
+    try {
+      base = await getExternalStorageDirectory();
+    } catch (_) {}
+    base ??= Directory(await Utils.appDir);
+    final dir = Directory('${base.path}/backups');
+    await dir.create(recursive: true);
+    return dir;
+  }
+
+  /// Guarda una copia en la carpeta de copias y devuelve su ruta.
+  Future<String> exportBackupToFile() async {
+    final data = await BackupSql.export();
+    final now = DateTime.now();
+    String two(int n) => n.toString().padLeft(2, '0');
+    final stamp = '${now.year}-${two(now.month)}-${two(now.day)}_'
+        '${two(now.hour)}${two(now.minute)}';
+    final file = File('${(await _backupDir()).path}/fred-tv-$stamp.json');
+    await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
+    return file.path;
+  }
+
+  /// Copias guardadas, la más reciente primero.
+  Future<List<String>> listBackupFiles() async {
+    final files = (await _backupDir())
+        .listSync()
+        .whereType<File>()
+        .where((f) => f.path.toLowerCase().endsWith('.json'))
+        .map((f) => f.path)
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
+    return files;
+  }
+
+  Future<BackupResult> importBackupFromFile(String path) async =>
+      _importBackup(BackupSql.parse(await File(path).readAsString()));
+
+  Future<BackupResult> importBackupFromUrl(String url) async {
+    final uri = Uri.tryParse(url.trim());
+    if (uri == null || !uri.hasScheme) {
+      throw BackupFormatException('La dirección no es válida');
+    }
+    final res = await http.get(uri).timeout(const Duration(seconds: 20));
+    if (res.statusCode != 200) {
+      throw BackupFormatException(
+          'No se pudo descargar (HTTP ${res.statusCode})');
+    }
+    return _importBackup(BackupSql.parse(utf8.decode(res.bodyBytes)));
+  }
+
+  /// Elegir un archivo del dispositivo; `null` si se cancela o no hay selector
+  /// (muchos Android TV no lo traen).
+  Future<String?> pickBackupFile() async {
+    try {
+      final r = await FilePicker.platform.pickFiles(type: FileType.any);
+      return r?.files.single.path;
+    } catch (e) {
+      debugPrint('TvData: no se pudo abrir el selector de archivos: $e');
+      return null;
+    }
+  }
+
+  Future<BackupResult> _importBackup(Map<String, dynamic> data) async {
+    var added = 0;
+    for (final s in await BackupSql.sourcesToAdd(data)) {
+      try {
+        await addSource(Source(
+          name: s['name'] as String,
+          url: s['url'] as String,
+          sourceType: SourceType.m3uUrl,
+          enabled: true,
+        ));
+        added++;
+      } catch (e) {
+        debugPrint('TvData: no se pudo añadir la lista "${s['name']}": $e');
+      }
+    }
+    final result = await BackupSql.restore(data);
+    tvSourcesVersion.value++;
+    return result.copyWith(sourcesAdded: added);
   }
 
   // --- Control parental ---------------------------------------------------
@@ -153,8 +249,9 @@ class TvData {
       throw StateError('duplicate');
     }
     await Utils.processSource(source);
-    final saved =
-        (await Sql.getSources()).where((s) => s.name == source.name).firstOrNull;
+    final saved = (await Sql.getSources())
+        .where((s) => s.name == source.name)
+        .firstOrNull;
     if (saved?.id != null) {
       await writeLastRefresh(saved!.id!, DateTime.now());
     }
