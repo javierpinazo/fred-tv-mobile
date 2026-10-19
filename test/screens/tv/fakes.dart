@@ -227,6 +227,24 @@ class FakeTvData extends TvData {
   Future<void> setChannelEngine(String url, TvEngineKind kind) async =>
       channelEngines[url] = kind;
 
+  bool hideAdult = false;
+  String? pin;
+
+  @override
+  Future<bool> hideAdultSetting() async => hideAdult;
+
+  @override
+  Future<void> setHideAdultSetting(bool value) async => hideAdult = value;
+
+  @override
+  Future<bool> parentalPinSet() async => pin != null;
+
+  @override
+  Future<void> setParentalPin(String? value) async => pin = value;
+
+  @override
+  Future<bool> verifyParentalPin(String value) async => pin == value;
+
   bool hideDead = false;
   int deadCount = 0;
   bool deadCleared = false;

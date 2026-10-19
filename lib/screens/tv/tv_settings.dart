@@ -5,6 +5,7 @@ import 'package:open_tv/models/source.dart';
 import 'package:open_tv/screens/tv/player/tv_buffer.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:open_tv/screens/tv/tv_appearance.dart';
+import 'package:open_tv/screens/tv/widgets/tv_pin_dialog.dart';
 import 'package:open_tv/screens/tv/tv_add_m3u_screen.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/tv_iptv_org_screen.dart';
@@ -38,6 +39,8 @@ class _TVSettingsState extends State<TVSettings> {
   double _textScale = 1.0;
   bool _highContrast = false;
   bool _hideDead = false;
+  bool _hideAdult = false;
+  bool _hasPin = false;
   int _deadCount = 0;
   String? _message;
   bool _messageIsError = false;
@@ -71,6 +74,8 @@ class _TVSettingsState extends State<TVSettings> {
       final scale = await widget.data.textScaleSetting();
       final contrast = await widget.data.highContrastSetting();
       final hideDead = await widget.data.hideDeadSetting();
+      final hideAdult = await widget.data.hideAdultSetting();
+      final hasPin = await widget.data.parentalPinSet();
       final deadCount = await widget.data.deadChannelCount();
       if (!mounted) return;
       setState(() {
@@ -81,6 +86,8 @@ class _TVSettingsState extends State<TVSettings> {
         _textScale = scale;
         _highContrast = contrast;
         _hideDead = hideDead;
+        _hideAdult = hideAdult;
+        _hasPin = hasPin;
         _deadCount = deadCount;
       });
     } catch (e) {
@@ -142,6 +149,64 @@ class _TVSettingsState extends State<TVSettings> {
     await widget.data.setTextScaleSetting(next);
     TvAppearance.textScale.value = next;
     if (mounted) setState(() => _textScale = next);
+  }
+
+  /// Pide el PIN actual; `true` si es correcto (avisa si no).
+  Future<bool> _verifyPin(String title) async {
+    final entered = await showTvPinPrompt(context, title: title);
+    if (entered == null || !mounted) return false;
+    if (await widget.data.verifyParentalPin(entered)) return true;
+    _setMessage('PIN incorrecto', error: true);
+    return false;
+  }
+
+  /// Pide un PIN nuevo dos veces; `null` si se cancela o no coinciden.
+  Future<String?> _askNewPin() async {
+    final first = await showTvPinPrompt(context, title: 'Nuevo PIN');
+    if (first == null || !mounted) return null;
+    final second = await showTvPinPrompt(context, title: 'Repite el PIN');
+    if (second == null || !mounted) return null;
+    if (first != second) {
+      _setMessage('Los PIN no coinciden', error: true);
+      return null;
+    }
+    return first;
+  }
+
+  Future<void> _toggleHideAdult() async {
+    final next = !_hideAdult;
+    // Activar es libre; desactivar exige el PIN si hay uno.
+    if (!next && _hasPin && !await _verifyPin('Introduce el PIN')) return;
+    await widget.data.setHideAdultSetting(next);
+    if (mounted) setState(() => _hideAdult = next);
+  }
+
+  Future<void> _managePin() async {
+    if (!_hasPin) {
+      final pin = await _askNewPin();
+      if (pin == null) return;
+      await widget.data.setParentalPin(pin);
+      if (mounted) setState(() => _hasPin = true);
+      _setMessage('PIN guardado');
+      return;
+    }
+    if (!await _verifyPin('Introduce el PIN actual')) return;
+    final choice = await showTvOptions<int>(
+      context,
+      title: 'PIN de control parental',
+      options: const [('Cambiar PIN', 0), ('Quitar PIN', 1)],
+    );
+    if (choice == null || !mounted) return;
+    if (choice == 1) {
+      await widget.data.setParentalPin(null);
+      if (mounted) setState(() => _hasPin = false);
+      _setMessage('PIN quitado');
+      return;
+    }
+    final pin = await _askNewPin();
+    if (pin == null) return;
+    await widget.data.setParentalPin(pin);
+    _setMessage('PIN guardado');
   }
 
   Future<void> _toggleHideDead() async {
@@ -388,6 +453,44 @@ class _TVSettingsState extends State<TVSettings> {
                       ),
                     ),
                     onSelect: _clearDead,
+                  ),
+                ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-hideadult'),
+                    icon: Icons.child_care,
+                    title: 'Ocultar contenido adulto',
+                    subtitle: _hasPin
+                        ? 'Desactivarlo exige el PIN'
+                        : 'Crea un PIN para protegerlo',
+                    trailing: Text(
+                      _hideAdult ? 'Activado' : 'Desactivado',
+                      style: TextStyle(
+                        fontSize: TvTheme.fontBody,
+                        fontWeight: FontWeight.bold,
+                        color: _hideAdult
+                            ? TvTheme.success
+                            : TvTheme.textSecondary,
+                      ),
+                    ),
+                    onSelect: _toggleHideAdult,
+                  ),
+                ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-pin'),
+                    icon: Icons.lock,
+                    title: 'PIN de control parental',
+                    subtitle: 'De 4 dígitos; protege el filtro de adultos',
+                    trailing: Text(
+                      _hasPin ? 'Configurado' : 'Sin PIN',
+                      style: const TextStyle(
+                        fontSize: TvTheme.fontBody,
+                        fontWeight: FontWeight.bold,
+                        color: TvTheme.accent,
+                      ),
+                    ),
+                    onSelect: _managePin,
                   ),
                 ),
                 const Padding(

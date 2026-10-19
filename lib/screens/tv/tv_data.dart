@@ -15,11 +15,14 @@ import 'package:open_tv/screens/tv/guide/tv_guide.dart';
 import 'package:open_tv/screens/tv/player/tv_buffer.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:open_tv/screens/tv/tv_appearance.dart';
+import 'package:open_tv/screens/tv/tv_parental.dart';
 
 const String _autoRefreshKey = 'tvAutoRefresh';
 const String _bufferKey = 'tvBufferSecs';
 const String _engineKey = 'tvEngine';
 const String _hideDeadKey = 'tvHideDead';
+const String _hideAdultKey = 'tvHideAdult';
+const String _pinKey = 'tvParentalPin';
 const String _textScaleKey = 'tvTextScale';
 const String _contrastKey = 'tvHighContrast';
 const String _channelEnginePrefix = 'tvEngine:';
@@ -55,8 +58,27 @@ class TvData {
   Future<List<Channel>> searchChannels(Filters f) async {
     // Solo Canales y Búsqueda ocultan los caídos; Favoritos e historial no.
     if (f.viewType == ViewType.all) f.hideDead = await hideDeadSetting();
+    f.hideAdult = await hideAdultSetting();
     return Sql.search(f);
   }
+
+  // --- Control parental ---------------------------------------------------
+
+  Future<bool> hideAdultSetting() async =>
+      await Sql.getSetting(_hideAdultKey) == '1';
+
+  Future<void> setHideAdultSetting(bool value) =>
+      Sql.setSetting(_hideAdultKey, value ? '1' : '0');
+
+  Future<bool> parentalPinSet() async =>
+      (await Sql.getSetting(_pinKey))?.isNotEmpty ?? false;
+
+  /// Guarda el PIN (solo su hash con sal); `null` lo quita.
+  Future<void> setParentalPin(String? pin) =>
+      Sql.setSetting(_pinKey, pin == null ? '' : TvParental.encode(pin));
+
+  Future<bool> verifyParentalPin(String pin) async =>
+      TvParental.verify(pin, await Sql.getSetting(_pinKey));
 
   /// Países con canales (de más a menos), para el filtro de Búsqueda.
   Future<List<({String code, int count})>> countries() async =>
@@ -102,7 +124,10 @@ class TvData {
     return r.isNotEmpty;
   }
 
-  Future<List<Channel>> searchGroups(Filters f) => Sql.searchGroupNames(f);
+  Future<List<Channel>> searchGroups(Filters f) async {
+    f.hideAdult = await hideAdultSetting();
+    return Sql.searchGroupNames(f);
+  }
 
   /// Id vigente del canal (puede haber cambiado si su fuente se refrescó
   /// después de mostrarlo); `null` si el canal ya no existe.

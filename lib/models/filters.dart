@@ -18,6 +18,9 @@ class Filters {
   /// Solo canales de este país (código en minúsculas).
   String? country;
 
+  /// Oculta los grupos para adultos (control parental).
+  bool hideAdult;
+
   Filters({
     this.query,
     this.sourceIds,
@@ -30,5 +33,6 @@ class Filters {
     this.useKeywords = false,
     this.hideDead = false,
     this.country,
+    this.hideAdult = false,
   });
 }

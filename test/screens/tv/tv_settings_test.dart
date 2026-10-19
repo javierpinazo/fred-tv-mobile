@@ -53,6 +53,8 @@ void main() {
         const ValueKey('tv-settings-contrast'),
         const ValueKey('tv-settings-hidedead'),
         const ValueKey('tv-settings-deadcount'),
+        const ValueKey('tv-settings-hideadult'),
+        const ValueKey('tv-settings-pin'),
         const ValueKey('tv-source-1'), const ValueKey('tv-source-2')]) {
       await _key(t, LogicalKeyboardKey.arrowDown);
       expect(isFocused(t, key), isTrue, reason: '$key');
@@ -208,6 +210,114 @@ void main() {
     await _ok(t);
     expect(data.deadCleared, isTrue);
     expect(find.text('Ninguno'), findsOneWidget);
+  });
+
+  Future<void> pin(WidgetTester t, String digits) async {
+    for (final d in digits.split('')) {
+      await focusKey(t, 'tv-pin-key-$d');
+      await _ok(t);
+    }
+  }
+
+  testWidgets('ocultar contenido adulto sin PIN se activa y desactiva solo',
+      (t) async {
+    final data = FakeTvData();
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-hideadult');
+    await _ok(t);
+    expect(data.hideAdult, isTrue);
+    await _ok(t);
+    expect(data.hideAdult, isFalse);
+  });
+
+  testWidgets('crear un PIN pide escribirlo dos veces', (t) async {
+    final data = FakeTvData();
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-pin');
+    expect(find.text('Sin PIN'), findsOneWidget);
+    await _ok(t);
+    expect(find.text('Nuevo PIN'), findsOneWidget);
+    await pin(t, '1234');
+    expect(find.text('Repite el PIN'), findsOneWidget);
+    await pin(t, '1234');
+    expect(data.pin, '1234');
+    expect(find.text('PIN guardado'), findsOneWidget);
+    expect(find.text('Configurado'), findsOneWidget);
+  });
+
+  testWidgets('si la repetición no coincide no se guarda el PIN', (t) async {
+    final data = FakeTvData();
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-pin');
+    await _ok(t);
+    await pin(t, '1234');
+    await pin(t, '1235');
+    expect(data.pin, isNull);
+    expect(find.text('Los PIN no coinciden'), findsOneWidget);
+  });
+
+  testWidgets('con PIN, desactivar el ocultado exige el PIN correcto',
+      (t) async {
+    final data = FakeTvData()
+      ..pin = '1234'
+      ..hideAdult = true;
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-hideadult');
+    await _ok(t);
+    await pin(t, '0000');
+    expect(find.text('PIN incorrecto'), findsOneWidget);
+    expect(data.hideAdult, isTrue);
+
+    await focusKey(t, 'tv-settings-hideadult');
+    await _ok(t);
+    await pin(t, '1234');
+    expect(data.hideAdult, isFalse);
+  });
+
+  testWidgets('activar el ocultado nunca pide PIN aunque exista', (t) async {
+    final data = FakeTvData()..pin = '1234';
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-hideadult');
+    await _ok(t);
+    expect(data.hideAdult, isTrue);
+    expect(find.text('Introduce el PIN'), findsNothing);
+  });
+
+  testWidgets('quitar el PIN exige el actual', (t) async {
+    final data = FakeTvData()..pin = '1234';
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-pin');
+    await _ok(t);
+    await pin(t, '1234');
+    expect(find.text('Quitar PIN'), findsOneWidget);
+    await focusKey(t, 'tv-option-1');
+    await _ok(t);
+    expect(data.pin, isNull);
+    expect(find.text('PIN quitado'), findsOneWidget);
+  });
+
+  testWidgets('cambiar el PIN: actual, nuevo y repetición', (t) async {
+    final data = FakeTvData()..pin = '1234';
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-pin');
+    await _ok(t);
+    await pin(t, '1234');
+    await focusKey(t, 'tv-option-0');
+    await _ok(t);
+    await pin(t, '5678');
+    await pin(t, '5678');
+    expect(data.pin, '5678');
+  });
+
+  testWidgets('un PIN actual incorrecto no deja cambiar nada', (t) async {
+    final data = FakeTvData()..pin = '1234';
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-pin');
+    await _ok(t);
+    await pin(t, '9999');
+    expect(find.text('PIN incorrecto'), findsOneWidget);
+    expect(find.text('Quitar PIN'), findsNothing);
+    expect(data.pin, '1234');
   });
 
   testWidgets('desactivar una fuente', (t) async {

@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
+import 'package:open_tv/backend/adult_filter.dart';
 import 'package:open_tv/backend/channel_health_sql.dart';
 import 'package:open_tv/backend/db_factory.dart';
 import 'package:open_tv/models/channel.dart';
@@ -183,6 +184,9 @@ class Sql {
     if (filters.country != null) {
       sqlQuery += "\nAND country = ?";
     }
+    if (filters.hideAdult) {
+      sqlQuery += "\nAND ${notAdultSql()}";
+    }
     if (filters.viewType == ViewType.favorites && filters.seriesId == null) {
       sqlQuery += "\nAND favorite = 1";
     }
@@ -202,6 +206,7 @@ class Sql {
     params.addAll(mediaTypes);
     params.addAll(filters.sourceIds!);
     if (filters.country != null) params.add(filters.country!);
+    if (filters.hideAdult) params.addAll(adultGroupPatterns);
     if (filters.seriesId != null) {
       params.add(filters.seriesId!);
     } else if (filters.groupId != null) {
@@ -241,12 +246,14 @@ class Sql {
         WHERE group_name IS NOT NULL AND group_name <> '' AND url IS NOT NULL
           AND media_type IN (${generatePlaceholders(mediaTypes.length)})
           AND source_id IN (${generatePlaceholders(filters.sourceIds!.length)})
+          ${filters.hideAdult ? 'AND ${notAdultSql()}' : ''}
         GROUP BY group_name ORDER BY group_name COLLATE NOCASE
         LIMIT ?, ?
     ''';
     List<Object> params = [];
     params.addAll(mediaTypes);
     params.addAll(filters.sourceIds!);
+    if (filters.hideAdult) params.addAll(adultGroupPatterns);
     params.add(offset);
     params.add(pageSize);
     var results = await db.getAll(sqlQuery, params);
