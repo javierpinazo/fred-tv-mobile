@@ -3,6 +3,7 @@ import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/backend/sql.dart' show customSourceName;
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/screens/tv/player/tv_buffer.dart';
+import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:open_tv/screens/tv/tv_add_m3u_screen.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/tv_iptv_org_screen.dart';
@@ -32,6 +33,7 @@ class _TVSettingsState extends State<TVSettings> {
   List<_SourceEntry> _entries = [];
   bool _autoRefresh = true;
   int _bufferSecs = TvBuffer.defaultSeconds;
+  TvEngineMode _engineMode = TvEngineMode.auto;
   String? _message;
   bool _messageIsError = false;
   final FocusNode _topNode = FocusNode();
@@ -60,11 +62,13 @@ class _TVSettingsState extends State<TVSettings> {
       }
       final auto = await widget.data.autoRefreshEnabled();
       final buffer = await widget.data.bufferSeconds();
+      final engine = await widget.data.videoEngineMode();
       if (!mounted) return;
       setState(() {
         _entries = entries;
         _autoRefresh = auto;
         _bufferSecs = buffer;
+        _engineMode = engine;
       });
     } catch (e) {
       debugPrint('TVSettings: error cargando fuentes: $e');
@@ -117,6 +121,12 @@ class _TVSettingsState extends State<TVSettings> {
     final value = TvBuffer.next(_bufferSecs);
     await widget.data.setBufferSeconds(value);
     if (mounted) setState(() => _bufferSecs = value);
+  }
+
+  Future<void> _toggleEngine() async {
+    final mode = _engineMode.next;
+    await widget.data.setVideoEngineMode(mode);
+    if (mounted) setState(() => _engineMode = mode);
   }
 
   Future<void> _openSourceMenu(_SourceEntry entry) async {
@@ -223,6 +233,25 @@ class _TVSettingsState extends State<TVSettings> {
                   ),
                 ),
                 onSelect: _cycleBuffer,
+              ),
+            ),
+            _gap(
+              TvListRow(
+                key: const ValueKey('tv-settings-engine'),
+                icon: Icons.memory,
+                title: 'Motor de video',
+                subtitle: _engineMode == TvEngineMode.auto
+                    ? 'ExoPlayer y, si falla, mpv'
+                    : 'Solo mpv (el más compatible)',
+                trailing: Text(
+                  _engineMode.label,
+                  style: const TextStyle(
+                    fontSize: TvTheme.fontBody,
+                    fontWeight: FontWeight.bold,
+                    color: TvTheme.accent,
+                  ),
+                ),
+                onSelect: _toggleEngine,
               ),
             ),
             if (_message != null)

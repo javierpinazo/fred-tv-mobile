@@ -5,6 +5,7 @@ import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/backend/sql.dart' show customSourceName;
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/source_type.dart';
+import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:open_tv/screens/tv/tv_settings.dart';
 
 import 'fakes.dart';
@@ -47,6 +48,7 @@ void main() {
     expect(isFocused(t, _iptv), isTrue);
     for (final key in [_m3u, _refresh, _auto,
         const ValueKey('tv-settings-buffer'),
+        const ValueKey('tv-settings-engine'),
         const ValueKey('tv-source-1'), const ValueKey('tv-source-2')]) {
       await _key(t, LogicalKeyboardKey.arrowDown);
       expect(isFocused(t, key), isTrue, reason: '$key');
@@ -131,6 +133,19 @@ void main() {
     expect(find.text('Desactivado'), findsOneWidget);
     await _ok(t);
     expect(data.bufferSecs, 2);
+  });
+
+  testWidgets('el motor de video alterna entre Automático y Solo mpv',
+      (t) async {
+    final data = FakeTvData();
+    await pumpTv(t, TVSettings(data: data));
+    expect(find.text('Automático'), findsOneWidget);
+    await focusKey(t, 'tv-settings-engine');
+    await _ok(t);
+    expect(data.engineMode, TvEngineMode.mpv);
+    expect(find.text('Solo mpv'), findsOneWidget);
+    await _ok(t);
+    expect(data.engineMode, TvEngineMode.auto);
   });
 
   testWidgets('desactivar una fuente', (t) async {

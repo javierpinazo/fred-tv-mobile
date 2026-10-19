@@ -52,6 +52,8 @@ dependencies:
   media_kit_video: ^1.3.0 # For video rendering.
   media_kit_libs_video: ^1.0.6 # Native video dependencies.
   package_info_plus: ^8.3.0
+  video_player: ^2.10.0 # ExoPlayer (Media3) en Android: motor principal de TV
+  wakelock_plus: ^1.2.8 # mantiene la pantalla encendida con ExoPlayer
 
 dev_dependencies:
   flutter_test:

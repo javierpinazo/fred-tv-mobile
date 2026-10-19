@@ -11,6 +11,7 @@ import 'package:open_tv/models/media_type.dart';
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/user_playlist.dart';
 import 'package:open_tv/models/view_type.dart';
+import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 
@@ -176,6 +177,14 @@ class FakeTvData extends TvData {
   @override
   Future<DateTime?> lastRefresh(int sourceId) async => lastRefreshes[sourceId];
 
+  TvEngineMode engineMode = TvEngineMode.auto;
+
+  @override
+  Future<TvEngineMode> videoEngineMode() async => engineMode;
+
+  @override
+  Future<void> setVideoEngineMode(TvEngineMode mode) async => engineMode = mode;
+
   int bufferSecs = 2;
 
   @override
@@ -337,6 +346,10 @@ bool injectBackKey() {
 
 /// Da el foco al [TvFocusable] con esa key.
 Future<void> focusKey(WidgetTester t, String key) async {
+  // Las listas perezosas no construyen lo que queda fuera de pantalla.
+  if (find.byKey(ValueKey(key)).evaluate().isEmpty) {
+    await t.scrollUntilVisible(find.byKey(ValueKey(key)), 200);
+  }
   final f = find.descendant(
     of: find.byKey(ValueKey(key)),
     matching: find.byType(TvFocusable),

@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:media_kit/media_kit.dart' as mk;
-import 'package:media_kit_video/media_kit_video.dart';
 import 'package:open_tv/backend/sql.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/id_data.dart';
 import 'package:open_tv/models/media_type.dart';
-import 'package:open_tv/screens/tv/player/tv_buffer.dart';
+import 'package:open_tv/screens/tv/player/exo_engine.dart';
+import 'package:open_tv/screens/tv/player/mpv_engine.dart';
+import 'package:open_tv/screens/tv/player/tv_engine.dart';
 import 'package:open_tv/screens/tv/player/tv_player_keys.dart';
 import 'package:open_tv/screens/tv/player/tv_playlist.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
@@ -57,11 +57,13 @@ class _TvPlayerState extends State<TvPlayer> {
   static const _seekStep = Duration(seconds: 10);
 
   late final TvPlaylistCursor _cursor;
-  final mk.Player _player = mk.Player();
-  late final VideoController _video;
+  TvEngine? _engine;
+  final List<StreamSubscription<dynamic>> _engineSubs = [];
+  List<TvPlaybackAttempt> _plan = const [];
+  TvEngineKind? _preferEngine;
+  bool _frameShown = false;
   final FocusNode _focus = FocusNode();
   final FocusNode _retryFocus = FocusNode();
-  final List<StreamSubscription<dynamic>> _subs = [];
 
   Timer? _overlayTimer;
   Timer? _firstFrameTimer;
@@ -87,15 +89,6 @@ class _TvPlayerState extends State<TvPlayer> {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _cursor = TvPlaylistCursor(widget.playlist, widget.initialIndex);
-    _video = VideoController(_player);
-    _subs.addAll([
-      _player.stream.width.listen(_onWidth),
-      _player.stream.error.listen(_onPlayerError),
-      _player.stream.completed.listen(_onCompleted),
-      _player.stream.playing.listen((playing) {
-        if (mounted) setState(() => _playing = playing);
-      }),
-    ]);
     _play(0);
     _showOverlay();
   }
@@ -105,10 +98,10 @@ class _TvPlayerState extends State<TvPlayer> {
     _overlayTimer?.cancel();
     _firstFrameTimer?.cancel();
     _reconnectTimer?.cancel();
-    for (final s in _subs) {
+    for (final s in _engineSubs) {
       s.cancel();
     }
-    _player.dispose();
+    _engine?.dispose();
     _focus.dispose();
     _retryFocus.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -121,6 +114,7 @@ class _TvPlayerState extends State<TvPlayer> {
     final generation = ++_generation;
     final channel = _channel;
     _attemptIndex = attemptIndex;
+    _frameShown = false;
     _firstFrameTimer?.cancel();
     _reconnectTimer?.cancel();
     if (mounted) {
@@ -146,43 +140,68 @@ class _TvPlayerState extends State<TvPlayer> {
       }
       if (attemptIndex == 0) {
         await widget.data.addToHistory(id);
+        final mode = await widget.data.videoEngineMode();
+        _plan = TvRetryPolicy.plan(channel.url!,
+            mode: mode, prefer: _preferEngine);
       }
+      final attempt = _plan[attemptIndex];
       final bufferSecs = await widget.data.bufferSeconds();
       final headers = await widget.data.channelHeaders(id);
       final seconds = channel.mediaType == MediaType.movie
           ? await Sql.getPosition(id)
           : null;
       if (!mounted || generation != _generation) return;
-      final platform = _player.platform;
-      if (platform is mk.NativePlayer) {
-        final attempt = TvRetryPolicy.attempts[attemptIndex];
-        await platform.setProperty(
-            'hwdec', attempt.hardwareDecoding ? 'auto-safe' : 'no');
-        await platform.setProperty('network-timeout', '15');
-        for (final e in TvBuffer.mpvOptions(bufferSecs).entries) {
-          await platform.setProperty(e.key, e.value);
-        }
-      }
-      await _player.open(
-        mk.Media(
-          channel.url!,
-          start: seconds != null ? Duration(seconds: seconds) : null,
-          httpHeaders: {
-            if (headers?.referrer != null) 'Referer': headers!.referrer!,
-            if (headers?.httpOrigin != null) 'Origin': headers!.httpOrigin!,
-            'User-Agent': headers?.userAgent ?? tvFallbackUserAgent,
-          },
-        ),
-      );
+      await _useEngine(attempt.engine);
       if (!mounted || generation != _generation) return;
-      _firstFrameTimer = Timer(
-        TvRetryPolicy.firstFrameTimeout,
-        () => _onFailure(generation),
-      );
+      final timeout = TvRetryPolicy.firstFrameTimeout(attempt);
+      await _engine!
+          .open(TvMedia(
+            url: channel.url!,
+            userAgent: headers?.userAgent ?? tvFallbackUserAgent,
+            headers: {
+              if (headers?.referrer != null) 'Referer': headers!.referrer!,
+              if (headers?.httpOrigin != null) 'Origin': headers!.httpOrigin!,
+            },
+            start: seconds != null ? Duration(seconds: seconds) : null,
+            bufferSecs: bufferSecs,
+            hardwareDecoding: attempt.hardwareDecoding,
+          ))
+          .timeout(timeout);
+      if (!mounted || generation != _generation) return;
+      if (!_frameShown) {
+        _firstFrameTimer = Timer(timeout, () => _onFailure(generation));
+      }
     } catch (e) {
       debugPrint('TvPlayer: error abriendo ${channel.name}: $e');
       _onFailure(generation);
     }
+  }
+
+  /// Cambia de motor (ExoPlayer o mpv) liberando el anterior.
+  Future<void> _useEngine(TvEngineKind kind) async {
+    if (_engine?.kind == kind) return;
+    for (final s in _engineSubs) {
+      await s.cancel();
+    }
+    _engineSubs.clear();
+    final old = _engine;
+    _engine = null;
+    if (mounted) setState(() {});
+    // El widget de video viejo debe salir del árbol antes de liberarlo.
+    await WidgetsBinding.instance.endOfFrame;
+    await old?.dispose();
+    if (!mounted) return;
+    final engine = kind == TvEngineKind.exo ? ExoEngine() : MpvEngine();
+    _engine = engine;
+    _engineSubs.addAll([
+      engine.firstFrame.listen(_onFirstFrame),
+      engine.errors.listen(_onPlayerError),
+      engine.completed.listen(_onCompleted),
+      engine.playing.listen((playing) {
+        if (mounted) setState(() => _playing = playing);
+      }),
+    ]);
+    setState(() {});
   }
 
   /// Muestra el error y le da el foco a "Reintentar" (el `autofocus` pierde
@@ -207,15 +226,15 @@ class _TvPlayerState extends State<TvPlayer> {
   void _onFailure(int generation) {
     if (!mounted || _exiting || generation != _generation) return;
     _firstFrameTimer?.cancel();
-    if (TvRetryPolicy.next(_attemptIndex) != null) {
+    if (TvRetryPolicy.next(_plan, _attemptIndex) != null) {
       _play(_attemptIndex + 1);
       return;
     }
     _showError();
   }
 
-  void _onWidth(int? width) {
-    if (width == null || width <= 0) return;
+  void _onFirstFrame(void _) {
+    _frameShown = true;
     _firstFrameTimer?.cancel();
     _liveReconnects = 0;
     if (mounted && (_loading || _hasError)) {
@@ -227,7 +246,7 @@ class _TvPlayerState extends State<TvPlayer> {
   }
 
   void _onPlayerError(String message) {
-    debugPrint('TvPlayer: error de mpv: $message');
+    debugPrint('TvPlayer: error de ${_engine?.kind.label}: $message');
     if (_exiting || _hasError) return;
     if (_loading) {
       _onFailure(_generation);
@@ -274,6 +293,7 @@ class _TvPlayerState extends State<TvPlayer> {
 
   void _zap(bool forward) {
     forward ? _cursor.next() : _cursor.previous();
+    _preferEngine = null;
     _liveReconnects = 0;
     setState(() {});
     _play(0);
@@ -281,7 +301,8 @@ class _TvPlayerState extends State<TvPlayer> {
   }
 
   void _seek(Duration delta) {
-    _player.seek(_player.state.position + delta);
+    final engine = _engine;
+    if (engine != null) engine.seek(engine.position + delta);
     _showOverlay();
   }
 
@@ -290,13 +311,13 @@ class _TvPlayerState extends State<TvPlayer> {
       case TvPlayerCommand.none:
         break;
       case TvPlayerCommand.togglePlayPause:
-        _player.playOrPause();
+        _engine?.playOrPause();
         _showOverlay();
       case TvPlayerCommand.play:
-        _player.play();
+        _engine?.play();
         _showOverlay();
       case TvPlayerCommand.pause:
-        _player.pause();
+        _engine?.pause();
         _showOverlay();
       case TvPlayerCommand.seekBack:
         _seek(-_seekStep);
@@ -368,25 +389,32 @@ class _TvPlayerState extends State<TvPlayer> {
   Future<void> _openOptions() async {
     _overlayTimer?.cancel();
     final channel = _channel;
+    final engine = _engine;
+    final canSwitchToExo = engine?.kind == TvEngineKind.mpv &&
+        TvRetryPolicy.exoCanOpen(channel.url ?? '');
     final choice = await showTvOptions<String>(
       context,
       title: channel.name,
       options: [
-        ('Audio', 'audio'),
-        ('Subtítulos', 'subs'),
+        if (engine?.supportsTracks == true) ('Audio', 'audio'),
+        if (engine?.supportsTracks == true) ('Subtítulos', 'subs'),
         ('Ajustar imagen', 'fit'),
         (
           channel.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos',
           'fav'
         ),
+        if (engine?.kind == TvEngineKind.exo)
+          ('Usar mpv en este canal (audio y subtítulos)', 'to-mpv'),
+        if (canSwitchToExo) ('Usar ExoPlayer en este canal', 'to-exo'),
       ],
     );
     if (!mounted) return;
     switch (choice) {
       case 'audio':
-        await _openAudioModal();
+        await _openTrackModal('Audio', engine!.audioTracks(), engine.selectAudio);
       case 'subs':
-        await _openSubtitlesModal();
+        await _openTrackModal(
+            'Subtítulos', engine!.subtitleTracks(), engine.selectSubtitle);
       case 'fit':
         setState(() => _fill = !_fill);
       case 'fav':
@@ -395,50 +423,30 @@ class _TvPlayerState extends State<TvPlayer> {
           await widget.data.setFavorite(id, !channel.favorite);
           channel.favorite = !channel.favorite;
         }
+      case 'to-mpv':
+      case 'to-exo':
+        _preferEngine =
+            choice == 'to-mpv' ? TvEngineKind.mpv : TvEngineKind.exo;
+        _liveReconnects = 0;
+        unawaited(_play(0));
     }
     if (mounted) _showOverlay();
   }
 
-  Future<void> _openSubtitlesModal() {
-    final tracks = _player.state.tracks.subtitle;
+  Future<void> _openTrackModal(
+    String title,
+    List<IdData<String>> tracks,
+    Future<void> Function(int index) select,
+  ) {
     return showDialog(
       context: context,
       builder: (ctx) => SelectDialog(
-        title: 'Subtítulos',
+        title: title,
         action: (id) async {
-          _player.setSubtitleTrack(tracks[id]);
+          select(id);
           Navigator.of(ctx).pop();
         },
-        data: tracks
-            .asMap()
-            .entries
-            .map((e) => IdData(
-                id: e.key,
-                data: e.value.language != null
-                    ? '${e.value.language} - ${e.value.id}'
-                    : e.value.id))
-            .toList(),
-      ),
-    );
-  }
-
-  Future<void> _openAudioModal() {
-    final tracks = _player.state.tracks.audio;
-    return showDialog(
-      context: context,
-      builder: (ctx) => SelectDialog(
-        title: 'Audio',
-        action: (id) async {
-          _player.setAudioTrack(tracks[id]);
-          Navigator.of(ctx).pop();
-        },
-        data: tracks
-            .asMap()
-            .entries
-            .map((e) => IdData(
-                id: e.key,
-                data: e.value.title ?? e.value.language ?? e.value.id))
-            .toList(),
+        data: tracks,
       ),
     );
   }
@@ -448,7 +456,7 @@ class _TvPlayerState extends State<TvPlayer> {
     _exiting = true;
     _generation++;
     if (_channel.mediaType == MediaType.movie) {
-      unawaited(_savePosition(_channel, _player.state.position.inSeconds));
+      unawaited(_savePosition(_channel, _engine?.position.inSeconds ?? 0));
     }
     if (!mounted) return;
     Navigator.of(context).pop(_cursor.index);
@@ -499,12 +507,7 @@ class _TvPlayerState extends State<TvPlayer> {
           body: Stack(
             fit: StackFit.expand,
             children: [
-              Video(
-                controller: _video,
-                controls: NoVideoControls,
-                fit: _fill ? BoxFit.cover : BoxFit.contain,
-                wakelock: true,
-              ),
+              _engine?.buildVideo(fill: _fill) ?? const SizedBox.expand(),
               if (_loading && !_hasError)
                 const Center(
                   child: CircularProgressIndicator(color: TvTheme.accent),
@@ -567,6 +570,7 @@ class _TvPlayerState extends State<TvPlayer> {
                 if (channel.group != null && channel.group!.isNotEmpty)
                   channel.group!,
                 if (_status().isNotEmpty) _status(),
+                if (_engine != null) _engine!.kind.label,
               ].join('  ·  '),
               style: const TextStyle(
                 fontSize: TvTheme.fontBody,
@@ -590,11 +594,11 @@ class _TvPlayerState extends State<TvPlayer> {
 
   Widget _buildProgress() {
     return StreamBuilder<Duration>(
-      stream: _player.stream.position,
-      initialData: _player.state.position,
+      stream: _engine?.positionStream,
+      initialData: _engine?.position ?? Duration.zero,
       builder: (context, snapshot) {
         final position = snapshot.data ?? Duration.zero;
-        final total = _player.state.duration;
+        final total = _engine?.duration ?? Duration.zero;
         final value = total.inMilliseconds > 0
             ? (position.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0)
             : 0.0;
