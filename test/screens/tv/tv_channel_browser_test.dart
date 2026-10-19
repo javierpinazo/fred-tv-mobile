@@ -281,6 +281,38 @@ void main() {
     expect(find.text('Primera hora'), findsOneWidget);
   });
 
+  testWidgets('con historial aparece "Recientes" justo después de "Todos"',
+      (t) async {
+    final data = _fake();
+    data.recents = [fakeChannel(77), fakeChannel(78)];
+    await pumpTv(t, TVChannelBrowser(data: data));
+    expect(find.text('Recientes'), findsOneWidget);
+    // Orden: Todos, Recientes, Deportes…
+    final all = t.getRect(find.text('Todos los canales')).top;
+    final rec = t.getRect(find.text('Recientes')).top;
+    final dep = t.getRect(find.text('Deportes')).top;
+    expect(all, lessThan(rec));
+    expect(rec, lessThan(dep));
+  });
+
+  testWidgets('elegir "Recientes" lista el historial en su orden', (t) async {
+    final data = _fake();
+    data.recents = [fakeChannel(77), fakeChannel(78)];
+    await pumpTv(t, TVChannelBrowser(data: data));
+    await focusKey(t, 'tv-group-1');
+    await t.pump(const Duration(milliseconds: 350));
+    await t.pumpAndSettle();
+    expect(data.channelCalls.last.viewType, ViewType.history);
+    expect(find.text('Canal 77'), findsOneWidget);
+    expect(find.text('Canal 78'), findsOneWidget);
+    expect(find.text('Canal 1'), findsNothing);
+  });
+
+  testWidgets('sin historial no se muestra "Recientes"', (t) async {
+    await pumpTv(t, TVChannelBrowser(data: _fake()));
+    expect(find.text('Recientes'), findsNothing);
+  });
+
   testWidgets('un canal sin guía no ofrece "Ver programación"', (t) async {
     await pumpTv(t, TVChannelBrowser(data: _fake()));
     await focusKey(t, 'tv-channel-0');

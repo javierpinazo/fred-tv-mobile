@@ -6,6 +6,8 @@ import 'package:open_tv/backend/utils.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/channel_http_headers.dart';
 import 'package:open_tv/models/filters.dart';
+import 'package:open_tv/models/media_type.dart';
+import 'package:open_tv/models/view_type.dart';
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/user_playlist.dart';
 import 'package:open_tv/screens/tv/guide/tv_guide.dart';
@@ -49,6 +51,19 @@ class TvData {
       (await Sql.getEnabledSourcesMinimal()).map((x) => x.id).toList();
 
   Future<List<Channel>> searchChannels(Filters f) => Sql.search(f);
+
+  /// Si hay canales vistos recientemente (historial de hasta 36).
+  Future<bool> hasRecents() async {
+    final ids = await enabledSourceIds();
+    if (ids.isEmpty) return false;
+    final r = await Sql.search(Filters(
+      viewType: ViewType.history,
+      sourceIds: ids,
+      mediaTypes: [MediaType.livestream],
+      page: 1,
+    ));
+    return r.isNotEmpty;
+  }
 
   Future<List<Channel>> searchGroups(Filters f) => Sql.searchGroupNames(f);
 

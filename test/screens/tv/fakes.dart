@@ -62,6 +62,12 @@ class FakeTvData extends TvData {
       const SourceRefreshResult(refreshed: 0, failedNames: []);
   int _nextSourceId = 100;
 
+  /// Canales vistos hace poco (más reciente primero).
+  List<Channel> recents = [];
+
+  @override
+  Future<bool> hasRecents() async => recents.isNotEmpty;
+
   final List<Filters> channelCalls = [];
   final List<Filters> groupCalls = [];
   final List<(int, bool)> favoriteCalls = [];
@@ -90,6 +96,7 @@ class FakeTvData extends TvData {
   Future<List<Channel>> searchChannels(Filters f) async {
     channelCalls.add(f);
     if (onSearchChannels != null) return onSearchChannels!(f);
+    if (f.viewType == ViewType.history) return List.of(recents);
     Iterable<Channel> r = channels;
     if (f.groupName != null) r = r.where((c) => c.group == f.groupName);
     if (f.viewType == ViewType.favorites) r = r.where((c) => c.favorite);

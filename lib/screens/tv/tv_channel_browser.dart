@@ -22,6 +22,7 @@ typedef TvAddToPlaylistCallback = Future<void> Function(
     BuildContext context, Channel channel);
 
 const String _allChannelsLabel = 'Todos los canales';
+const String _recentsLabel = 'Recientes';
 const double _groupRowExtent = 56;
 const int _maxGroupPages = 20;
 
@@ -119,9 +120,15 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
     } catch (e) {
       debugPrint('TVChannelBrowser: error cargando grupos: $e');
     }
+    var hasRecents = false;
+    try {
+      hasRecents = await widget.data.hasRecents();
+    } catch (e) {
+      debugPrint('TVChannelBrowser: error leyendo el historial: $e');
+    }
     if (!mounted) return;
     setState(() {
-      _groups = [_allChannelsLabel, ...names];
+      _groups = [_allChannelsLabel, if (hasRecents) _recentsLabel, ...names];
       _selectedGroup = 0;
       _loadingGroups = false;
     });
@@ -130,11 +137,15 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
 
   Future<List<Channel>> _fetch(int page) async {
     final ids = await widget.data.enabledSourceIds();
-    final groupName = widget.favoritesOnly || _selectedGroup == 0
+    final selected = widget.favoritesOnly || _selectedGroup == 0
         ? null
         : _groups[_selectedGroup];
+    final recents = selected == _recentsLabel;
+    final groupName = recents ? null : selected;
     return widget.data.searchChannels(Filters(
-      viewType: widget.favoritesOnly ? ViewType.favorites : ViewType.all,
+      viewType: widget.favoritesOnly
+          ? ViewType.favorites
+          : (recents ? ViewType.history : ViewType.all),
       sourceIds: ids,
       mediaTypes: widget.favoritesOnly
           ? [MediaType.livestream, MediaType.movie]
