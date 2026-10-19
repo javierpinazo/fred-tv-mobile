@@ -220,6 +220,18 @@ class Sql {
     return results.map(rowToChannel).toList();
   }
 
+  /// Canal por nombre (y por lista, si se indica); `null` si no existe.
+  static Future<Channel?> channelByName(String name, {String? sourceName}) async {
+    final db = await DbFactory.db;
+    final row = await db.getOptional('''
+      SELECT c.* FROM channels c JOIN sources s ON s.id = c.source_id
+      WHERE c.name = ? AND c.url IS NOT NULL
+        ${sourceName == null ? '' : 'AND s.name = ?'}
+      ORDER BY c.favorite DESC LIMIT 1
+    ''', [name, if (sourceName != null) sourceName]);
+    return row == null ? null : rowToChannel(row);
+  }
+
   /// Países (hasta 4) de los canales que el usuario sigue (favoritos o vistos).
   static Future<List<String>> watchedCountries() async {
     final db = await DbFactory.db;

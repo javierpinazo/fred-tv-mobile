@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:open_tv/backend/source_refresher.dart';
+import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/screens/tv/tv_channel_browser.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
+import 'package:open_tv/screens/tv/player/tv_player.dart';
 import 'package:open_tv/screens/tv/tv_focus.dart';
+import 'package:open_tv/screens/tv/tv_links.dart';
+import 'package:open_tv/screens/tv/tv_platform.dart';
 import 'package:open_tv/screens/tv/tv_search.dart';
 import 'package:open_tv/screens/tv/tv_settings.dart';
 import 'package:open_tv/screens/tv/tv_user_playlists.dart';
@@ -21,9 +27,17 @@ const _tabs = <(String, IconData)>[
 /// FocusScope. La navegación ↑↓←→ la hace Flutter; solo los bordes saltan
 /// entre el menú y el contenido.
 class TVHome extends StatefulWidget {
-  const TVHome({super.key, this.data = const TvData(), this.onPlay});
+  const TVHome({
+    super.key,
+    this.data = const TvData(),
+    this.onPlay,
+    this.platform = const TvPlatform(),
+  });
 
   final TvData data;
+
+  /// Puente con Android TV (enlaces de la pantalla de inicio y de la búsqueda).
+  final TvPlatform platform;
   final TvPlayCallback? onPlay;
 
   @override
@@ -35,6 +49,9 @@ class _TVHomeState extends State<TVHome> {
   bool _sidebarFocused = true;
   bool _pendingReload = false;
   Key _browserKey = UniqueKey();
+  Key _searchKey = UniqueKey();
+  String? _searchQuery;
+  StreamSubscription<String>? _linkSub;
   final GlobalKey<TVChannelBrowserState> _favoritesKey = GlobalKey();
   final GlobalKey<TvUserPlaylistsScreenState> _playlistsKey = GlobalKey();
 
@@ -49,10 +66,13 @@ class _TVHomeState extends State<TVHome> {
     super.initState();
     _sidebarScope.addListener(_onSidebarFocus);
     tvSourcesVersion.addListener(_onSourcesChanged);
+    _linkSub = widget.platform.links.listen(_onLink);
+    widget.platform.initialLink().then(_onLink);
   }
 
   @override
   void dispose() {
+    _linkSub?.cancel();
     _sidebarScope.removeListener(_onSidebarFocus);
     tvSourcesVersion.removeListener(_onSourcesChanged);
     _sidebarScope.dispose();
@@ -63,6 +83,43 @@ class _TVHomeState extends State<TVHome> {
       n.dispose();
     }
     super.dispose();
+  }
+
+  // --- Enlaces de Android TV ----------------------------------------------
+
+  Future<void> _onLink(String? raw) async {
+    final link = parseTvLink(raw);
+    if (link == null || !mounted) return;
+    switch (link) {
+      case TvSearchLink(:final query):
+        setState(() {
+          _searchQuery = query;
+          _searchKey = UniqueKey();
+          _selectedIndex = 3;
+        });
+        WidgetsBinding.instance.endOfFrame.then((_) {
+          if (mounted) _navNodes[3].requestFocus();
+        });
+      case TvPlayLink(:final name, :final source):
+        Channel? channel;
+        try {
+          channel = await widget.data.findChannel(name, sourceName: source);
+        } catch (e) {
+          debugPrint('TVHome: error buscando el canal del enlace: $e');
+        }
+        if (!mounted) return;
+        if (channel == null) {
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
+            content: Text('Ese canal ya no está disponible'),
+            duration: Duration(seconds: 3),
+          ));
+          return;
+        }
+        final play = widget.onPlay ??
+            (ctx, list, i) =>
+                openTvPlayer(ctx, playlist: list, index: i, data: widget.data);
+        await play(context, [channel], 0);
+    }
   }
 
   // --- Foco ---------------------------------------------------------------
@@ -244,6 +301,8 @@ class _TVHomeState extends State<TVHome> {
         onPlay: widget.onPlay,
       ),
       TVSearch(
+        key: _searchKey,
+        initialQuery: _searchQuery,
         data: widget.data,
         onPlay: widget.onPlay,
         onAddToPlaylist: addToPlaylist,

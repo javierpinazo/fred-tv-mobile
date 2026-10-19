@@ -13,6 +13,7 @@ import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/user_playlist.dart';
 import 'package:open_tv/models/view_type.dart';
 import 'package:open_tv/screens/tv/guide/tv_guide.dart';
+import 'package:open_tv/screens/tv/tv_platform.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
@@ -262,6 +263,16 @@ class FakeTvData extends TvData {
 
   @override
   Future<String?> pickBackupFile() async => pickedFile;
+
+  int homeRowPublishes = 0;
+
+  @override
+  Future<void> publishHomeRow({TvPlatform platform = const TvPlatform()}) async =>
+      homeRowPublishes++;
+
+  @override
+  Future<Channel?> findChannel(String name, {String? sourceName}) async =>
+      channels.where((c) => c.name == name).firstOrNull;
 
   bool zeroCopy = false;
 

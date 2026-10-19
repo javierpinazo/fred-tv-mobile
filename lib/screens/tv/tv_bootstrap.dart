@@ -70,6 +70,7 @@ class _TvBootstrapState extends State<TvBootstrap> {
     if (_phase == _Phase.ready) return;
     setState(() => _phase = _Phase.ready);
     unawaited(widget.data.warmUpGuide());
+    unawaited(widget.data.publishHomeRow());
     widget.data.autoRefreshEnabled().then((enabled) {
       if (enabled) unawaited(widget.data.refreshSources(onlyStale: true));
     }).catchError((Object e) {

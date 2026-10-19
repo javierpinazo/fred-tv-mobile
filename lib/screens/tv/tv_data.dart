@@ -26,6 +26,8 @@ import 'package:open_tv/screens/tv/guide/xmltv_guide.dart';
 import 'package:open_tv/screens/tv/player/tv_buffer.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:open_tv/screens/tv/tv_appearance.dart';
+import 'package:open_tv/screens/tv/tv_links.dart';
+import 'package:open_tv/screens/tv/tv_platform.dart';
 import 'package:open_tv/screens/tv/tv_parental.dart';
 
 const String _autoRefreshKey = 'tvAutoRefresh';
@@ -221,6 +223,34 @@ class TvData {
   Future<List<({String code, int count})>> countries() async =>
       Sql.countries(await enabledSourceIds());
 
+  // --- Pantalla de inicio de Android TV -----------------------------------
+
+  Future<Channel?> findChannel(String name, {String? sourceName}) =>
+      Sql.channelByName(name, sourceName: sourceName);
+
+  /// Publica los favoritos como fila de la pantalla de inicio (no lanza).
+  Future<void> publishHomeRow(
+      {TvPlatform platform = const TvPlatform()}) async {
+    try {
+      final ids = await enabledSourceIds();
+      final favorites = ids.isEmpty
+          ? <Channel>[]
+          : await searchChannels(Filters(
+              viewType: ViewType.favorites,
+              sourceIds: ids,
+              mediaTypes: [MediaType.livestream],
+              page: 1,
+            ));
+      final names = {
+        for (final s in await Sql.getSources())
+          if (s.id != null) s.id!: s.name
+      };
+      await platform.publishFavorites(buildHomeItems(favorites, names));
+    } catch (e) {
+      debugPrint('TvData: no se pudo publicar la fila de inicio: $e');
+    }
+  }
+
   // --- Estado de los canales ----------------------------------------------
 
   Future<bool> hideDeadSetting() async =>
@@ -271,8 +301,10 @@ class TvData {
   Future<int?> resolveChannelId(Channel channel) =>
       Sql.channelIdByKey(channel.sourceId, channel.name);
 
-  Future<void> setFavorite(int channelId, bool favorite) =>
-      Sql.favoriteChannel(channelId, favorite);
+  Future<void> setFavorite(int channelId, bool favorite) async {
+    await Sql.favoriteChannel(channelId, favorite);
+    unawaited(publishHomeRow());
+  }
 
   Future<void> addToHistory(int channelId) => Sql.addToHistory(channelId);
 

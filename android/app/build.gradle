@@ -44,6 +44,11 @@ android {
     }
 }
 
+dependencies {
+    // Fila "Favoritos" de la pantalla de inicio de Android TV.
+    implementation "androidx.tvprovider:tvprovider:1.0.0"
+}
+
 flutter {
     source = "../.."
 }

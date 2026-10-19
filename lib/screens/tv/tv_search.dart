@@ -28,7 +28,11 @@ class TVSearch extends StatefulWidget {
     this.data = const TvData(),
     this.onPlay,
     this.onAddToPlaylist,
+    this.initialQuery,
   });
+
+  /// Consulta con la que se abre (por ejemplo desde la búsqueda del sistema).
+  final String? initialQuery;
 
   final TvData data;
   final TvPlayCallback? onPlay;
@@ -58,6 +62,18 @@ class _TVSearchState extends State<TVSearch> {
   bool _hasMore = false;
   bool _loadingMore = false;
   int _page = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialQuery?.trim();
+    if (initial != null && initial.isNotEmpty) {
+      _controller.text = initial;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _search(initial);
+      });
+    }
+  }
 
   @override
   void dispose() {
