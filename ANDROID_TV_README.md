@@ -31,6 +31,21 @@ Al pulsar OK en un campo de texto se abre un **teclado propio** que se maneja co
 
 Si un canal no se puede reproducir, la pantalla muestra el error con **Reintentar**, **Siguiente canal** y **Volver**. La app prueba primero decodificación por hardware y, si no sale imagen en 15 s, por software; en directo reconecta sola hasta 3 veces.
 
+## Funciones de la interfaz de TV
+
+- **Recientes**: el grupo *Recientes* de *Canales* lista lo último que viste.
+- **Zapping**: con un canal en directo, teclea su número (1,5 s o OK para confirmar) o usa la tecla *Último canal* / la opción "Volver al canal anterior" de Mantén OK. ↑↓ saltan los canales caídos.
+- **Canales caídos**: tras dos fallos seguidos un canal se marca (7 días). Se puede marcar/quitar a mano desde Mantén OK, ocultar de Canales y Búsqueda y limpiar desde Ajustes.
+- **País**: en *Buscar*, el selector *País* filtra por el país del `tvg-id` (`.pe`, `.us`…). Tras actualizar a esta versión las listas se recargan una vez para rellenarlo.
+- **Control parental**: en Ajustes, *Ocultar contenido adulto* (grupos XXX, Adult, +18…) y un PIN de 4 dígitos que protege desactivarlo.
+- **Copia de seguridad**: *Ajustes → Copia de seguridad* exporta/importa favoritos, listas propias, canales propios, listas M3U por URL y ajustes (nunca el PIN ni listas Xtream). Se guarda en la carpeta `backups` de la app; se puede importar desde ella, desde una URL o desde un archivo.
+- **Guía de programación**: Mantén OK → *Ver programación*. TV Perú usa su web oficial; el resto, el XMLTV de epgshare01 de los países de tus favoritos (por defecto Perú) y, opcionalmente, una URL propia (*Guía personalizada*).
+- **Accesibilidad**: tamaño de letra (100/115/130 %) y alto contraste.
+- **Pantalla de inicio de Android TV**: fila *Favoritos* y enlaces `fredtv://play?name=…` / `fredtv://search?q=…`; la app también atiende el intent de búsqueda.
+- **mpv**: *Decodificación de video (mpv)* → *Sin copia* es experimental (`hwdec=mediacodec`) y vuelve a la automática si no da imagen.
+
+> ExoPlayer no permite elegir pista de audio con la versión de Flutter del proyecto (la API exige Flutter ≥ 3.35); para eso usa "Usar mpv en este canal".
+
 ## Listas de canales
 
 - **Agregar desde iptv-org** (Ajustes): lista recomendada en español, todos los países y las categorías de [iptv-org](https://github.com/iptv-org/iptv).

@@ -282,7 +282,7 @@ class TvData {
   Future<bool> hasRecents() async {
     final ids = await enabledSourceIds();
     if (ids.isEmpty) return false;
-    final r = await Sql.search(Filters(
+    final r = await searchChannels(Filters(
       viewType: ViewType.history,
       sourceIds: ids,
       mediaTypes: [MediaType.livestream],
