@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_row_name">Favorites</string>
+    <string name="home_row_description">Your favorite Fred TV channels</string>
+</resources>

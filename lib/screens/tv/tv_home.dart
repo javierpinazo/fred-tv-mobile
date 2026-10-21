@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:open_tv/backend/source_refresher.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/screens/tv/tv_channel_browser.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
@@ -15,13 +16,21 @@ import 'package:open_tv/screens/tv/tv_user_playlists.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
-const _tabs = <(String, IconData)>[
-  ('Canales', Icons.live_tv),
-  ('Favoritos', Icons.star),
-  ('Mis listas', Icons.playlist_play),
-  ('Buscar', Icons.search),
-  ('Ajustes', Icons.settings),
+const _tabIcons = <IconData>[
+  Icons.live_tv,
+  Icons.star,
+  Icons.playlist_play,
+  Icons.search,
+  Icons.settings,
 ];
+
+List<String> _tabLabels(AppLocalizations l10n) => [
+      l10n.navChannels,
+      l10n.navFavorites,
+      l10n.navMyLists,
+      l10n.navSearch,
+      l10n.navSettings,
+    ];
 
 /// Pantalla principal de TV: menú lateral + pestañas, cada una en su propio
 /// FocusScope. La navegación ↑↓←→ la hace Flutter; solo los bordes saltan
@@ -57,8 +66,8 @@ class _TVHomeState extends State<TVHome> {
 
   final FocusScopeNode _sidebarScope = FocusScopeNode(debugLabel: 'tv-sidebar');
   final List<FocusScopeNode> _tabScopes =
-      List.generate(_tabs.length, (i) => FocusScopeNode(debugLabel: 'tv-tab-$i'));
-  final List<FocusNode> _navNodes = List.generate(_tabs.length, (_) => FocusNode());
+      List.generate(_tabIcons.length, (i) => FocusScopeNode(debugLabel: 'tv-tab-$i'));
+  final List<FocusNode> _navNodes = List.generate(_tabIcons.length, (_) => FocusNode());
   late final TvEdgeFocusAction _edgeAction = TvEdgeFocusAction(onEdge: _onEdge);
 
   @override
@@ -109,9 +118,9 @@ class _TVHomeState extends State<TVHome> {
         }
         if (!mounted) return;
         if (channel == null) {
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
-            content: Text('Ese canal ya no está disponible'),
-            duration: Duration(seconds: 3),
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+            content: Text(context.l10n.linkChannelUnavailable),
+            duration: const Duration(seconds: 3),
           ));
           return;
         }
@@ -216,7 +225,7 @@ class _TVHomeState extends State<TVHome> {
         ),
         child: Column(
           children: [
-            for (var i = 0; i < _tabs.length; i++)
+            for (var i = 0; i < _tabIcons.length; i++)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: _buildNavItem(i),
@@ -228,7 +237,8 @@ class _TVHomeState extends State<TVHome> {
   }
 
   Widget _buildNavItem(int index) {
-    final (label, icon) = _tabs[index];
+    final label = _tabLabels(context.l10n)[index];
+    final icon = _tabIcons[index];
     return TvFocusable(
       key: ValueKey('tv-nav-$index'),
       focusNode: _navNodes[index],

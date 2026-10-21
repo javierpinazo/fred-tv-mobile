@@ -60,6 +60,7 @@ void main() {
         const ValueKey('tv-settings-backup'),
         const ValueKey('tv-settings-epgurl'),
         const ValueKey('tv-settings-camera'),
+        const ValueKey('tv-settings-language'),
         const ValueKey('tv-source-1'), const ValueKey('tv-source-2')]) {
       await _key(t, LogicalKeyboardKey.arrowDown);
       expect(isFocused(t, key), isTrue, reason: '$key');

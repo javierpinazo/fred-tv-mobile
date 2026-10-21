@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:open_tv/backend/countries.dart';
 import 'package:open_tv/backend/iptv_org_catalog.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/source_type.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
@@ -8,7 +10,6 @@ import 'package:open_tv/screens/tv/tv_source_errors.dart';
 import 'package:open_tv/screens/tv/widgets/tv_list_row.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
-const _sectionTitles = ['Recomendados', 'Países', 'Categorías'];
 const _sectionIcons = [Icons.star_outline, Icons.public, Icons.category_outlined];
 const double _itemExtent = 72;
 
@@ -104,6 +105,31 @@ class _TvIptvOrgScreenState extends State<TvIptvOrgScreen> {
     });
   }
 
+  List<String> _sectionTitles(AppLocalizations l10n) => [
+        l10n.iptvSectionRecommended,
+        l10n.iptvSectionCountries,
+        l10n.iptvSectionCategories,
+      ];
+
+  /// Nombre del elemento en el idioma de la interfaz. Los de «Recomendados»
+  /// están escritos en español en el catálogo; el resto viene de la API.
+  String _displayName(IptvOrgPlaylist p, AppLocalizations l10n) {
+    if (!IptvOrgCatalog.recommended.contains(p)) return p.name;
+    return switch (p.kind) {
+      IptvOrgKind.country => countryName(p.code, lang: l10n.localeName),
+      IptvOrgKind.language => l10n.iptvAllSpanish,
+      IptvOrgKind.category => switch (p.code) {
+          'news' => l10n.iptvCatNews,
+          'sports' => l10n.iptvCatSports,
+          'kids' => l10n.iptvCatKids,
+          'movies' => l10n.iptvCatMovies,
+          'music' => l10n.iptvCatMusic,
+          'documentary' => l10n.iptvCatDocumentary,
+          _ => p.name,
+        },
+    };
+  }
+
   void _toast(String text) {
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
       content: Text(text),
@@ -114,9 +140,11 @@ class _TvIptvOrgScreenState extends State<TvIptvOrgScreen> {
   Future<void> _add(IptvOrgPlaylist playlist) async {
     if (_busy) return;
     if (_addedUrls.contains(playlist.url.toLowerCase())) {
-      _toast('Ya agregada');
+      _toast(context.l10n.iptvAlreadyAdded);
       return;
     }
+    final l10n = context.l10n;
+    final name = _displayName(playlist, l10n);
     _busy = true;
     showDialog<void>(
       context: context,
@@ -133,7 +161,7 @@ class _TvIptvOrgScreenState extends State<TvIptvOrgScreen> {
                 const CircularProgressIndicator(),
                 const SizedBox(width: 20),
                 Text(
-                  'Agregando «${playlist.name}»…',
+                  l10n.iptvAdding(name),
                   style: const TextStyle(
                     fontSize: TvTheme.fontBody,
                     color: TvTheme.textPrimary,
@@ -153,10 +181,10 @@ class _TvIptvOrgScreenState extends State<TvIptvOrgScreen> {
         sourceType: SourceType.m3uUrl,
         enabled: true,
       ));
-      message = '«${playlist.name}» agregada';
+      message = l10n.iptvAdded(name);
     } catch (e) {
       debugPrint('TvIptvOrgScreen: error agregando "${playlist.name}": $e');
-      message = tvAddSourceErrorMessage(e);
+      message = tvAddSourceErrorMessage(e, l10n);
     }
     _busy = false;
     if (!mounted) return;
@@ -174,9 +202,9 @@ class _TvIptvOrgScreenState extends State<TvIptvOrgScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Listas de iptv-org',
-              style: TextStyle(
+            Text(
+              context.l10n.iptvTitle,
+              style: const TextStyle(
                 fontSize: TvTheme.fontTitle,
                 fontWeight: FontWeight.bold,
                 color: TvTheme.textPrimary,
@@ -213,7 +241,7 @@ class _TvIptvOrgScreenState extends State<TvIptvOrgScreen> {
       },
       child: Column(
         children: [
-          for (var i = 0; i < _sectionTitles.length; i++)
+          for (var i = 0; i < 3; i++)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: TvListRow(
@@ -221,7 +249,7 @@ class _TvIptvOrgScreenState extends State<TvIptvOrgScreen> {
                 focusNode: _sectionNodes[i],
                 autofocus: i == 0,
                 icon: _sectionIcons[i],
-                title: _sectionTitles[i],
+                title: _sectionTitles(context.l10n)[i],
                 onFocusChange: (focused) {
                   if (focused) _showSection(i);
                 },
@@ -247,7 +275,7 @@ class _TvIptvOrgScreenState extends State<TvIptvOrgScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'No se pudo cargar el catálogo. Revisa tu conexión.',
+              context.l10n.iptvLoadFailed,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: TvTheme.fontBody,
@@ -259,7 +287,7 @@ class _TvIptvOrgScreenState extends State<TvIptvOrgScreen> {
               width: 220,
               child: TvListRow(
                 key: const ValueKey('tv-iptv-retry'),
-                title: 'Reintentar',
+                title: context.l10n.commonRetry,
                 icon: Icons.refresh,
                 onSelect: () {
                   setState(() => _failed.remove(_section));
@@ -299,12 +327,14 @@ class _TvIptvOrgScreenState extends State<TvIptvOrgScreen> {
                   ? null
                   : Text(p.flag!, style: const TextStyle(fontSize: 28)),
               icon: p.flag == null ? Icons.live_tv : null,
-              title: p.name,
-              subtitle: p.kind == IptvOrgKind.language ? 'Idioma' : null,
+              title: _displayName(p, context.l10n),
+              subtitle: p.kind == IptvOrgKind.language
+                  ? context.l10n.iptvKindLanguage
+                  : null,
               trailing: added
-                  ? const Text(
-                      'Agregada',
-                      style: TextStyle(
+                  ? Text(
+                      context.l10n.iptvAddedBadge,
+                      style: const TextStyle(
                         fontSize: TvTheme.fontSmall,
                         fontWeight: FontWeight.bold,
                         color: TvTheme.success,

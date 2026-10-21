@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/screens/tv/tv_bootstrap.dart';
 
 import 'fakes.dart';
@@ -17,6 +18,9 @@ Future<void> _pumpBootstrap(
   addTearDown(t.view.reset);
   await t.pumpWidget(MaterialApp(
     theme: ThemeData.dark(useMaterial3: true),
+    locale: const Locale('es'),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: TvBootstrap(
       data: data,
       prepare: prepare,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/screens/tv/widgets/tv_dialogs.dart';
 
@@ -12,16 +13,17 @@ Future<void> showTvChannelMenu(
   VoidCallback? onShowGuide,
   VoidCallback? onToggleDead,
 }) async {
+  final l10n = context.l10n;
   final choice = await showTvOptions<int>(
     context,
     title: channel.name,
     options: [
-      ('Reproducir', 0),
-      (channel.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos', 1),
-      if (onAddToPlaylist != null) ('Agregar a una lista…', 2),
-      if (onShowGuide != null) ('Ver programación', 3),
+      (l10n.commonPlay, 0),
+      (channel.favorite ? l10n.menuFavoriteRemove : l10n.menuFavoriteAdd, 1),
+      if (onAddToPlaylist != null) (l10n.menuAddToList, 2),
+      if (onShowGuide != null) (l10n.menuShowGuide, 3),
       if (onToggleDead != null)
-        (channel.dead ? 'Quitar marca de caído' : 'Marcar como caído', 4),
+        (channel.dead ? l10n.menuDeadClear : l10n.menuDeadMark, 4),
     ],
   );
   switch (choice) {

@@ -13,6 +13,7 @@ import androidx.tvprovider.media.tv.TvContractCompat
 /**
  * Fila "Favoritos" de la pantalla de inicio de Android TV (canal de vista
  * previa). Cada elemento abre su canal con un enlace `fredtv://play?...`.
+ * El nombre sale de los recursos (`strings.xml`) en el idioma del sistema.
  */
 object HomeRow {
     private const val PREFS = "tv_home_row"
@@ -22,16 +23,19 @@ object HomeRow {
         val helper = PreviewChannelHelper(context)
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
+        val channel = PreviewChannel.Builder()
+            .setDisplayName(context.getString(R.string.home_row_name))
+            .setDescription(context.getString(R.string.home_row_description))
+            .setAppLinkIntentUri(Uri.parse("fredtv://home"))
+            .setLogo(appIcon(context))
+            .build()
         var channelId = prefs.getLong(KEY_CHANNEL_ID, -1L)
         if (channelId == -1L) {
-            val channel = PreviewChannel.Builder()
-                .setDisplayName("Favoritos")
-                .setDescription("Tus canales favoritos de Fred TV")
-                .setAppLinkIntentUri(Uri.parse("fredtv://home"))
-                .setLogo(appIcon(context))
-                .build()
             channelId = helper.publishDefaultChannel(channel)
             prefs.edit().putLong(KEY_CHANNEL_ID, channelId).apply()
+        } else {
+            // Si el idioma del sistema cambió, el nombre de la fila se actualiza.
+            helper.updatePreviewChannel(channelId, channel)
         }
 
         // Se reemplaza el contenido anterior por el actual.

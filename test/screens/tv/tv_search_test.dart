@@ -179,7 +179,7 @@ void main() {
     expect(find.byKey(_res(0)), findsOneWidget);
     expect(find.byKey(_res(1)), findsNothing);
     expect(find.text('Canal 3'), findsOneWidget);
-    expect(find.text('1 resultados'), findsOneWidget);
+    expect(find.text('1 resultado'), findsOneWidget);
   });
 
   testWidgets('error muestra mensaje', (t) async {

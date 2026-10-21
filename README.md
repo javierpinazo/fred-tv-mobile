@@ -15,30 +15,33 @@ Fred TV for Android and iOS
 
 ---
 
-## Fork: mejoras para Android TV
+## Fork: Android TV improvements
 
-Este fork añade una interfaz pensada para el control remoto y hace que la app sea estable en Android TV. En teléfonos y tablets sigue usándose la interfaz móvil original. Guía completa de controles e instalación: [ANDROID_TV_README.md](ANDROID_TV_README.md).
+This fork adds a remote-friendly interface and makes the app stable on Android TV. On phones and tablets the original mobile interface is still used. Full guide to controls and installation (in Spanish): [ANDROID_TV_README.md](ANDROID_TV_README.md).
 
-**Reproducción estable**
-- **ExoPlayer como motor principal y mpv de respaldo**: si un canal no da imagen, se prueba con mpv por hardware y luego por software. Se puede forzar mpv para todos los canales o para uno solo.
-- **Reconexión automática** en directo y reintentos con mensajes de error claros (*Reintentar*, *Siguiente canal*, *Volver*).
-- **Buffer configurable** y opciones de mpv que evitan cortes en HLS; audio de HLS que declara solo video corregido; decodificación sin copia (experimental) con vuelta automática si falla.
-- **Canales caídos**: se marcan tras dos fallos seguidos, el zapping los salta y se pueden ocultar o limpiar.
+**Stable playback**
+- **ExoPlayer as the main engine with mpv as a fallback**: if a channel shows no picture, it is retried with hardware mpv and then software mpv. mpv can be forced for all channels or for a single one.
+- **Automatic reconnection** on live streams and retries with clear error messages (*Retry*, *Next channel*, *Back*).
+- **Configurable buffer** and mpv options that prevent HLS dropouts; fixed audio for HLS streams that declare video only; zero-copy decoding (experimental) with automatic fallback if it fails.
+- **Dead channels**: flagged after two consecutive failures, skipped when channel surfing, and can be hidden or cleaned up.
 
-**Control con D-pad**
-- Foco nativo en todas las pantallas, menú lateral colapsable y cinco pestañas: Canales, Favoritos, Mis listas, Buscar y Ajustes.
-- **Teclado propio** manejable con el control (con opción de teclado del sistema o voz).
-- **Mantén OK** abre las opciones del canal; zapping por número, tecla de último canal y grupo *Recientes*.
+**D-pad control**
+- Native focus on every screen, a collapsible side menu and five tabs: Channels, Favorites, My lists, Search and Settings.
+- **Built-in keyboard** that works with the remote (with an option to use the system keyboard or voice input).
+- **Hold OK** opens the channel options; channel surfing by number, a last-channel key and a *Recent* group.
 
-**Canales y datos**
-- Alta de listas desde el catálogo de **iptv-org** o por URL M3U, con **actualización automática** cada 24 h.
-- **Mis listas** propias (con canales manuales), filtro por **país** y **copia de seguridad** exportable e importable.
-- **Guía de programación (EPG)**: TV Perú y XMLTV por país, con URL propia opcional.
-- **Control parental** con PIN, **tamaño de letra** y **alto contraste**.
-- Integración con Android TV: fila *Favoritos* en la pantalla de inicio, enlaces `fredtv://` y búsqueda del sistema.
+**Channels and data**
+- Add playlists from the **iptv-org** catalog or by M3U URL, with **automatic refresh** every 24 h.
+- Your own **lists** (with manually added channels), **country** filter, and exportable/importable **backup**.
+- **Program guide (EPG)**: TV Peru and per-country XMLTV, with an optional custom URL.
+- **Parental control** with a PIN, **font size** and **high contrast**.
+- Android TV integration: a *Favorites* row on the home screen, `fredtv://` links and system search.
+- **Multi-language TV interface**: Spanish, English, Portuguese, French, German and Italian. It follows the system language (English if yours isn't available) and can be changed in *Settings → Language*.
 
-**Cámara de seguridad en un recuadro**
-- Configura la dirección RTSP en *Ajustes → Cámara de seguridad* y aparece como un canal más.
-- Con cualquier canal en pantalla, *Mantén OK → Mostrar cámara* la abre en un recuadro, sin audio; se puede **intercambiar con el canal** a pantalla grande, hacer **zoom** (1x a 4x con desplazamiento) y ocultarla. Usa su propio mpv por TCP y se reconecta sola.
+**Security camera in a picture-in-picture box**
+- Set the RTSP address in *Settings → Security camera* and it shows up as one more channel.
+- With any channel on screen, *Hold OK → Show camera* opens it in a small box, without audio; you can **swap it with the channel** on the big screen, **zoom** (1x to 4x with panning) and hide it. It uses its own mpv over TCP and reconnects on its own.
 
-La interfaz de TV se cubre con más de 390 pruebas automáticas.
+The TV interface is covered by more than 410 automated tests.
+
+**Adding a language:** copy `lib/l10n/app_en.arb` to `app_<code>.arb`, translate the values, add the language name to `languageNativeNames` in `lib/l10n/l10n.dart` and its country names to `lib/backend/country_names_l10n.dart`, then run `flutter gen-l10n`. The phone/tablet interface (original upstream UI) is still English only.

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_tv/screens/tv/player/tv_buffer.dart';
+import 'package:open_tv/l10n/gen/app_localizations_es.dart';
 
 void main() {
   test('opciones disponibles y valor por defecto', () {
@@ -30,9 +31,9 @@ void main() {
   });
 
   test('etiquetas', () {
-    expect(TvBuffer.label(0), 'Desactivado');
-    expect(TvBuffer.label(2), '2 s');
-    expect(TvBuffer.label(10), '10 s');
+    expect(TvBuffer.label(0, AppLocalizationsEs()), 'Desactivado');
+    expect(TvBuffer.label(2, AppLocalizationsEs()), '2 s');
+    expect(TvBuffer.label(10, AppLocalizationsEs()), '10 s');
   });
 
   test('siguiente valor da la vuelta', () {

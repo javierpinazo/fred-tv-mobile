@@ -1,3 +1,5 @@
+import 'package:open_tv/l10n/l10n.dart';
+
 const String tvFallbackUserAgent = 'VLC/3.0.21 LibVLC/3.0.21';
 
 /// Motor de reproducción.
@@ -16,7 +18,8 @@ enum TvEngineMode {
   /// Solo mpv (el más compatible con streams raros).
   mpv;
 
-  String get label => this == auto ? 'Automático' : 'Solo mpv';
+  String labelOf(AppLocalizations l10n) =>
+      this == auto ? l10n.engineModeAuto : l10n.engineModeMpv;
 
   TvEngineMode get next => this == auto ? mpv : auto;
 

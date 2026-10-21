@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/backend/sql.dart' show customSourceName;
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/screens/tv/player/tv_buffer.dart';
+import 'package:open_tv/screens/tv/player/tv_camera.dart' show tvCameraChannelName;
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:open_tv/backend/backup_sql.dart';
 import 'package:open_tv/screens/tv/tv_appearance.dart';
@@ -44,6 +46,7 @@ class _TVSettingsState extends State<TVSettings> {
   bool _zeroCopy = false;
   String? _epgUrl;
   String? _cameraUrl;
+  String? _language;
   bool _hasPin = false;
   int _deadCount = 0;
   String? _message;
@@ -82,6 +85,7 @@ class _TVSettingsState extends State<TVSettings> {
       final zeroCopy = await widget.data.mpvZeroCopySetting();
       final epgUrl = await widget.data.epgUrlSetting();
       final cameraUrl = await widget.data.cameraUrlSetting();
+      final language = await widget.data.languageSetting();
       final hasPin = await widget.data.parentalPinSet();
       final deadCount = await widget.data.deadChannelCount();
       if (!mounted) return;
@@ -97,6 +101,7 @@ class _TVSettingsState extends State<TVSettings> {
         _zeroCopy = zeroCopy;
         _epgUrl = epgUrl;
         _cameraUrl = cameraUrl;
+        _language = language;
         _hasPin = hasPin;
         _deadCount = deadCount;
       });
@@ -120,24 +125,24 @@ class _TVSettingsState extends State<TVSettings> {
   }
 
   Future<void> _refreshNow({int? onlySourceId}) async {
+    final l10n = context.l10n;
     if (widget.data.isRefreshing) {
-      _setMessage('Ya se están actualizando las listas');
+      _setMessage(l10n.settingsAlreadyRefreshing);
       return;
     }
-    _setMessage('Actualizando listas…');
+    _setMessage(l10n.settingsRefreshing);
     try {
       final result =
           await widget.data.refreshSources(onlySourceId: onlySourceId);
       if (result.failedNames.isNotEmpty) {
-        _setMessage(
-            '${result.failedNames.length} listas no se pudieron actualizar',
+        _setMessage(l10n.settingsRefreshFailedSome(result.failedNames.length),
             error: true);
       } else {
-        _setMessage('Listas actualizadas');
+        _setMessage(l10n.settingsRefreshDone);
       }
     } catch (e) {
       debugPrint('TVSettings: error actualizando: $e');
-      _setMessage('No se pudieron actualizar las listas', error: true);
+      _setMessage(l10n.settingsRefreshFailed, error: true);
     }
     if (mounted) _load();
   }
@@ -166,18 +171,20 @@ class _TVSettingsState extends State<TVSettings> {
     final entered = await showTvPinPrompt(context, title: title);
     if (entered == null || !mounted) return false;
     if (await widget.data.verifyParentalPin(entered)) return true;
-    _setMessage('PIN incorrecto', error: true);
+    _setMessage(context.l10n.pinWrong, error: true);
     return false;
   }
 
   /// Pide un PIN nuevo dos veces; `null` si se cancela o no coinciden.
   Future<String?> _askNewPin() async {
-    final first = await showTvPinPrompt(context, title: 'Nuevo PIN');
+    final first =
+        await showTvPinPrompt(context, title: context.l10n.pinNew);
     if (first == null || !mounted) return null;
-    final second = await showTvPinPrompt(context, title: 'Repite el PIN');
+    final second =
+        await showTvPinPrompt(context, title: context.l10n.pinRepeat);
     if (second == null || !mounted) return null;
     if (first != second) {
-      _setMessage('Los PIN no coinciden', error: true);
+      _setMessage(context.l10n.pinMismatch, error: true);
       return null;
     }
     return first;
@@ -186,7 +193,9 @@ class _TVSettingsState extends State<TVSettings> {
   Future<void> _toggleHideAdult() async {
     final next = !_hideAdult;
     // Activar es libre; desactivar exige el PIN si hay uno.
-    if (!next && _hasPin && !await _verifyPin('Introduce el PIN')) return;
+    if (!next && _hasPin && !await _verifyPin(context.l10n.pinEnter)) {
+      return;
+    }
     await widget.data.setHideAdultSetting(next);
     if (mounted) setState(() => _hideAdult = next);
   }
@@ -197,26 +206,26 @@ class _TVSettingsState extends State<TVSettings> {
       if (pin == null) return;
       await widget.data.setParentalPin(pin);
       if (mounted) setState(() => _hasPin = true);
-      _setMessage('PIN guardado');
+      _setMessage(context.l10n.pinSaved);
       return;
     }
-    if (!await _verifyPin('Introduce el PIN actual')) return;
+    if (!await _verifyPin(context.l10n.pinEnterCurrent)) return;
     final choice = await showTvOptions<int>(
       context,
-      title: 'PIN de control parental',
-      options: const [('Cambiar PIN', 0), ('Quitar PIN', 1)],
+      title: context.l10n.settingsPin,
+      options: [(context.l10n.pinChange, 0), (context.l10n.pinRemove, 1)],
     );
     if (choice == null || !mounted) return;
     if (choice == 1) {
       await widget.data.setParentalPin(null);
       if (mounted) setState(() => _hasPin = false);
-      _setMessage('PIN quitado');
+      _setMessage(context.l10n.pinRemoved);
       return;
     }
     final pin = await _askNewPin();
     if (pin == null) return;
     await widget.data.setParentalPin(pin);
-    _setMessage('PIN guardado');
+    _setMessage(context.l10n.pinSaved);
   }
 
   static String _fileName(String path) => path.split(RegExp(r'[\\/]')).last;
@@ -224,10 +233,10 @@ class _TVSettingsState extends State<TVSettings> {
   Future<void> _backupMenu() async {
     final choice = await showTvOptions<String>(
       context,
-      title: 'Copia de seguridad',
-      options: const [
-        ('Exportar copia', 'export'),
-        ('Importar copia…', 'import'),
+      title: context.l10n.settingsBackup,
+      options: [
+        (context.l10n.backupExport, 'export'),
+        (context.l10n.backupImportMenu, 'import'),
       ],
     );
     if (choice == 'export') await _exportBackup();
@@ -237,10 +246,10 @@ class _TVSettingsState extends State<TVSettings> {
   Future<void> _exportBackup() async {
     try {
       final path = await widget.data.exportBackupToFile();
-      _setMessage('Copia guardada en $path');
+      _setMessage(context.l10n.backupSavedTo(path));
     } catch (e) {
       debugPrint('TVSettings: error exportando: $e');
-      _setMessage('No se pudo guardar la copia', error: true);
+      _setMessage(context.l10n.backupSaveFailed, error: true);
     }
   }
 
@@ -254,11 +263,11 @@ class _TVSettingsState extends State<TVSettings> {
     if (!mounted) return;
     final choice = await showTvOptions<String>(
       context,
-      title: 'Importar copia',
+      title: context.l10n.backupImportTitle,
       options: [
         for (final f in files) (_fileName(f), 'file:$f'),
-        ('Desde una URL…', 'url'),
-        ('Desde un archivo del dispositivo…', 'picker'),
+        (context.l10n.backupFromUrl, 'url'),
+        (context.l10n.backupFromPicker, 'picker'),
       ],
     );
     if (choice == null || !mounted) return;
@@ -268,16 +277,16 @@ class _TVSettingsState extends State<TVSettings> {
     } else if (choice == 'url') {
       final url = await showTvTextPrompt(
         context,
-        title: 'Importar desde una URL',
-        label: 'Dirección de la copia (.json)',
-        confirmLabel: 'Importar',
+        title: context.l10n.backupImportFromUrlTitle,
+        label: context.l10n.backupUrlLabel,
+        confirmLabel: context.l10n.backupImportConfirm,
       );
       if (url == null || !mounted) return;
       await _runImport(() => widget.data.importBackupFromUrl(url));
     } else {
       final path = await widget.data.pickBackupFile();
       if (path == null || !mounted) {
-        _setMessage('No se eligió ningún archivo', error: true);
+        _setMessage(context.l10n.backupNoFile, error: true);
         return;
       }
       await _runImport(() => widget.data.importBackupFromFile(path));
@@ -285,15 +294,16 @@ class _TVSettingsState extends State<TVSettings> {
   }
 
   Future<void> _runImport(Future<BackupResult> Function() run) async {
-    _setMessage('Importando…');
+    final l10n = context.l10n;
+    _setMessage(l10n.backupImporting);
     try {
       final result = await run();
-      _setMessage('Copia importada: ${result.summary}');
+      _setMessage(l10n.backupImported(result.summary(l10n)));
     } on BackupFormatException catch (e) {
-      _setMessage(e.message, error: true);
+      _setMessage(e.localized(l10n), error: true);
     } catch (e) {
       debugPrint('TVSettings: error importando: $e');
-      _setMessage('No se pudo importar la copia', error: true);
+      _setMessage(l10n.backupImportFailed, error: true);
     }
     if (mounted) _load();
   }
@@ -301,8 +311,8 @@ class _TVSettingsState extends State<TVSettings> {
   Future<void> _editEpgUrl() async {
     final url = await showTvTextPrompt(
       context,
-      title: 'Guía personalizada (XMLTV)',
-      label: 'Dirección (.xml o .xml.gz); vacío para quitarla',
+      title: context.l10n.settingsEpg,
+      label: context.l10n.epgUrlLabel,
       initial: _epgUrl ?? '',
     );
     // `null` = cancelado (el prompt devuelve null también con texto vacío: se
@@ -316,8 +326,8 @@ class _TVSettingsState extends State<TVSettings> {
   Future<void> _editCameraUrl() async {
     final url = await showTvTextPrompt(
       context,
-      title: 'Cámara de seguridad',
-      label: 'Dirección RTSP; vacío para quitarla',
+      title: context.l10n.settingsCamera,
+      label: context.l10n.cameraUrlLabel,
       initial: _cameraUrl ?? '',
     );
     // Igual que la guía: `null` es cancelar, o quitar si ya había una.
@@ -327,8 +337,24 @@ class _TVSettingsState extends State<TVSettings> {
     if (!mounted) return;
     setState(() => _cameraUrl = url);
     _setMessage(url == null
-        ? 'Cámara quitada'
-        : 'Cámara guardada: búscala como canal «Cámara» en Favoritos');
+        ? context.l10n.cameraRemoved
+        : context.l10n.cameraSaved(tvCameraChannelName));
+  }
+
+  Future<void> _pickLanguage() async {
+    final choice = await showTvOptions<String>(
+      context,
+      title: context.l10n.settingsLanguage,
+      options: [
+        (context.l10n.settingsLanguageAuto, ''),
+        for (final e in languageNativeNames.entries) (e.value, e.key),
+      ],
+    );
+    if (choice == null || !mounted) return;
+    final code = choice.isEmpty ? null : choice;
+    await widget.data.setLanguageSetting(code);
+    TvAppearance.locale.value = TvAppearance.parseLocale(code);
+    if (mounted) setState(() => _language = code);
   }
 
   Future<void> _toggleZeroCopy() async {
@@ -347,8 +373,8 @@ class _TVSettingsState extends State<TVSettings> {
     if (_deadCount == 0) return;
     final ok = await showTvConfirm(
       context,
-      message: '¿Limpiar las marcas de canales caídos?',
-      confirmLabel: 'Limpiar',
+      message: context.l10n.deadClearConfirm,
+      confirmLabel: context.l10n.deadClearAction,
     );
     if (!ok) return;
     await widget.data.clearDeadChannels();
@@ -374,9 +400,13 @@ class _TVSettingsState extends State<TVSettings> {
       context,
       title: s.name,
       options: [
-        if (SourceRefresher.isRefreshable(s)) ('Actualizar', 'refresh'),
-        (s.enabled ? 'Desactivar' : 'Activar', 'toggle'),
-        ('Eliminar', 'delete'),
+        if (SourceRefresher.isRefreshable(s))
+          (context.l10n.sourceRefresh, 'refresh'),
+        (
+          s.enabled ? context.l10n.sourceDisable : context.l10n.sourceEnable,
+          'toggle'
+        ),
+        (context.l10n.commonDelete, 'delete'),
       ],
     );
     if (!mounted || choice == null) return;
@@ -389,7 +419,7 @@ class _TVSettingsState extends State<TVSettings> {
       case 'delete':
         final confirmed = await showTvConfirm(
           context,
-          message: '¿Eliminar la fuente «${s.name}» y sus canales?',
+          message: context.l10n.sourceDeleteConfirm(s.name),
         );
         if (!mounted || !confirmed) return;
         await widget.data.deleteSource(s.id!);
@@ -399,11 +429,12 @@ class _TVSettingsState extends State<TVSettings> {
     }
   }
 
-  String _subtitle(_SourceEntry e) {
-    if (!e.source.enabled) return 'Desactivada';
+  String _subtitle(_SourceEntry e, AppLocalizations l10n) {
+    if (!e.source.enabled) return l10n.sourceDisabled;
     final last = e.lastRefresh;
-    if (last == null) return 'Nunca actualizada';
-    return 'Actualizada ${formatAgo(DateTime.now().difference(last))}';
+    if (last == null) return l10n.sourceNeverRefreshed;
+    return l10n.sourceRefreshedAgo(
+        formatAgo(DateTime.now().difference(last), l10n));
   }
 
   @override
@@ -434,7 +465,7 @@ class _TVSettingsState extends State<TVSettings> {
                     key: const ValueKey('tv-settings-iptv'),
                     focusNode: _topNode,
                     icon: Icons.public,
-                    title: 'Agregar desde iptv-org',
+                    title: context.l10n.settingsAddFromIptvOrg,
                     onSelect: () => _open(TvIptvOrgScreen(data: widget.data)),
                   ),
                 ),
@@ -442,7 +473,7 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-m3u'),
                     icon: Icons.link,
-                    title: 'Agregar lista M3U por URL',
+                    title: context.l10n.settingsAddM3u,
                     onSelect: () => _open(TvAddM3uScreen(data: widget.data)),
                   ),
                 ),
@@ -450,7 +481,7 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-refresh'),
                     icon: Icons.refresh,
-                    title: 'Actualizar listas ahora',
+                    title: context.l10n.settingsRefreshNow,
                     onSelect: _refreshNow,
                   ),
                 ),
@@ -458,9 +489,11 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-auto'),
                     icon: Icons.autorenew,
-                    title: 'Actualización automática (cada 24 h)',
+                    title: context.l10n.settingsAutoRefresh,
                     trailing: Text(
-                      _autoRefresh ? 'Activada' : 'Desactivada',
+                      _autoRefresh
+                          ? context.l10n.settingsAutoOn
+                          : context.l10n.settingsAutoOff,
                       style: TextStyle(
                         fontSize: TvTheme.fontBody,
                         fontWeight: FontWeight.bold,
@@ -476,11 +509,10 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-buffer'),
                     icon: Icons.speed,
-                    title: 'Buffer de reproducción',
-                    subtitle:
-                        'Más segundos = menos tirones; empieza algo más tarde',
+                    title: context.l10n.settingsBuffer,
+                    subtitle: context.l10n.settingsBufferHint,
                     trailing: Text(
-                      TvBuffer.label(_bufferSecs),
+                      TvBuffer.label(_bufferSecs, context.l10n),
                       style: const TextStyle(
                         fontSize: TvTheme.fontBody,
                         fontWeight: FontWeight.bold,
@@ -494,12 +526,12 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-engine'),
                     icon: Icons.memory,
-                    title: 'Motor de video',
+                    title: context.l10n.settingsEngine,
                     subtitle: _engineMode == TvEngineMode.auto
-                        ? 'ExoPlayer y, si falla, mpv'
-                        : 'Solo mpv (el más compatible)',
+                        ? context.l10n.settingsEngineAutoHint
+                        : context.l10n.settingsEngineMpvHint,
                     trailing: Text(
-                      _engineMode.label,
+                      _engineMode.labelOf(context.l10n),
                       style: const TextStyle(
                         fontSize: TvTheme.fontBody,
                         fontWeight: FontWeight.bold,
@@ -513,12 +545,14 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-zerocopy'),
                     icon: Icons.speed,
-                    title: 'Decodificación de video (mpv)',
+                    title: context.l10n.settingsDecoding,
                     subtitle: _zeroCopy
-                        ? 'Experimental: sin copiar fotogramas; si no da imagen, vuelve a la automática'
-                        : 'Si un canal 1080p va a tirones con mpv, prueba "Sin copia"',
+                        ? context.l10n.settingsDecodingZeroCopyHint
+                        : context.l10n.settingsDecodingAutoHint,
                     trailing: Text(
-                      _zeroCopy ? 'Sin copia' : 'Automática',
+                      _zeroCopy
+                          ? context.l10n.settingsDecodingZeroCopy
+                          : context.l10n.settingsDecodingAuto,
                       style: TextStyle(
                         fontSize: TvTheme.fontBody,
                         fontWeight: FontWeight.bold,
@@ -532,8 +566,8 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-textsize'),
                     icon: Icons.format_size,
-                    title: 'Tamaño de letra',
-                    subtitle: 'Agranda los textos de toda la interfaz',
+                    title: context.l10n.settingsTextSize,
+                    subtitle: context.l10n.settingsTextSizeHint,
                     trailing: Text(
                       TvAppearance.scaleLabel(_textScale),
                       style: const TextStyle(
@@ -549,11 +583,12 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-contrast'),
                     icon: Icons.contrast,
-                    title: 'Alto contraste',
-                    subtitle:
-                        'Texto más claro y borde de foco amarillo más grueso',
+                    title: context.l10n.settingsHighContrast,
+                    subtitle: context.l10n.settingsHighContrastHint,
                     trailing: Text(
-                      _highContrast ? 'Activado' : 'Desactivado',
+                      _highContrast
+                          ? context.l10n.commonOn
+                          : context.l10n.commonOff,
                       style: TextStyle(
                         fontSize: TvTheme.fontBody,
                         fontWeight: FontWeight.bold,
@@ -569,11 +604,12 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-hidedead'),
                     icon: Icons.visibility_off,
-                    title: 'Ocultar canales caídos',
-                    subtitle:
-                        'En Canales y Búsqueda (Favoritos siempre los muestra)',
+                    title: context.l10n.settingsHideDead,
+                    subtitle: context.l10n.settingsHideDeadHint,
                     trailing: Text(
-                      _hideDead ? 'Activado' : 'Desactivado',
+                      _hideDead
+                          ? context.l10n.commonOn
+                          : context.l10n.commonOff,
                       style: TextStyle(
                         fontSize: TvTheme.fontBody,
                         fontWeight: FontWeight.bold,
@@ -588,11 +624,12 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-deadcount'),
                     icon: Icons.link_off,
-                    title: 'Canales caídos',
-                    subtitle:
-                        'Se saltan al cambiar de canal. OK para limpiar las marcas',
+                    title: context.l10n.settingsDeadChannels,
+                    subtitle: context.l10n.settingsDeadChannelsHint,
                     trailing: Text(
-                      _deadCount == 0 ? 'Ninguno' : '$_deadCount marcados',
+                      _deadCount == 0
+                          ? context.l10n.settingsDeadNone
+                          : context.l10n.settingsDeadCount(_deadCount),
                       style: const TextStyle(
                         fontSize: TvTheme.fontBody,
                         fontWeight: FontWeight.bold,
@@ -606,12 +643,14 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-hideadult'),
                     icon: Icons.child_care,
-                    title: 'Ocultar contenido adulto',
+                    title: context.l10n.settingsHideAdult,
                     subtitle: _hasPin
-                        ? 'Desactivarlo exige el PIN'
-                        : 'Crea un PIN para protegerlo',
+                        ? context.l10n.settingsHideAdultHintPin
+                        : context.l10n.settingsHideAdultHintNoPin,
                     trailing: Text(
-                      _hideAdult ? 'Activado' : 'Desactivado',
+                      _hideAdult
+                          ? context.l10n.commonOn
+                          : context.l10n.commonOff,
                       style: TextStyle(
                         fontSize: TvTheme.fontBody,
                         fontWeight: FontWeight.bold,
@@ -627,10 +666,12 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-pin'),
                     icon: Icons.lock,
-                    title: 'PIN de control parental',
-                    subtitle: 'De 4 dígitos; protege el filtro de adultos',
+                    title: context.l10n.settingsPin,
+                    subtitle: context.l10n.settingsPinHint,
                     trailing: Text(
-                      _hasPin ? 'Configurado' : 'Sin PIN',
+                      _hasPin
+                          ? context.l10n.settingsPinSet
+                          : context.l10n.settingsPinNone,
                       style: const TextStyle(
                         fontSize: TvTheme.fontBody,
                         fontWeight: FontWeight.bold,
@@ -644,9 +685,8 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-backup'),
                     icon: Icons.save_alt,
-                    title: 'Copia de seguridad',
-                    subtitle:
-                        'Exporta o importa favoritos, listas propias y ajustes',
+                    title: context.l10n.settingsBackup,
+                    subtitle: context.l10n.settingsBackupHint,
                     onSelect: _backupMenu,
                   ),
                 ),
@@ -654,11 +694,12 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-epgurl'),
                     icon: Icons.calendar_month,
-                    title: 'Guía personalizada (XMLTV)',
-                    subtitle:
-                        'Más canales con guía; se suma a la de tus países',
+                    title: context.l10n.settingsEpg,
+                    subtitle: context.l10n.settingsEpgHint,
                     trailing: Text(
-                      _epgUrl == null ? 'Sin definir' : 'Definida',
+                      _epgUrl == null
+                          ? context.l10n.settingsEpgUnset
+                          : context.l10n.settingsEpgSet,
                       style: const TextStyle(
                         fontSize: TvTheme.fontBody,
                         fontWeight: FontWeight.bold,
@@ -672,11 +713,12 @@ class _TVSettingsState extends State<TVSettings> {
                   TvListRow(
                     key: const ValueKey('tv-settings-camera'),
                     icon: Icons.videocam,
-                    title: 'Cámara de seguridad',
-                    subtitle:
-                        'Se ve como canal y en un recuadro (mantén OK en un canal)',
+                    title: context.l10n.settingsCamera,
+                    subtitle: context.l10n.settingsCameraHint,
                     trailing: Text(
-                      _cameraUrl == null ? 'Sin cámara' : 'Configurada',
+                      _cameraUrl == null
+                          ? context.l10n.settingsCameraUnset
+                          : context.l10n.settingsCameraSet,
                       style: const TextStyle(
                         fontSize: TvTheme.fontBody,
                         fontWeight: FontWeight.bold,
@@ -686,11 +728,30 @@ class _TVSettingsState extends State<TVSettings> {
                     onSelect: _editCameraUrl,
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(4, 20, 4, 10),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-language'),
+                    icon: Icons.language,
+                    title: context.l10n.settingsLanguage,
+                    subtitle: context.l10n.settingsLanguageHint,
+                    trailing: Text(
+                      _language == null
+                          ? context.l10n.settingsLanguageAuto
+                          : (languageNativeNames[_language] ?? _language!),
+                      style: const TextStyle(
+                        fontSize: TvTheme.fontBody,
+                        fontWeight: FontWeight.bold,
+                        color: TvTheme.accent,
+                      ),
+                    ),
+                    onSelect: _pickLanguage,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 20, 4, 10),
                   child: Text(
-                    'Mis fuentes',
-                    style: TextStyle(
+                    context.l10n.settingsMySources,
+                    style: const TextStyle(
                       fontSize: TvTheme.fontTitle,
                       fontWeight: FontWeight.bold,
                       color: TvTheme.textPrimary,
@@ -703,7 +764,7 @@ class _TVSettingsState extends State<TVSettings> {
                       key: ValueKey('tv-source-${entry.source.id}'),
                       icon: Icons.playlist_play,
                       title: entry.source.name,
-                      subtitle: _subtitle(entry),
+                      subtitle: _subtitle(entry, context.l10n),
                       onSelect: () => _openSourceMenu(entry),
                     ),
                   ),

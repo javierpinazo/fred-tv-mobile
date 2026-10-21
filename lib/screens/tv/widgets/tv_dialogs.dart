@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_text_field.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
@@ -50,8 +51,8 @@ Widget _dialog({required Widget child}) {
 Future<bool> showTvConfirm(
   BuildContext context, {
   required String message,
-  String confirmLabel = 'Eliminar',
-  String cancelLabel = 'Cancelar',
+  String? confirmLabel,
+  String? cancelLabel,
 }) async {
   final result = await showDialog<bool>(
     context: context,
@@ -72,13 +73,13 @@ Future<bool> showTvConfirm(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _button(
-                confirmLabel,
+                confirmLabel ?? ctx.l10n.commonDelete,
                 key: const ValueKey('tv-confirm-ok'),
                 onSelect: () => Navigator.of(ctx).pop(true),
               ),
               const SizedBox(width: 20),
               _button(
-                cancelLabel,
+                cancelLabel ?? ctx.l10n.commonCancel,
                 key: const ValueKey('tv-confirm-cancel'),
                 autofocus: true,
                 onSelect: () => Navigator.of(ctx).pop(false),
@@ -98,7 +99,7 @@ Future<String?> showTvTextPrompt(
   required String title,
   required String label,
   String initial = '',
-  String confirmLabel = 'Guardar',
+  String? confirmLabel,
 }) async {
   final controller = TextEditingController(text: initial);
   try {
@@ -126,7 +127,7 @@ Future<String?> showTvTextPrompt(
             ),
             const SizedBox(height: 20),
             _button(
-              confirmLabel,
+              confirmLabel ?? ctx.l10n.commonSave,
               key: const ValueKey('tv-prompt-confirm'),
               filled: true,
               onSelect: () {
@@ -136,7 +137,7 @@ Future<String?> showTvTextPrompt(
             ),
             const SizedBox(height: 12),
             _button(
-              'Cancelar',
+              ctx.l10n.commonCancel,
               key: const ValueKey('tv-prompt-cancel'),
               onSelect: () => Navigator.of(ctx).pop(),
             ),

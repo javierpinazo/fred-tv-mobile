@@ -1,10 +1,11 @@
 import 'package:open_tv/backend/m3u.dart' show HttpStatusException;
+import 'package:open_tv/l10n/l10n.dart';
 
-/// Mensaje en español para un error al agregar una fuente.
-String tvAddSourceErrorMessage(Object error) {
+/// Mensaje, en el idioma de [l10n], para un error al agregar una fuente.
+String tvAddSourceErrorMessage(Object error, AppLocalizations l10n) {
   if (error is StateError && error.message == 'duplicate') {
-    return 'Ya existe una lista con ese nombre';
+    return l10n.playlistDuplicate;
   }
-  if (error is HttpStatusException) return 'Esta lista no está disponible';
-  return 'No se pudo agregar la lista';
+  if (error is HttpStatusException) return l10n.sourceErrUnavailable;
+  return l10n.sourceErrGeneric;
 }

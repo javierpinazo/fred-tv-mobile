@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:open_tv/backend/countries.dart';
 import 'package:open_tv/backend/sql.dart' show pageSize;
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/filters.dart';
 import 'package:open_tv/screens/tv/player/tv_player.dart';
@@ -93,19 +94,20 @@ class _TVSearchState extends State<TVSearch> {
     final countries = await widget.data.countries();
     if (!mounted) return;
     if (countries.isEmpty) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
-        content: Text('Actualiza las listas para ver los países'),
-        duration: Duration(seconds: 3),
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+        content: Text(context.l10n.searchUpdateListsForCountries),
+        duration: const Duration(seconds: 3),
       ));
       return;
     }
+    final l10n = context.l10n;
     final choice = await showTvOptions<String>(
       context,
-      title: 'País',
+      title: l10n.searchCountryTitle,
       options: [
-        ('Todos los países', ''),
+        (l10n.searchAllCountries, ''),
         for (final c in countries)
-          ('${countryName(c.code)} (${c.count})', c.code),
+          ('${countryName(c.code, lang: l10n.localeName)} (${c.count})', c.code),
       ],
     );
     if (choice == null || !mounted) return;
@@ -236,9 +238,9 @@ class _TVSearchState extends State<TVSearch> {
       final id = await widget.data.resolveChannelId(channel);
       if (id == null) {
         if (mounted) {
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
-            content: Text('Este canal ya no está disponible'),
-            duration: Duration(seconds: 2),
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+            content: Text(context.l10n.channelUnavailable),
+            duration: const Duration(seconds: 2),
           ));
         }
         return;
@@ -251,7 +253,9 @@ class _TVSearchState extends State<TVSearch> {
     if (!mounted) return;
     setState(() => channel.favorite = value);
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-      content: Text(value ? 'Agregado a favoritos' : 'Quitado de favoritos'),
+      content: Text(value
+          ? context.l10n.favoriteAdded
+          : context.l10n.favoriteRemoved),
       duration: const Duration(milliseconds: 800),
     ));
   }
@@ -266,7 +270,9 @@ class _TVSearchState extends State<TVSearch> {
     if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-      content: Text(wasDead ? 'Marca quitada' : 'Marcado como caído'),
+      content: Text(wasDead
+          ? context.l10n.deadMarkRemoved
+          : context.l10n.deadMarked),
       duration: const Duration(milliseconds: 800),
     ));
   }
@@ -288,20 +294,20 @@ class _TVSearchState extends State<TVSearch> {
     );
   }
 
-  String _statusText() {
+  String _statusText(AppLocalizations l10n) {
     switch (_status) {
       case _SearchStatus.idle:
-        return 'Escribe al menos 2 letras o elige un país';
+        return l10n.searchStatusIdle(tvSearchMinChars);
       case _SearchStatus.searching:
-        return 'Buscando…';
+        return l10n.searchStatusSearching;
       case _SearchStatus.results:
-        return '${_results.length} resultados';
+        return l10n.searchStatusResults(_results.length);
       case _SearchStatus.empty:
         return _query.isEmpty
-            ? 'Sin canales de este país'
-            : 'Sin resultados para "$_query"';
+            ? l10n.searchStatusNoCountryChannels
+            : l10n.searchStatusNoResults(_query);
       case _SearchStatus.error:
-        return 'Error al buscar. Intenta de nuevo.';
+        return l10n.searchStatusError;
     }
   }
 
@@ -330,8 +336,8 @@ class _TVSearchState extends State<TVSearch> {
                   child: TvTextField(
                     key: const ValueKey('tv-search-field'),
                     controller: _controller,
-                    label: 'Buscar canales',
-                    hint: 'Presiona OK para escribir',
+                    label: context.l10n.searchLabel,
+                    hint: context.l10n.searchHint,
                     icon: Icons.search,
                     textInputAction: TextInputAction.search,
                     onChanged: _onChanged,
@@ -356,7 +362,10 @@ class _TVSearchState extends State<TVSearch> {
                         const Icon(Icons.public, color: TvTheme.textPrimary),
                         const SizedBox(width: 8),
                         Text(
-                          'País: ${_country == null ? 'Todos' : countryName(_country!)}',
+                          context.l10n.searchCountryChip(_country == null
+                              ? context.l10n.searchCountryAllShort
+                              : countryName(_country!,
+                                  lang: context.l10n.localeName)),
                           style: const TextStyle(
                             fontSize: TvTheme.fontBody,
                             color: TvTheme.textPrimary,
@@ -374,7 +383,7 @@ class _TVSearchState extends State<TVSearch> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                _statusText(),
+                _statusText(context.l10n),
                 style: TextStyle(
                   fontSize: TvTheme.fontSmall,
                   color: _status == _SearchStatus.error

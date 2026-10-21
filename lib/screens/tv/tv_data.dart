@@ -43,6 +43,7 @@ const String _hideAdultKey = 'tvHideAdult';
 const String _pinKey = 'tvParentalPin';
 const String _textScaleKey = 'tvTextScale';
 const String _contrastKey = 'tvHighContrast';
+const String _languageKey = 'tvLanguage';
 const String _channelEnginePrefix = 'tvEngine:';
 
 /// Fachada inyectable sobre el backend para las pantallas de TV.
@@ -187,12 +188,15 @@ class TvData {
   Future<BackupResult> importBackupFromUrl(String url) async {
     final uri = Uri.tryParse(url.trim());
     if (uri == null || !uri.hasScheme) {
-      throw BackupFormatException('La dirección no es válida');
+      throw BackupFormatException('La dirección no es válida',
+          error: BackupError.invalidUrl);
     }
     final res = await http.get(uri).timeout(const Duration(seconds: 20));
     if (res.statusCode != 200) {
       throw BackupFormatException(
-          'No se pudo descargar (HTTP ${res.statusCode})');
+          'No se pudo descargar (HTTP ${res.statusCode})',
+          error: BackupError.downloadFailed,
+          status: res.statusCode);
     }
     return _importBackup(BackupSql.parse(utf8.decode(res.bodyBytes)));
   }
@@ -424,6 +428,15 @@ class TvData {
 
   Future<void> setTextScaleSetting(double value) =>
       Sql.setSetting(_textScaleKey, '$value');
+
+  /// Idioma forzado (`es`, `en`…); `null` = el del sistema.
+  Future<String?> languageSetting() async {
+    final v = await Sql.getSetting(_languageKey);
+    return v == null || v.isEmpty ? null : v;
+  }
+
+  Future<void> setLanguageSetting(String? code) =>
+      Sql.setSetting(_languageKey, code ?? '');
 
   Future<bool> highContrastSetting() async =>
       await Sql.getSetting(_contrastKey) == '1';

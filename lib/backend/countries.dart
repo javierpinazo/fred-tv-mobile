@@ -1,3 +1,5 @@
+import 'package:open_tv/backend/country_names_l10n.dart';
+
 /// Países (código ISO‑3166 en minúsculas, como los usa iptv-org) y su nombre en
 /// español. Se usa para reconocer el país en el `tvg-id` y para mostrarlo.
 /// Se excluye `tv` (Tuvalu) porque sería un falso positivo con ids como `x.tv`.
@@ -197,6 +199,11 @@ const Map<String, String> countryNames = {
   'zw': 'Zimbabue',
 };
 
-/// Nombre del país en español; si no se conoce, el código en mayúsculas.
-String countryName(String code) =>
-    countryNames[code.toLowerCase()] ?? code.toUpperCase();
+/// Nombre del país en el idioma [lang] (`es` por defecto; ver
+/// `country_names_l10n.dart`); si no se conoce, el código en mayúsculas.
+String countryName(String code, {String lang = 'es'}) {
+  final key = code.toLowerCase();
+  return (lang == 'es' ? null : localizedCountryNames[lang]?[key]) ??
+      countryNames[key] ??
+      code.toUpperCase();
+}

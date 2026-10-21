@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
+import 'package:open_tv/l10n/gen/app_localizations_es.dart';
 
 List<(TvEngineKind, bool)> _p(List<TvPlaybackAttempt> plan) =>
     plan.map((a) => (a.engine, a.hardwareDecoding)).toList();
@@ -102,8 +103,8 @@ void main() {
   test('etiquetas de motor y modo', () {
     expect(TvEngineKind.exo.label, 'ExoPlayer');
     expect(TvEngineKind.mpv.label, 'mpv');
-    expect(TvEngineMode.auto.label, 'Automático');
-    expect(TvEngineMode.mpv.label, 'Solo mpv');
+    expect(TvEngineMode.auto.labelOf(AppLocalizationsEs()), 'Automático');
+    expect(TvEngineMode.mpv.labelOf(AppLocalizationsEs()), 'Solo mpv');
   });
 
   test('modo: alternar y leer desde texto', () {

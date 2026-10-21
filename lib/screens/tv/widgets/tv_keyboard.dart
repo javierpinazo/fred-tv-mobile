@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
@@ -22,7 +23,7 @@ Future<TvKeyboardResult?> showTvKeyboard(
   BuildContext context, {
   required String label,
   String initial = '',
-  String doneLabel = 'Listo',
+  String? doneLabel,
   bool offerSystemKeyboard = true,
 }) async {
   final navigator = Navigator.of(context);
@@ -32,7 +33,7 @@ Future<TvKeyboardResult?> showTvKeyboard(
     builder: (_) => _TvKeyboardDialog(
       label: label,
       initial: initial,
-      doneLabel: doneLabel,
+      doneLabel: doneLabel ?? context.l10n.keyboardDone,
       offerSystemKeyboard: offerSystemKeyboard,
     ),
   );
@@ -177,24 +178,24 @@ class _TvKeyboardDialogState extends State<_TvKeyboardDialog> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _key('shift', 'Mayús',
+                  _key('shift', context.l10n.keyboardShift,
                       units: 2, active: _shift, onPress: () {
                     setState(() => _shift = !_shift);
                   }),
                   _key(':', ':', onPress: () => _append(':')),
                   _key('/', '/', onPress: () => _append('/')),
                   _key('@', '@', onPress: () => _append('@')),
-                  _key('space', 'Espacio', units: 4, onPress: () => _append(' ')),
+                  _key('space', context.l10n.keyboardSpace, units: 4, onPress: () => _append(' ')),
                 ],
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _key('back', '⌫ Borrar', units: 2, onPress: _backspace),
-                  _key('clear', 'Limpiar', units: 2,
+                  _key('back', context.l10n.keyboardBackspace, units: 2, onPress: _backspace),
+                  _key('clear', context.l10n.keyboardClear, units: 2,
                       onPress: () => setState(() => _text = '')),
                   if (widget.offerSystemKeyboard)
-                    _key('system', 'Voz / sistema', units: 3, onPress: () {
+                    _key('system', context.l10n.keyboardSystem, units: 3, onPress: () {
                       Navigator.of(context).pop(TvKeyboardResult.system(_text));
                     }),
                   _key('done', widget.doneLabel,

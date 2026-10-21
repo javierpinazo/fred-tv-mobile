@@ -42,6 +42,7 @@ Si un canal no se puede reproducir, la pantalla muestra el error con **Reintenta
 - **Guía de programación**: Mantén OK → *Ver programación*. TV Perú usa su web oficial; el resto, el XMLTV de epgshare01 de los países de tus favoritos (por defecto Perú) y, opcionalmente, una URL propia (*Guía personalizada*).
 - **Cámara de seguridad**: en *Ajustes → Cámara de seguridad* escribe su dirección (p. ej. `rtsp://192.168.1.20/stream1`). Se crea el canal *Cámara* (en *Mis canales* y *Favoritos*) y, con cualquier otro canal en pantalla, Mantén OK → *Mostrar cámara* la abre en un recuadro arriba a la derecha, sin audio. Desde el mismo menú: *Cámara en pantalla grande* (intercambia con el canal, el sonido sigue siendo el del canal), *Zoom de la cámara* (OK cambia 1x/2x/3x/4x, las flechas mueven la imagen, Atrás termina) y *Ocultar cámara*. Va por TCP con su propio mpv y se reconecta sola; si no da imagen por hardware, prueba por software.
 - **Accesibilidad**: tamaño de letra (100/115/130 %) y alto contraste.
+- **Idioma**: la interfaz de TV está en español, inglés, portugués, francés, alemán e italiano. Sigue el idioma del sistema (inglés si no está traducido) y se cambia en *Ajustes → Idioma*.
 - **Pantalla de inicio de Android TV**: fila *Favoritos* y enlaces `fredtv://play?name=…` / `fredtv://search?q=…`; la app también atiende el intent de búsqueda.
 - **mpv**: *Decodificación de video (mpv)* → *Sin copia* es experimental (`hwdec=mediacodec`) y vuelve a la automática si no da imagen.
 

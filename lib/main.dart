@@ -6,6 +6,7 @@ import 'package:open_tv/backend/settings_service.dart';
 import 'package:open_tv/backend/sql.dart';
 import 'package:open_tv/backend/utils.dart';
 import 'package:open_tv/home.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/filters.dart';
 import 'package:open_tv/models/home_manager.dart';
 import 'package:open_tv/models/settings.dart';
@@ -83,6 +84,8 @@ Future<void> main() async {
     final data = const TvData();
     TvAppearance.textScale.value = await data.textScaleSetting();
     TvAppearance.applyHighContrast(await data.highContrastSetting());
+    TvAppearance.locale.value =
+        TvAppearance.parseLocale(await data.languageSetting());
     runApp(MyApp(skipSetup: true, settings: Settings(), isTv: true));
     return;
   }
@@ -115,22 +118,29 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final app = _buildApp();
+    final app = _buildApp(null);
     if (!isTv) return app;
     // Tamaño de letra (sin reconstruir) y alto contraste (reconstruye todo el
     // árbol porque los colores se leen al construir cada widget).
-    return ValueListenableBuilder<int>(
-      valueListenable: TvAppearance.epoch,
-      builder: (context, epoch, _) => KeyedSubtree(
-        key: ValueKey(epoch),
-        child: _buildApp(),
+    return ValueListenableBuilder<Locale?>(
+      valueListenable: TvAppearance.locale,
+      builder: (context, locale, _) => ValueListenableBuilder<int>(
+        valueListenable: TvAppearance.epoch,
+        builder: (context, epoch, _) => KeyedSubtree(
+          key: ValueKey(epoch),
+          child: _buildApp(locale),
+        ),
       ),
     );
   }
 
-  Widget _buildApp() {
+  Widget _buildApp(Locale? locale) {
     return MaterialApp(
       title: 'Fred TV',
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localeResolutionCallback: resolveAppLocale,
       builder: isTv
           ? (context, child) => ValueListenableBuilder<double>(
                 valueListenable: TvAppearance.textScale,

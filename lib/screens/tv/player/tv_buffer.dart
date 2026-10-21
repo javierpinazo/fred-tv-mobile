@@ -1,3 +1,5 @@
+import 'package:open_tv/l10n/l10n.dart';
+
 /// Buffer de reproducción: cuántos segundos se acumulan antes de reproducir y
 /// al recuperarse de un corte. Más segundos = menos tirones en canales pesados
 /// (p. ej. 1080p), a cambio de empezar un poco más tarde.
@@ -25,8 +27,8 @@ abstract final class TvBuffer {
     };
   }
 
-  static String label(int seconds) =>
-      seconds <= 0 ? 'Desactivado' : '$seconds s';
+  static String label(int seconds, AppLocalizations l10n) =>
+      seconds <= 0 ? l10n.commonOff : '$seconds s';
 
   /// Siguiente opción al pulsar OK (da la vuelta; un valor desconocido vuelve al
   /// valor por defecto).

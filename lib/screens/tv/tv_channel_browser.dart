@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:open_tv/backend/sql.dart' show pageSize;
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/filters.dart';
 import 'package:open_tv/models/media_type.dart';
@@ -21,8 +22,10 @@ typedef TvPlayCallback = Future<int?> Function(
 typedef TvAddToPlaylistCallback = Future<void> Function(
     BuildContext context, Channel channel);
 
-const String _allChannelsLabel = 'Todos los canales';
-const String _recentsLabel = 'Recientes';
+// Marcas internas de los grupos fijos: la etiqueta se traduce al dibujar, así
+// cambiar de idioma no deja textos viejos ni confunde un grupo con otro.
+const String _allChannelsLabel = '\u0000all';
+const String _recentsLabel = '\u0000recents';
 const double _groupRowExtent = 56;
 const int _maxGroupPages = 20;
 
@@ -275,9 +278,9 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
       final id = await widget.data.resolveChannelId(channel);
       if (id == null) {
         if (mounted) {
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
-            content: Text('Este canal ya no está disponible'),
-            duration: Duration(seconds: 2),
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+            content: Text(context.l10n.channelUnavailable),
+            duration: const Duration(seconds: 2),
           ));
         }
         return;
@@ -294,7 +297,9 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
       if (removed) _channels.removeAt(index);
     });
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-      content: Text(value ? 'Agregado a favoritos' : 'Quitado de favoritos'),
+      content: Text(value
+          ? context.l10n.favoriteAdded
+          : context.l10n.favoriteRemoved),
       duration: const Duration(milliseconds: 800),
     ));
     if (removed && _channels.isNotEmpty) {
@@ -314,7 +319,9 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
     if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-      content: Text(wasDead ? 'Marca quitada' : 'Marcado como caído'),
+      content: Text(wasDead
+          ? context.l10n.deadMarkRemoved
+          : context.l10n.deadMarked),
       duration: const Duration(milliseconds: 800),
     ));
   }
@@ -338,6 +345,12 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
 
   // --- UI -----------------------------------------------------------------
 
+  String _groupLabel(BuildContext context, String group) => switch (group) {
+        _allChannelsLabel => context.l10n.browserAllChannels,
+        _recentsLabel => context.l10n.browserRecents,
+        _ => group,
+      };
+
   @override
   Widget build(BuildContext context) {
     if (_loadingGroups) {
@@ -355,9 +368,9 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
           ),
         ),
         Padding(
-          padding: EdgeInsets.only(top: 8, bottom: 4),
+          padding: const EdgeInsets.only(top: 8, bottom: 4),
           child: Text(
-            'OK Reproducir  ·  Mantén OK Opciones  ·  ← Menú',
+            context.l10n.browserFooterHint,
             style: TextStyle(
               fontSize: TvTheme.fontSmall,
               color: TvTheme.textSecondary,
@@ -411,7 +424,7 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
                 ),
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  _groups[index],
+                  _groupLabel(context, _groups[index]),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -440,8 +453,8 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
           padding: const EdgeInsets.all(32),
           child: Text(
             widget.favoritesOnly
-                ? 'Aún no tienes favoritos. Mantén presionado OK sobre un canal para agregarlo.'
-                : 'No hay canales en este grupo',
+                ? context.l10n.browserEmptyFavorites
+                : context.l10n.browserEmptyGroup,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: TvTheme.fontBody,

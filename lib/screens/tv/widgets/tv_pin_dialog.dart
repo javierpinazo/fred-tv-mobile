@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/screens/tv/player/tv_player_keys.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
@@ -164,7 +165,7 @@ class _PinDialogState extends State<_PinDialog> {
                   _key('', const ValueKey('tv-pin-back'), _back,
                       icon: Icons.backspace_outlined),
                   _digit(0),
-                  _key('Cancelar', const ValueKey('tv-pin-cancel'),
+                  _key(context.l10n.commonCancel, const ValueKey('tv-pin-cancel'),
                       () => Navigator.of(context).pop()),
                 ]),
               ],

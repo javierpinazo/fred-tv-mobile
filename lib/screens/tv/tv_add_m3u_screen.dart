@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/source_type.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
@@ -43,15 +44,15 @@ class _TvAddM3uScreenState extends State<TvAddM3uScreen> {
     final name = _name.text.trim();
     final url = _url.text.trim();
     if (name.isEmpty || url.isEmpty) {
-      _setMessage('Completa todos los campos', error: true);
+      _setMessage(context.l10n.addM3uFillAll, error: true);
       return;
     }
     if (!RegExp(r'^https?://', caseSensitive: false).hasMatch(url)) {
-      _setMessage('La URL debe empezar con http:// o https://', error: true);
+      _setMessage(context.l10n.urlMustBeHttp, error: true);
       return;
     }
     _busy = true;
-    _setMessage('Agregando lista…', error: false);
+    _setMessage(context.l10n.addM3uAdding, error: false);
     try {
       await widget.data.addSource(Source(
         name: name,
@@ -62,11 +63,11 @@ class _TvAddM3uScreenState extends State<TvAddM3uScreen> {
       if (!mounted) return;
       _name.clear();
       _url.clear();
-      _setMessage('Lista agregada correctamente', error: false);
+      _setMessage(context.l10n.addM3uAdded, error: false);
     } catch (e) {
       debugPrint('TvAddM3uScreen: error agregando "$name": $e');
       if (!mounted) return;
-      _setMessage(tvAddSourceErrorMessage(e), error: true);
+      _setMessage(tvAddSourceErrorMessage(e, context.l10n), error: true);
     } finally {
       _busy = false;
     }
@@ -86,10 +87,10 @@ class _TvAddM3uScreenState extends State<TvAddM3uScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Agregar lista M3U',
+                  Text(
+                    context.l10n.addM3uTitle,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: TvTheme.fontTitle,
                       fontWeight: FontWeight.bold,
                       color: TvTheme.textPrimary,
@@ -99,7 +100,7 @@ class _TvAddM3uScreenState extends State<TvAddM3uScreen> {
                   TvTextField(
                     key: const ValueKey('tv-m3u-name'),
                     controller: _name,
-                    label: 'Nombre de la lista',
+                    label: context.l10n.playlistNameLabel,
                     icon: Icons.label_outline,
                     autofocus: true,
                   ),
@@ -107,7 +108,7 @@ class _TvAddM3uScreenState extends State<TvAddM3uScreen> {
                   TvTextField(
                     key: const ValueKey('tv-m3u-url'),
                     controller: _url,
-                    label: 'URL de la lista M3U',
+                    label: context.l10n.addM3uUrlLabel,
                     icon: Icons.link,
                     keyboardType: TextInputType.url,
                   ),
@@ -122,9 +123,9 @@ class _TvAddM3uScreenState extends State<TvAddM3uScreen> {
                         color: TvTheme.accent,
                         borderRadius: BorderRadius.circular(TvTheme.radius - 2),
                       ),
-                      child: const Text(
-                        'Agregar lista',
-                        style: TextStyle(
+                      child: Text(
+                        context.l10n.addM3uButton,
+                        style: const TextStyle(
                           fontSize: TvTheme.fontBody,
                           fontWeight: FontWeight.bold,
                           color: TvTheme.textPrimary,

@@ -1,0 +1,464 @@
+{
+  "@@locale": "es",
+  "commonRetry": "Reintentar",
+  "commonContinue": "Continuar",
+  "commonCancel": "Cancelar",
+  "commonSave": "Guardar",
+  "commonDelete": "Eliminar",
+  "commonPlay": "Reproducir",
+  "commonOn": "Activado",
+  "commonOff": "Desactivado",
+  "navChannels": "Canales",
+  "navFavorites": "Favoritos",
+  "navMyLists": "Mis listas",
+  "navSearch": "Buscar",
+  "navSettings": "Ajustes",
+  "linkChannelUnavailable": "Ese canal ya no está disponible",
+  "channelUnavailable": "Este canal ya no está disponible",
+  "bootstrapPreparing": "Preparando canales…",
+  "bootstrapFailed": "No se pudo descargar la lista de canales",
+  "agoMoment": "hace un momento",
+  "agoMinutes": "hace {n} min",
+  "@agoMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "agoHours": "hace {n} h",
+  "@agoHours": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "agoDays": "hace {n} d",
+  "@agoDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "browserAllChannels": "Todos los canales",
+  "browserRecents": "Recientes",
+  "browserFooterHint": "OK Reproducir  ·  Mantén OK Opciones  ·  ← Menú",
+  "browserEmptyFavorites": "Aún no tienes favoritos. Mantén presionado OK sobre un canal para agregarlo.",
+  "browserEmptyGroup": "No hay canales en este grupo",
+  "favoriteAdded": "Agregado a favoritos",
+  "favoriteRemoved": "Quitado de favoritos",
+  "deadMarkRemoved": "Marca quitada",
+  "deadMarked": "Marcado como caído",
+  "menuFavoriteAdd": "Agregar a favoritos",
+  "menuFavoriteRemove": "Quitar de favoritos",
+  "menuAddToList": "Agregar a una lista…",
+  "menuShowGuide": "Ver programación",
+  "menuDeadClear": "Quitar marca de caído",
+  "menuDeadMark": "Marcar como caído",
+  "searchUpdateListsForCountries": "Actualiza las listas para ver los países",
+  "searchCountryTitle": "País",
+  "searchAllCountries": "Todos los países",
+  "searchCountryAllShort": "Todos",
+  "searchCountryChip": "País: {value}",
+  "@searchCountryChip": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "searchLabel": "Buscar canales",
+  "searchHint": "Presiona OK para escribir",
+  "searchStatusIdle": "Escribe al menos {min} letras o elige un país",
+  "@searchStatusIdle": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "searchStatusSearching": "Buscando…",
+  "searchStatusResults": "{n, plural, =1{1 resultado} other{{n} resultados}}",
+  "@searchStatusResults": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "searchStatusNoCountryChannels": "Sin canales de este país",
+  "searchStatusNoResults": "Sin resultados para \"{query}\"",
+  "@searchStatusNoResults": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "searchStatusError": "Error al buscar. Intenta de nuevo.",
+  "playlistNew": "Nueva lista",
+  "playlistCreate": "Crear",
+  "playlistCreateFailed": "No se pudo crear la lista",
+  "playlistAddedTo": "Agregado a «{name}»",
+  "@playlistAddedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "playlistAlreadyIn": "Ya está en «{name}»",
+  "@playlistAlreadyIn": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "playlistRename": "Renombrar",
+  "playlistRenameFailed": "No se pudo renombrar",
+  "playlistDeleteConfirm": "¿Eliminar la lista «{name}»?",
+  "@playlistDeleteConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "playlistAddChannelByUrl": "Agregar canal por URL",
+  "playlistChannelNameLabel": "Nombre del canal",
+  "playlistStreamUrlLabel": "URL del stream",
+  "playlistAddChannelFailed": "No se pudo agregar el canal",
+  "playlistMoveUp": "Mover antes",
+  "playlistMoveDown": "Mover después",
+  "playlistRemoveFromList": "Quitar de la lista",
+  "playlistDeleteChannel": "Eliminar canal",
+  "playlistChannelCount": "{n, plural, =1{1 canal} other{{n} canales}}",
+  "@playlistChannelCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "playlistEmptyFirst": "Crea tu primera lista con «Nueva lista».",
+  "playlistEmptyList": "Esta lista está vacía. Mantén OK sobre cualquier canal y elige «Agregar a una lista…».",
+  "keyboardDone": "Listo",
+  "keyboardSearch": "Buscar",
+  "keyboardShift": "Mayús",
+  "keyboardSpace": "Espacio",
+  "keyboardBackspace": "⌫ Borrar",
+  "keyboardClear": "Limpiar",
+  "keyboardSystem": "Voz / sistema",
+  "guideToday": "Hoy",
+  "guideTomorrow": "Mañana",
+  "guideWeekdaysShort": "lun|mar|mié|jue|vie|sáb|dom",
+  "guidePrevious": "Anterior",
+  "guideNext": "Siguiente",
+  "guideNowBadge": "AHORA",
+  "guideLoadFailed": "No se pudo cargar la guía",
+  "guideEmptyDay": "Sin programación para este día",
+  "playerSetCameraFirst": "Primero define la cámara en Ajustes",
+  "playerMenuAudio": "Audio",
+  "playerMenuSubtitles": "Subtítulos",
+  "playerMenuLast": "Volver al canal anterior",
+  "playerMenuFit": "Ajustar imagen",
+  "playerMenuToMpv": "Usar mpv en este canal (audio y subtítulos)",
+  "playerMenuToExo": "Usar ExoPlayer en este canal",
+  "playerCamShow": "Mostrar cámara",
+  "playerCamHide": "Ocultar cámara",
+  "playerCamInBox": "Cámara en el recuadro (canal en grande)",
+  "playerCamFull": "Cámara en pantalla grande",
+  "playerCamZoom": "Zoom de la cámara",
+  "playerCamRetry": "Reintentar cámara",
+  "playerLoading": "Cargando…",
+  "playerPaused": "Pausado",
+  "playerLive": "En vivo",
+  "playerKeyHintLive": "↑↓ Cambiar canal  ·  OK Info  ·  Mantén OK Opciones  ·  Atrás Salir",
+  "playerKeyHintVod": "←→ 10 s  ·  OK Pausa  ·  Mantén OK Opciones  ·  Atrás Salir",
+  "playerCamNoSignal": "Cámara sin señal",
+  "playerZoomHint": "Zoom {zoom}  ·  ←↑↓→ Mover  ·  OK Cambiar zoom  ·  Atrás Terminar",
+  "@playerZoomHint": {
+    "placeholders": {
+      "zoom": {
+        "type": "String"
+      }
+    }
+  },
+  "playerChannelNumber": "Canal {number}",
+  "@playerChannelNumber": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "playerGuideNow": "Ahora: {title}",
+  "@playerGuideNow": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "playerErrorTitle": "No se pudo reproducir este canal",
+  "playerNextChannel": "Siguiente canal",
+  "playerBack": "Volver",
+  "settingsAddFromIptvOrg": "Agregar desde iptv-org",
+  "settingsAddM3u": "Agregar lista M3U por URL",
+  "settingsRefreshNow": "Actualizar listas ahora",
+  "settingsAutoRefresh": "Actualización automática (cada 24 h)",
+  "settingsAutoOn": "Activada",
+  "settingsAutoOff": "Desactivada",
+  "settingsBuffer": "Buffer de reproducción",
+  "settingsBufferHint": "Más segundos = menos tirones; empieza algo más tarde",
+  "settingsEngine": "Motor de video",
+  "settingsEngineAutoHint": "ExoPlayer y, si falla, mpv",
+  "settingsEngineMpvHint": "Solo mpv (el más compatible)",
+  "engineModeAuto": "Automático",
+  "engineModeMpv": "Solo mpv",
+  "settingsDecoding": "Decodificación de video (mpv)",
+  "settingsDecodingAutoHint": "Si un canal 1080p va a tirones con mpv, prueba \"Sin copia\"",
+  "settingsDecodingZeroCopyHint": "Experimental: sin copiar fotogramas; si no da imagen, vuelve a la automática",
+  "settingsDecodingZeroCopy": "Sin copia",
+  "settingsDecodingAuto": "Automática",
+  "settingsTextSize": "Tamaño de letra",
+  "settingsTextSizeHint": "Agranda los textos de toda la interfaz",
+  "settingsHighContrast": "Alto contraste",
+  "settingsHighContrastHint": "Texto más claro y borde de foco amarillo más grueso",
+  "settingsHideDead": "Ocultar canales caídos",
+  "settingsHideDeadHint": "En Canales y Búsqueda (Favoritos siempre los muestra)",
+  "settingsDeadChannels": "Canales caídos",
+  "settingsDeadChannelsHint": "Se saltan al cambiar de canal. OK para limpiar las marcas",
+  "settingsDeadNone": "Ninguno",
+  "settingsDeadCount": "{n, plural, =1{1 marcado} other{{n} marcados}}",
+  "@settingsDeadCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsHideAdult": "Ocultar contenido adulto",
+  "settingsHideAdultHintPin": "Desactivarlo exige el PIN",
+  "settingsHideAdultHintNoPin": "Crea un PIN para protegerlo",
+  "settingsPin": "PIN de control parental",
+  "settingsPinHint": "De 4 dígitos; protege el filtro de adultos",
+  "settingsPinSet": "Configurado",
+  "settingsPinNone": "Sin PIN",
+  "settingsBackup": "Copia de seguridad",
+  "settingsBackupHint": "Exporta o importa favoritos, listas propias y ajustes",
+  "settingsEpg": "Guía personalizada (XMLTV)",
+  "settingsEpgHint": "Más canales con guía; se suma a la de tus países",
+  "settingsEpgSet": "Definida",
+  "settingsEpgUnset": "Sin definir",
+  "settingsCamera": "Cámara de seguridad",
+  "settingsCameraHint": "Se ve como canal y en un recuadro (mantén OK en un canal)",
+  "settingsCameraSet": "Configurada",
+  "settingsCameraUnset": "Sin cámara",
+  "settingsLanguage": "Idioma",
+  "settingsLanguageHint": "Idioma de la interfaz de TV",
+  "settingsLanguageAuto": "Automático (sistema)",
+  "settingsMySources": "Mis fuentes",
+  "settingsAlreadyRefreshing": "Ya se están actualizando las listas",
+  "settingsRefreshing": "Actualizando listas…",
+  "settingsRefreshFailedSome": "{n, plural, =1{1 lista no se pudo actualizar} other{{n} listas no se pudieron actualizar}}",
+  "@settingsRefreshFailedSome": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsRefreshDone": "Listas actualizadas",
+  "settingsRefreshFailed": "No se pudieron actualizar las listas",
+  "pinWrong": "PIN incorrecto",
+  "pinNew": "Nuevo PIN",
+  "pinRepeat": "Repite el PIN",
+  "pinMismatch": "Los PIN no coinciden",
+  "pinEnter": "Introduce el PIN",
+  "pinEnterCurrent": "Introduce el PIN actual",
+  "pinSaved": "PIN guardado",
+  "pinRemoved": "PIN quitado",
+  "pinChange": "Cambiar PIN",
+  "pinRemove": "Quitar PIN",
+  "backupExport": "Exportar copia",
+  "backupImportMenu": "Importar copia…",
+  "backupSavedTo": "Copia guardada en {path}",
+  "@backupSavedTo": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "backupSaveFailed": "No se pudo guardar la copia",
+  "backupImportTitle": "Importar copia",
+  "backupFromUrl": "Desde una URL…",
+  "backupFromPicker": "Desde un archivo del dispositivo…",
+  "backupImportFromUrlTitle": "Importar desde una URL",
+  "backupUrlLabel": "Dirección de la copia (.json)",
+  "backupImportConfirm": "Importar",
+  "backupNoFile": "No se eligió ningún archivo",
+  "backupImporting": "Importando…",
+  "backupImported": "Copia importada: {summary}",
+  "@backupImported": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "backupImportFailed": "No se pudo importar la copia",
+  "backupSummaryLists": "{n, plural, =1{1 lista} other{{n} listas}}",
+  "@backupSummaryLists": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "backupSummaryFavorites": "{n, plural, =1{1 favorito} other{{n} favoritos}}",
+  "@backupSummaryFavorites": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "backupSummaryPlaylists": "{n, plural, =1{1 lista propia nueva} other{{n} listas propias nuevas}}",
+  "@backupSummaryPlaylists": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "backupSummaryPlaylistItems": "{n, plural, =1{1 canal en listas} other{{n} canales en listas}}",
+  "@backupSummaryPlaylistItems": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "backupSummaryCustom": "{n, plural, =1{1 canal propio} other{{n} canales propios}}",
+  "@backupSummaryCustom": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "backupSummarySettings": "{n, plural, =1{1 ajuste} other{{n} ajustes}}",
+  "@backupSummarySettings": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "backupSummaryNothing": "Nada nuevo que importar",
+  "backupSummaryMissing": "{base} ({n, plural, =1{1 favorito sin canal} other{{n} favoritos sin canal}})",
+  "@backupSummaryMissing": {
+    "placeholders": {
+      "base": {
+        "type": "String"
+      },
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "backupErrInvalidUrl": "La dirección no es válida",
+  "backupErrDownload": "No se pudo descargar (HTTP {code})",
+  "@backupErrDownload": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "backupErrNotBackup": "El archivo no es una copia válida",
+  "backupErrNotFred": "El archivo no es una copia de Fred TV",
+  "backupErrNoVersion": "La copia no indica su versión",
+  "backupErrNewer": "La copia es de una versión más nueva de la app",
+  "epgUrlLabel": "Dirección (.xml o .xml.gz); vacío para quitarla",
+  "cameraUrlLabel": "Dirección RTSP; vacío para quitarla",
+  "cameraRemoved": "Cámara quitada",
+  "cameraSaved": "Cámara guardada: búscala como canal «{name}» en Favoritos",
+  "@cameraSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deadClearConfirm": "¿Limpiar las marcas de canales caídos?",
+  "deadClearAction": "Limpiar",
+  "sourceRefresh": "Actualizar",
+  "sourceDisable": "Desactivar",
+  "sourceEnable": "Activar",
+  "sourceDeleteConfirm": "¿Eliminar la fuente «{name}» y sus canales?",
+  "@sourceDeleteConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sourceDisabled": "Desactivada",
+  "sourceNeverRefreshed": "Nunca actualizada",
+  "sourceRefreshedAgo": "Actualizada {ago}",
+  "@sourceRefreshedAgo": {
+    "placeholders": {
+      "ago": {
+        "type": "String"
+      }
+    }
+  },
+  "playlistNameLabel": "Nombre de la lista",
+  "playlistDuplicate": "Ya existe una lista con ese nombre",
+  "addM3uTitle": "Agregar lista M3U",
+  "addM3uUrlLabel": "URL de la lista M3U",
+  "addM3uButton": "Agregar lista",
+  "addM3uFillAll": "Completa todos los campos",
+  "addM3uAdding": "Agregando lista…",
+  "addM3uAdded": "Lista agregada correctamente",
+  "urlMustBeHttp": "La URL debe empezar con http:// o https://",
+  "sourceErrUnavailable": "Esta lista no está disponible",
+  "sourceErrGeneric": "No se pudo agregar la lista",
+  "iptvTitle": "Listas de iptv-org",
+  "iptvSectionRecommended": "Recomendados",
+  "iptvSectionCountries": "Países",
+  "iptvSectionCategories": "Categorías",
+  "iptvAlreadyAdded": "Ya agregada",
+  "iptvAdding": "Agregando «{name}»…",
+  "@iptvAdding": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "iptvAdded": "«{name}» agregada",
+  "@iptvAdded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "iptvLoadFailed": "No se pudo cargar el catálogo. Revisa tu conexión.",
+  "iptvKindLanguage": "Idioma",
+  "iptvAddedBadge": "Agregada",
+  "iptvAllSpanish": "Todo en español",
+  "iptvCatNews": "Noticias",
+  "iptvCatSports": "Deportes",
+  "iptvCatKids": "Infantil",
+  "iptvCatMovies": "Películas",
+  "iptvCatMusic": "Música",
+  "iptvCatDocumentary": "Documentales"
+}

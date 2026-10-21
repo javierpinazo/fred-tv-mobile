@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/screens/tv/guide/tv_guide.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
@@ -7,8 +8,6 @@ import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
 /// Días hacia adelante que se pueden consultar (el sitio publica una semana).
 const int _maxDaysAhead = 6;
-
-const List<String> _weekdays = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
 
 /// Programación de un canal por día. [clock] permite fijar "ahora" en pruebas.
 Future<void> showTvGuide(
@@ -118,11 +117,11 @@ class _GuideDialogState extends State<_GuideDialog> {
     _load();
   }
 
-  String _dayLabel() {
-    if (_offset == 0) return 'Hoy';
-    if (_offset == 1) return 'Mañana';
+  String _dayLabel(AppLocalizations l10n) {
+    if (_offset == 0) return l10n.guideToday;
+    if (_offset == 1) return l10n.guideTomorrow;
     final d = _day;
-    return '${_weekdays[d.weekday - 1]} '
+    return '${l10n.guideWeekdaysShort.split('|')[d.weekday - 1]} '
         '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
   }
 
@@ -220,9 +219,9 @@ class _GuideDialogState extends State<_GuideDialog> {
                     color: TvTheme.accent,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Text(
-                    'AHORA',
-                    style: TextStyle(
+                  child: Text(
+                    context.l10n.guideNowBadge,
+                    style: const TextStyle(
                       fontSize: TvTheme.fontSmall,
                       fontWeight: FontWeight.bold,
                       color: TvTheme.textPrimary,
@@ -247,17 +246,17 @@ class _GuideDialogState extends State<_GuideDialog> {
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
             child: Text(
-              'No se pudo cargar la guía',
-              style: TextStyle(
+              context.l10n.guideLoadFailed,
+              style: const TextStyle(
                 fontSize: TvTheme.fontBody,
                 color: TvTheme.error,
               ),
             ),
           ),
-          _navButton('Reintentar', Icons.refresh,
+          _navButton(context.l10n.commonRetry, Icons.refresh,
               const ValueKey('tv-guide-retry'), _load),
         ],
       );
@@ -267,7 +266,7 @@ class _GuideDialogState extends State<_GuideDialog> {
         height: 120,
         child: Center(
           child: Text(
-            'Sin programación para este día',
+            context.l10n.guideEmptyDay,
             style: TextStyle(
               fontSize: TvTheme.fontBody,
               color: TvTheme.textSecondary,
@@ -315,13 +314,13 @@ class _GuideDialogState extends State<_GuideDialog> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  _navButton('Anterior', Icons.chevron_left,
+                  _navButton(context.l10n.guidePrevious, Icons.chevron_left,
                       const ValueKey('tv-guide-prev'), () => _goTo(_offset - 1),
                       enabled: _offset > 0),
                   Expanded(
                     child: Center(
                       child: Text(
-                        _dayLabel(),
+                        _dayLabel(context.l10n),
                         style: const TextStyle(
                           fontSize: TvTheme.fontTitle,
                           color: TvTheme.textPrimary,
@@ -329,7 +328,7 @@ class _GuideDialogState extends State<_GuideDialog> {
                       ),
                     ),
                   ),
-                  _navButton('Siguiente', Icons.chevron_right,
+                  _navButton(context.l10n.guideNext, Icons.chevron_right,
                       const ValueKey('tv-guide-next'), () => _goTo(_offset + 1),
                       enabled: _offset < _maxDaysAhead),
                 ],

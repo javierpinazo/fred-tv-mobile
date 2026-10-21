@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:open_tv/backend/sql.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/id_data.dart';
 import 'package:open_tv/models/media_type.dart';
@@ -363,7 +364,7 @@ class _TvPlayerState extends State<TvPlayer> {
     final url = await widget.data.cameraUrlSetting();
     if (!mounted) return;
     if (url == null) {
-      _notice('Primero define la cámara en Ajustes');
+      _notice(context.l10n.playerSetCameraFirst);
       return;
     }
     unawaited(_camera.show(url));
@@ -601,44 +602,46 @@ class _TvPlayerState extends State<TvPlayer> {
     final cameraUrl = await widget.data.cameraUrlSetting();
     if (!mounted) return;
     final showCameraOptions = cameraUrl == null || channel.url != cameraUrl;
+    final l10n = context.l10n;
     final choice = await showTvOptions<String>(
       context,
       title: channel.name,
       options: [
-        if (engine?.supportsTracks == true) ('Audio', 'audio'),
-        if (engine?.supportsTracks == true) ('Subtítulos', 'subs'),
-        if (_cursor.hasLast) ('Volver al canal anterior', 'last'),
-        ('Ajustar imagen', 'fit'),
-        if (widget.data.hasGuide(channel)) ('Ver programación', 'guide'),
+        if (engine?.supportsTracks == true) (l10n.playerMenuAudio, 'audio'),
+        if (engine?.supportsTracks == true)
+          (l10n.playerMenuSubtitles, 'subs'),
+        if (_cursor.hasLast) (l10n.playerMenuLast, 'last'),
+        (l10n.playerMenuFit, 'fit'),
+        if (widget.data.hasGuide(channel)) (l10n.menuShowGuide, 'guide'),
         (
-          channel.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos',
+          channel.favorite ? l10n.menuFavoriteRemove : l10n.menuFavoriteAdd,
           'fav'
         ),
         if (engine?.kind == TvEngineKind.exo)
-          ('Usar mpv en este canal (audio y subtítulos)', 'to-mpv'),
-        if (canSwitchToExo) ('Usar ExoPlayer en este canal', 'to-exo'),
-        if (showCameraOptions && !_camera.visible) ('Mostrar cámara', 'cam-show'),
+          (l10n.playerMenuToMpv, 'to-mpv'),
+        if (canSwitchToExo) (l10n.playerMenuToExo, 'to-exo'),
+        if (showCameraOptions && !_camera.visible)
+          (l10n.playerCamShow, 'cam-show'),
         if (showCameraOptions && _camera.visible) ...[
-          ('Ocultar cámara', 'cam-hide'),
+          (l10n.playerCamHide, 'cam-hide'),
           (
-            _camera.swapped
-                ? 'Cámara en el recuadro (canal en grande)'
-                : 'Cámara en pantalla grande',
+            _camera.swapped ? l10n.playerCamInBox : l10n.playerCamFull,
             'cam-swap'
           ),
-          ('Zoom de la cámara', 'cam-zoom'),
+          (l10n.playerCamZoom, 'cam-zoom'),
           if (_camera.status == TvCameraStatus.error)
-            ('Reintentar cámara', 'cam-retry'),
+            (l10n.playerCamRetry, 'cam-retry'),
         ],
       ],
     );
     if (!mounted) return;
     switch (choice) {
       case 'audio':
-        await _openTrackModal('Audio', engine!.audioTracks(), engine.selectAudio);
-      case 'subs':
         await _openTrackModal(
-            'Subtítulos', engine!.subtitleTracks(), engine.selectSubtitle);
+            l10n.playerMenuAudio, engine!.audioTracks(), engine.selectAudio);
+      case 'subs':
+        await _openTrackModal(l10n.playerMenuSubtitles,
+            engine!.subtitleTracks(), engine.selectSubtitle);
       case 'last':
         _goLast();
       case 'guide':
@@ -717,15 +720,14 @@ class _TvPlayerState extends State<TvPlayer> {
 
   // --- UI -----------------------------------------------------------------
 
-  String _status() {
-    if (_loading) return 'Cargando…';
-    if (!_playing) return 'Pausado';
-    return _isLive ? 'En vivo' : '';
+  String _status(AppLocalizations l10n) {
+    if (_loading) return l10n.playerLoading;
+    if (!_playing) return l10n.playerPaused;
+    return _isLive ? l10n.playerLive : '';
   }
 
-  String _keyHint() => _isLive
-      ? '↑↓ Cambiar canal  ·  OK Info  ·  Mantén OK Opciones  ·  Atrás Salir'
-      : '←→ 10 s  ·  OK Pausa  ·  Mantén OK Opciones  ·  Atrás Salir';
+  String _keyHint(AppLocalizations l10n) =>
+      _isLive ? l10n.playerKeyHintLive : l10n.playerKeyHintVod;
 
   static String _fmt(Duration d) {
     String two(int n) => n.toString().padLeft(2, '0');
@@ -767,7 +769,7 @@ class _TvPlayerState extends State<TvPlayer> {
             if (status == TvCameraStatus.error)
               Center(
                 child: Text(
-                  'Cámara sin señal',
+                  context.l10n.playerCamNoSignal,
                   style: TextStyle(
                     fontSize: TvTheme.fontBody,
                     color: TvTheme.textSecondary,
@@ -819,8 +821,7 @@ class _TvPlayerState extends State<TvPlayer> {
               borderRadius: BorderRadius.circular(TvTheme.radius),
             ),
             child: Text(
-              'Zoom ${_camera.zoom.label}  ·  ←↑↓→ Mover  ·  '
-              'OK Cambiar zoom  ·  Atrás Terminar',
+              context.l10n.playerZoomHint(_camera.zoom.label),
               style: const TextStyle(
                 fontSize: TvTheme.fontBody,
                 color: TvTheme.textPrimary,
@@ -874,7 +875,7 @@ class _TvPlayerState extends State<TvPlayer> {
                       borderRadius: BorderRadius.circular(TvTheme.radius),
                     ),
                     child: Text(
-                      'Canal ${_number.value}',
+                      context.l10n.playerChannelNumber(_number.value),
                       style: const TextStyle(
                         fontSize: 40,
                         fontWeight: FontWeight.bold,
@@ -891,11 +892,11 @@ class _TvPlayerState extends State<TvPlayer> {
   }
 
   /// "Ahora: X  ·  08:30 AM: Y" o `null` si el canal no tiene guía.
-  String? _guideLine() {
+  String? _guideLine(AppLocalizations l10n) {
     final g = _guideNow;
     if (g == null || (g.now == null && g.next == null)) return null;
     return [
-      if (g.now != null) 'Ahora: ${g.now!.title}',
+      if (g.now != null) l10n.playerGuideNow(g.now!.title),
       if (g.next != null) '${g.next!.timeLabel}: ${g.next!.title}',
     ].join('  ·  ');
   }
@@ -948,7 +949,7 @@ class _TvPlayerState extends State<TvPlayer> {
               [
                 if (channel.group != null && channel.group!.isNotEmpty)
                   channel.group!,
-                if (_status().isNotEmpty) _status(),
+                if (_status(context.l10n).isNotEmpty) _status(context.l10n),
                 if (_engine != null) _engine!.kind.label,
               ].join('  ·  '),
               style: TextStyle(
@@ -956,11 +957,11 @@ class _TvPlayerState extends State<TvPlayer> {
                 color: TvTheme.textSecondary,
               ),
             ),
-            if (_guideLine() != null)
+            if (_guideLine(context.l10n) != null)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
-                  _guideLine()!,
+                  _guideLine(context.l10n)!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -972,7 +973,7 @@ class _TvPlayerState extends State<TvPlayer> {
             if (!_isLive) _buildProgress(),
             const SizedBox(height: 10),
             Text(
-              _keyHint(),
+              _keyHint(context.l10n),
               style: TextStyle(
                 fontSize: TvTheme.fontSmall,
                 color: TvTheme.textSecondary,
@@ -1031,9 +1032,9 @@ class _TvPlayerState extends State<TvPlayer> {
         children: [
           const Icon(Icons.error_outline, color: TvTheme.error, size: 64),
           const SizedBox(height: 16),
-          const Text(
-            'No se pudo reproducir este canal',
-            style: TextStyle(
+          Text(
+            context.l10n.playerErrorTitle,
+            style: const TextStyle(
               fontSize: TvTheme.fontTitle,
               fontWeight: FontWeight.bold,
               color: TvTheme.textPrimary,
@@ -1052,7 +1053,7 @@ class _TvPlayerState extends State<TvPlayer> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _errorButton(
-                'Reintentar',
+                context.l10n.commonRetry,
                 focusNode: _retryFocus,
                 onSelect: () {
                   _liveReconnects = 0;
@@ -1061,11 +1062,11 @@ class _TvPlayerState extends State<TvPlayer> {
               ),
               const SizedBox(width: 16),
               _errorButton(
-                'Siguiente canal',
+                context.l10n.playerNextChannel,
                 onSelect: () => _zap(true),
               ),
               const SizedBox(width: 16),
-              _errorButton('Volver', onSelect: _exit),
+              _errorButton(context.l10n.playerBack, onSelect: _exit),
             ],
           ),
         ],

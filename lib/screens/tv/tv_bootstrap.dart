@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:open_tv/backend/sql.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/source_type.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
@@ -92,20 +93,20 @@ class _TvBootstrapState extends State<TvBootstrap> {
   }
 
   Widget _buildLoading() {
-    return const Column(
+    return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.live_tv, size: 96, color: TvTheme.accent),
-        SizedBox(height: 24),
+        const Icon(Icons.live_tv, size: 96, color: TvTheme.accent),
+        const SizedBox(height: 24),
         Text(
-          'Preparando canales…',
-          style: TextStyle(
+          context.l10n.bootstrapPreparing,
+          style: const TextStyle(
             fontSize: TvTheme.fontTitle,
             color: TvTheme.textPrimary,
           ),
         ),
-        SizedBox(height: 24),
-        CircularProgressIndicator(),
+        const SizedBox(height: 24),
+        const CircularProgressIndicator(),
       ],
     );
   }
@@ -116,9 +117,9 @@ class _TvBootstrapState extends State<TvBootstrap> {
       children: [
         const Icon(Icons.cloud_off, size: 80, color: TvTheme.error),
         const SizedBox(height: 20),
-        const Text(
-          'No se pudo descargar la lista de canales',
-          style: TextStyle(
+        Text(
+          context.l10n.bootstrapFailed,
+          style: const TextStyle(
             fontSize: TvTheme.fontTitle,
             color: TvTheme.textPrimary,
           ),
@@ -128,14 +129,14 @@ class _TvBootstrapState extends State<TvBootstrap> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _button(
-              'Reintentar',
+              context.l10n.commonRetry,
               key: const ValueKey('tv-bootstrap-retry'),
               autofocus: true,
               onSelect: _prepare,
             ),
             const SizedBox(width: 20),
             _button(
-              'Continuar',
+              context.l10n.commonContinue,
               key: const ValueKey('tv-bootstrap-continue'),
               onSelect: _goHome,
             ),

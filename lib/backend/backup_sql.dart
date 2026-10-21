@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:open_tv/backend/db_factory.dart';
 import 'package:open_tv/backend/sql.dart';
 import 'package:open_tv/backend/user_playlists_sql.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/media_type.dart';
 import 'package:open_tv/models/source_type.dart';
@@ -10,9 +11,26 @@ import 'package:open_tv/models/source_type.dart';
 const int backupVersion = 1;
 const String _backupApp = 'fred-tv';
 
+/// Motivo de un error de formato; la interfaz lo traduce con [BackupFormatException.localized].
+enum BackupError { invalidUrl, downloadFailed, notBackup, notFredBackup, noVersion, newerVersion }
+
 class BackupFormatException implements Exception {
-  BackupFormatException(this.message);
+  /// [message] va en español (registros y pruebas); [error] permite mostrarlo
+  /// en el idioma de la interfaz y [status] lleva el código HTTP si lo hay.
+  BackupFormatException(this.message, {this.error, this.status});
   final String message;
+  final BackupError? error;
+  final int? status;
+
+  String localized(AppLocalizations l10n) => switch (error) {
+        BackupError.invalidUrl => l10n.backupErrInvalidUrl,
+        BackupError.downloadFailed => l10n.backupErrDownload(status ?? 0),
+        BackupError.notBackup => l10n.backupErrNotBackup,
+        BackupError.notFredBackup => l10n.backupErrNotFred,
+        BackupError.noVersion => l10n.backupErrNoVersion,
+        BackupError.newerVersion => l10n.backupErrNewer,
+        null => message,
+      };
 
   @override
   String toString() => message;
@@ -48,18 +66,18 @@ class BackupResult {
       );
 
   /// Resumen en una línea para mostrar al usuario.
-  String get summary {
+  String summary(AppLocalizations l10n) {
     final parts = <String>[
-      if (sourcesAdded > 0) '$sourcesAdded listas',
-      if (favoritesApplied > 0) '$favoritesApplied favoritos',
-      if (playlistsCreated > 0) '$playlistsCreated listas propias nuevas',
-      if (playlistItems > 0) '$playlistItems canales en listas',
-      if (customChannels > 0) '$customChannels canales propios',
-      if (settingsApplied > 0) '$settingsApplied ajustes',
+      if (sourcesAdded > 0) l10n.backupSummaryLists(sourcesAdded),
+      if (favoritesApplied > 0) l10n.backupSummaryFavorites(favoritesApplied),
+      if (playlistsCreated > 0) l10n.backupSummaryPlaylists(playlistsCreated),
+      if (playlistItems > 0) l10n.backupSummaryPlaylistItems(playlistItems),
+      if (customChannels > 0) l10n.backupSummaryCustom(customChannels),
+      if (settingsApplied > 0) l10n.backupSummarySettings(settingsApplied),
     ];
-    final base = parts.isEmpty ? 'Nada nuevo que importar' : parts.join(', ');
+    final base = parts.isEmpty ? l10n.backupSummaryNothing : parts.join(', ');
     return favoritesMissing > 0
-        ? '$base ($favoritesMissing favoritos sin canal)'
+        ? l10n.backupSummaryMissing(base, favoritesMissing)
         : base;
   }
 }
@@ -156,18 +174,22 @@ abstract final class BackupSql {
     try {
       decoded = jsonDecode(text);
     } catch (_) {
-      throw BackupFormatException('El archivo no es una copia válida');
+      throw BackupFormatException('El archivo no es una copia válida',
+          error: BackupError.notBackup);
     }
     if (decoded is! Map<String, dynamic> || decoded['app'] != _backupApp) {
-      throw BackupFormatException('El archivo no es una copia de Fred TV');
+      throw BackupFormatException('El archivo no es una copia de Fred TV',
+          error: BackupError.notFredBackup);
     }
     final version = decoded['version'];
     if (version is! int || version < 1) {
-      throw BackupFormatException('La copia no indica su versión');
+      throw BackupFormatException('La copia no indica su versión',
+          error: BackupError.noVersion);
     }
     if (version > backupVersion) {
       throw BackupFormatException(
-          'La copia es de una versión más nueva de la app');
+          'La copia es de una versión más nueva de la app',
+          error: BackupError.newerVersion);
     }
     return decoded;
   }

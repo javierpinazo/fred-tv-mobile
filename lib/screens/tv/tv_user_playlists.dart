@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/user_playlist.dart';
 import 'package:open_tv/screens/tv/player/tv_player.dart';
@@ -15,7 +16,6 @@ import 'package:open_tv/screens/tv/widgets/tv_list_row.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
 const double _playlistRowExtent = 84;
-const String _duplicateMessage = 'Ya existe una lista con ese nombre';
 
 void _toast(BuildContext context, String text) {
   final messenger = ScaffoldMessenger.maybeOf(context);
@@ -41,7 +41,7 @@ Future<void> showAddToPlaylistDialog(
     title: channel.name,
     options: [
       for (final p in lists) (p.name, p.id),
-      ('Nueva lista', -1),
+      (context.l10n.playlistNew, -1),
     ],
   );
   if (choice == null || !context.mounted) return;
@@ -51,9 +51,9 @@ Future<void> showAddToPlaylistDialog(
   if (choice == -1) {
     final name = await showTvTextPrompt(
       context,
-      title: 'Nueva lista',
-      label: 'Nombre de la lista',
-      confirmLabel: 'Crear',
+      title: context.l10n.playlistNew,
+      label: context.l10n.playlistNameLabel,
+      confirmLabel: context.l10n.playlistCreate,
     );
     if (name == null || !context.mounted) return;
     try {
@@ -61,8 +61,11 @@ Future<void> showAddToPlaylistDialog(
       playlistName = name;
     } catch (e) {
       if (!context.mounted) return;
-      _toast(context,
-          _isDuplicate(e) ? _duplicateMessage : 'No se pudo crear la lista');
+      _toast(
+          context,
+          _isDuplicate(e)
+              ? context.l10n.playlistDuplicate
+              : context.l10n.playlistCreateFailed);
       return;
     }
   } else {
@@ -71,8 +74,11 @@ Future<void> showAddToPlaylistDialog(
   }
   final added = await data.addToUserPlaylist(playlistId, channel);
   if (!context.mounted) return;
-  _toast(context,
-      added ? 'Agregado a «$playlistName»' : 'Ya está en «$playlistName»');
+  _toast(
+      context,
+      added
+          ? context.l10n.playlistAddedTo(playlistName)
+          : context.l10n.playlistAlreadyIn(playlistName));
 }
 
 /// Callback listo para pasar a las pantallas que ofrecen "Agregar a una lista…".
@@ -230,9 +236,9 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
   Future<void> _createPlaylist() async {
     final name = await showTvTextPrompt(
       context,
-      title: 'Nueva lista',
-      label: 'Nombre de la lista',
-      confirmLabel: 'Crear',
+      title: context.l10n.playlistNew,
+      label: context.l10n.playlistNameLabel,
+      confirmLabel: context.l10n.playlistCreate,
     );
     if (name == null || !mounted) return;
     try {
@@ -240,8 +246,11 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
       await reload(selectId: id);
     } catch (e) {
       if (!mounted) return;
-      _toast(context,
-          _isDuplicate(e) ? _duplicateMessage : 'No se pudo crear la lista');
+      _toast(
+          context,
+          _isDuplicate(e)
+              ? context.l10n.playlistDuplicate
+              : context.l10n.playlistCreateFailed);
     }
   }
 
@@ -250,14 +259,17 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
     final choice = await showTvOptions<String>(
       context,
       title: playlist.name,
-      options: [('Renombrar', 'rename'), ('Eliminar', 'delete')],
+      options: [
+        (context.l10n.playlistRename, 'rename'),
+        (context.l10n.commonDelete, 'delete'),
+      ],
     );
     if (choice == null || !mounted) return;
     if (choice == 'rename') {
       final name = await showTvTextPrompt(
         context,
-        title: 'Renombrar',
-        label: 'Nombre de la lista',
+        title: context.l10n.playlistRename,
+        label: context.l10n.playlistNameLabel,
         initial: playlist.name,
       );
       if (name == null || !mounted) return;
@@ -266,12 +278,16 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
         await reload(selectId: playlist.id);
       } catch (e) {
         if (!mounted) return;
-        _toast(context, _isDuplicate(e) ? _duplicateMessage : 'No se pudo renombrar');
+        _toast(
+            context,
+            _isDuplicate(e)
+                ? context.l10n.playlistDuplicate
+                : context.l10n.playlistRenameFailed);
       }
     } else {
       final confirmed = await showTvConfirm(
         context,
-        message: '¿Eliminar la lista «${playlist.name}»?',
+        message: context.l10n.playlistDeleteConfirm(playlist.name),
       );
       if (!confirmed || !mounted) return;
       await widget.data.deleteUserPlaylist(playlist.id);
@@ -289,18 +305,18 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
     if (playlist == null) return;
     final name = await showTvTextPrompt(
       context,
-      title: 'Agregar canal por URL',
-      label: 'Nombre del canal',
+      title: context.l10n.playlistAddChannelByUrl,
+      label: context.l10n.playlistChannelNameLabel,
     );
     if (name == null || !mounted) return;
     final url = await showTvTextPrompt(
       context,
-      title: 'Agregar canal por URL',
-      label: 'URL del stream',
+      title: context.l10n.playlistAddChannelByUrl,
+      label: context.l10n.playlistStreamUrlLabel,
     );
     if (url == null || !mounted) return;
     if (!RegExp(r'^https?://', caseSensitive: false).hasMatch(url)) {
-      _toast(context, 'La URL debe empezar con http:// o https://');
+      _toast(context, context.l10n.urlMustBeHttp);
       return;
     }
     try {
@@ -309,7 +325,7 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
       await reload(selectId: playlist.id);
     } catch (e) {
       debugPrint('TvUserPlaylists: error agregando canal manual: $e');
-      if (mounted) _toast(context, 'No se pudo agregar el canal');
+      if (mounted) _toast(context, context.l10n.playlistAddChannelFailed);
     }
   }
 
@@ -333,11 +349,12 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
       context,
       title: channel.name,
       options: [
-        ('Reproducir', 'play'),
-        ('Mover antes', 'up'),
-        ('Mover después', 'down'),
-        ('Quitar de la lista', 'remove'),
-        if (channel.sourceId == _customSourceId) ('Eliminar canal', 'delete'),
+        (context.l10n.commonPlay, 'play'),
+        (context.l10n.playlistMoveUp, 'up'),
+        (context.l10n.playlistMoveDown, 'down'),
+        (context.l10n.playlistRemoveFromList, 'remove'),
+        if (channel.sourceId == _customSourceId)
+          (context.l10n.playlistDeleteChannel, 'delete'),
       ],
     );
     if (choice == null || !mounted) return;
@@ -407,7 +424,7 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
                   key: const ValueKey('tv-playlist-new'),
                   focusNode: _playlistNode(index),
                   icon: Icons.add,
-                  title: 'Nueva lista',
+                  title: context.l10n.playlistNew,
                   onSelect: _createPlaylist,
                 ),
               );
@@ -420,7 +437,7 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
                 key: ValueKey('tv-playlist-$index'),
                 focusNode: _playlistNode(index),
                 title: playlist.name,
-                subtitle: '${playlist.channelCount} canales',
+                subtitle: context.l10n.playlistChannelCount(playlist.channelCount),
                 trailing: selected
                     ? const Icon(Icons.chevron_right,
                         color: TvTheme.accent, size: 26)
@@ -442,9 +459,9 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
     if (_playlists.isEmpty) {
       return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Text(
-            'Crea tu primera lista con «Nueva lista».',
+            context.l10n.playlistEmptyFirst,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: TvTheme.fontBody,
@@ -459,9 +476,9 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
       children: [
         if (_channels.isEmpty)
           Padding(
-            padding: EdgeInsets.fromLTRB(24, 16, 24, 0),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
             child: Text(
-              'Esta lista está vacía. Mantén OK sobre cualquier canal y elige «Agregar a una lista…».',
+              context.l10n.playlistEmptyList,
               style: TextStyle(
                 fontSize: TvTheme.fontSmall,
                 color: TvTheme.textSecondary,
@@ -518,18 +535,19 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
                       borderRadius: BorderRadius.circular(TvTheme.radius - 2),
                     ),
                     padding: const EdgeInsets.all(8),
-                    child: const Column(
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_link, size: 36, color: TvTheme.accent),
-                        SizedBox(height: 6),
+                        const Icon(Icons.add_link,
+                            size: 36, color: TvTheme.accent),
+                        const SizedBox(height: 6),
                         Flexible(
                           child: Text(
-                            'Agregar canal por URL',
+                            context.l10n.playlistAddChannelByUrl,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: TvTheme.fontSmall,
                               color: TvTheme.textPrimary,
                               height: 1.1,

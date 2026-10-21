@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_keyboard.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
@@ -79,7 +80,9 @@ class _TvTextFieldState extends State<TvTextField> {
       label: widget.label,
       initial: widget.controller.text,
       doneLabel:
-          widget.textInputAction == TextInputAction.search ? 'Buscar' : 'Listo',
+          widget.textInputAction == TextInputAction.search
+              ? context.l10n.keyboardSearch
+              : context.l10n.keyboardDone,
     );
     if (!mounted || result == null) return;
     widget.controller.value = TextEditingValue(

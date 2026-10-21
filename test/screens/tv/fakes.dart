@@ -5,6 +5,7 @@ import 'package:open_tv/backend/backup_sql.dart';
 import 'package:open_tv/backend/iptv_org_catalog.dart';
 import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/backend/sql.dart' show pageSize;
+import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/channel_http_headers.dart';
 import 'package:open_tv/models/filters.dart';
@@ -363,6 +364,13 @@ class FakeTvData extends TvData {
 
   double textScale = 1.0;
   bool highContrast = false;
+  String? language;
+
+  @override
+  Future<String?> languageSetting() async => language;
+
+  @override
+  Future<void> setLanguageSetting(String? code) async => language = code;
 
   @override
   Future<double> textScaleSetting() async => textScale;
@@ -504,6 +512,9 @@ Future<void> pumpTv(WidgetTester t, Widget child) async {
   addTearDown(t.view.reset);
   await t.pumpWidget(MaterialApp(
     theme: ThemeData.dark(useMaterial3: true),
+    locale: const Locale('es'),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(body: child),
   ));
   await t.pumpAndSettle();
