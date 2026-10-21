@@ -59,6 +59,7 @@ void main() {
         const ValueKey('tv-settings-pin'),
         const ValueKey('tv-settings-backup'),
         const ValueKey('tv-settings-epgurl'),
+        const ValueKey('tv-settings-camera'),
         const ValueKey('tv-source-1'), const ValueKey('tv-source-2')]) {
       await _key(t, LogicalKeyboardKey.arrowDown);
       expect(isFocused(t, key), isTrue, reason: '$key');
@@ -77,7 +78,7 @@ void main() {
         DateTime.now().subtract(const Duration(hours: 3, minutes: 5));
     await pumpTv(t, TVSettings(data: data));
     // El ListView es perezoso: se agranda la ventana para construir todas las filas.
-    t.view.physicalSize = const Size(1920, 3000);
+    t.view.physicalSize = const Size(1920, 3400);
     await t.pump();
     expect(find.text('Reciente'), findsOneWidget);
     expect(find.text('Actualizada hace 3 h'), findsOneWidget);
@@ -415,6 +416,21 @@ void main() {
     await _ok(t); // Guardar
     expect(data.epgUrl, 'http://epg.test/guia.xml.gz');
     expect(find.text('Definida'), findsOneWidget);
+  });
+
+  testWidgets('la cámara de seguridad guarda la URL y se puede quitar',
+      (t) async {
+    final data = FakeTvData();
+    await pumpTv(t, TVSettings(data: data));
+    await focusKey(t, 'tv-settings-camera');
+    expect(find.text('Sin cámara'), findsOneWidget);
+    await _ok(t);
+    await _ok(t); // abre el teclado propio del campo
+    await typeOnTvKeyboard(t, 'rtsp://192.168.1.20/stream1');
+    await _key(t, LogicalKeyboardKey.arrowDown);
+    await _ok(t); // Guardar
+    expect(data.cameraUrl, 'rtsp://192.168.1.20/stream1');
+    expect(find.text('Configurada'), findsOneWidget);
   });
 
   testWidgets('decodificación sin copia (experimental) se activa y desactiva',

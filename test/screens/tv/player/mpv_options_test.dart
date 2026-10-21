@@ -18,6 +18,13 @@ void main() {
     expect(mpvHwdecFor(zeroCopy: true, hardwareDecoding: false), 'no');
   });
 
+  test('RTSP va por TCP (cámaras de seguridad)', () {
+    expect(mpvUrlOptions('rtsp://192.168.1.20/stream1'),
+        {'demuxer-lavf-o': 'rtsp_transport=tcp'});
+    expect(mpvUrlOptions('RTSP://cam.test/stream'),
+        {'demuxer-lavf-o': 'rtsp_transport=tcp'});
+  });
+
   test('otras URLs no llevan opciones extra', () {
     expect(mpvUrlOptions('http://x.test/stream.ts'), isEmpty);
     expect(mpvUrlOptions('rtmp://x.test/live'), isEmpty);

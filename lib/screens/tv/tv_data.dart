@@ -13,6 +13,7 @@ import 'package:open_tv/backend/iptv_org_catalog.dart';
 import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/backend/sql.dart';
 import 'package:open_tv/backend/user_playlists_sql.dart';
+import 'package:open_tv/screens/tv/player/tv_camera.dart';
 import 'package:open_tv/backend/utils.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/channel_http_headers.dart';
@@ -36,6 +37,7 @@ const String _engineKey = 'tvEngine';
 const String _hideDeadKey = 'tvHideDead';
 const String _zeroCopyKey = 'tvMpvZeroCopy';
 const String _epgUrlKey = 'tvEpgUrl';
+const String _cameraUrlKey = 'tvCameraUrl';
 const String _epgShareBase = 'https://epgshare01.online/epgshare01/epg_ripper_';
 const String _hideAdultKey = 'tvHideAdult';
 const String _pinKey = 'tvParentalPin';
@@ -84,6 +86,32 @@ class TvData {
     unawaited(_xmltv.load(force: true).catchError((Object e) {
       debugPrint('TvData: no se pudo recargar la guía: $e');
     }));
+  }
+
+  // --- Cámara de seguridad ------------------------------------------------
+
+  Future<String?> cameraUrlSetting() async {
+    final v = (await Sql.getSetting(_cameraUrlKey))?.trim();
+    return v == null || v.isEmpty ? null : v;
+  }
+
+  /// Guarda la URL de la cámara (`null` la quita) y mantiene el canal «Cámara»
+  /// de «Mis canales», que se crea como favorito la primera vez.
+  Future<void> setCameraUrlSetting(String? url) async {
+    final clean = url?.trim();
+    await Sql.setSetting(_cameraUrlKey, clean ?? '');
+    final existing = await Sql.channelByName(tvCameraChannelName,
+        sourceName: customSourceName);
+    if (clean == null || clean.isEmpty) {
+      if (existing != null) await deleteManualChannel(existing);
+    } else {
+      final channel =
+          await addManualChannel(name: tvCameraChannelName, url: clean);
+      if (existing == null && channel.id != null) {
+        await setFavorite(channel.id!, true);
+      }
+    }
+    tvSourcesVersion.value++;
   }
 
   // --- Guía de programación -----------------------------------------------

@@ -294,6 +294,14 @@ class FakeTvData extends TvData {
   @override
   Future<void> setEpgUrlSetting(String? url) async => epgUrl = url;
 
+  String? cameraUrl;
+
+  @override
+  Future<String?> cameraUrlSetting() async => cameraUrl;
+
+  @override
+  Future<void> setCameraUrlSetting(String? url) async => cameraUrl = url;
+
   bool hideAdult = false;
   String? pin;
 

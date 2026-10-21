@@ -8,6 +8,8 @@ import 'package:open_tv/models/id_data.dart';
 import 'package:open_tv/models/media_type.dart';
 import 'package:open_tv/screens/tv/guide/tv_guide.dart';
 import 'package:open_tv/screens/tv/player/exo_engine.dart';
+import 'package:open_tv/screens/tv/player/tv_camera.dart';
+import 'package:open_tv/screens/tv/player/tv_camera_session.dart';
 import 'package:open_tv/screens/tv/player/mpv_engine.dart';
 import 'package:open_tv/screens/tv/player/tv_channel_number.dart';
 import 'package:open_tv/screens/tv/player/tv_engine.dart';
@@ -71,6 +73,13 @@ class _TvPlayerState extends State<TvPlayer> {
   final FocusNode _focus = FocusNode();
   final FocusNode _retryFocus = FocusNode();
 
+  // Cámara de seguridad en un recuadro (ver `TvCameraSession`). Las claves
+  // permiten intercambiar canal y cámara sin recrear sus videos.
+  final TvCameraSession _camera = TvCameraSession();
+  final GlobalKey _channelVideoKey = GlobalKey();
+  final GlobalKey _cameraVideoKey = GlobalKey();
+  bool _cameraZoomMode = false;
+
   Timer? _overlayTimer;
   Timer? _firstFrameTimer;
   Timer? _stallTimer;
@@ -96,6 +105,7 @@ class _TvPlayerState extends State<TvPlayer> {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _cursor = TvPlaylistCursor(widget.playlist, widget.initialIndex);
+    _camera.addListener(_onCameraChanged);
     _play(0);
     _showOverlay();
   }
@@ -111,6 +121,9 @@ class _TvPlayerState extends State<TvPlayer> {
       s.cancel();
     }
     _engine?.dispose();
+    _camera
+      ..removeListener(_onCameraChanged)
+      ..dispose();
     _focus.dispose();
     _retryFocus.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -333,6 +346,73 @@ class _TvPlayerState extends State<TvPlayer> {
     _reconnectTimer = Timer(TvRetryPolicy.reconnectDelay, () => _play(0));
   }
 
+  // --- Cámara -------------------------------------------------------------
+
+  void _onCameraChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _notice(String text) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(
+        SnackBar(content: Text(text), duration: const Duration(seconds: 3)));
+  }
+
+  Future<void> _showCamera() async {
+    final url = await widget.data.cameraUrlSetting();
+    if (!mounted) return;
+    if (url == null) {
+      _notice('Primero define la cámara en Ajustes');
+      return;
+    }
+    unawaited(_camera.show(url));
+  }
+
+  Future<void> _hideCamera() async {
+    _cameraZoomMode = false;
+    await _camera.hide();
+  }
+
+  void _enterZoomMode() {
+    _overlayTimer?.cancel();
+    setState(() {
+      _cameraZoomMode = true;
+      _overlayVisible = false;
+    });
+  }
+
+  void _endZoomMode() {
+    setState(() => _cameraZoomMode = false);
+    _showOverlay();
+  }
+
+  /// En el modo zoom OK cambia el aumento, las flechas mueven la imagen y
+  /// Atrás sale del modo.
+  KeyEventResult _onZoomKey(LogicalKeyboardKey key, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.handled;
+    final isOk = key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.gameButtonA;
+    const step = TvCameraZoom.panStep;
+    if (isOk) {
+      if (event is KeyDownEvent) _camera.cycleZoom();
+    } else if (key == LogicalKeyboardKey.arrowLeft) {
+      _camera.panZoom(-step, 0);
+    } else if (key == LogicalKeyboardKey.arrowRight) {
+      _camera.panZoom(step, 0);
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      _camera.panZoom(0, -step);
+    } else if (key == LogicalKeyboardKey.arrowDown) {
+      _camera.panZoom(0, step);
+    } else if (event is KeyDownEvent &&
+        mapTvPlayerKey(key, isLive: true) == TvPlayerCommand.exit) {
+      _endZoomMode();
+    }
+    return KeyEventResult.handled;
+  }
+
   // --- Comandos -----------------------------------------------------------
 
   /// Programa actual y siguiente (solo canales con guía); falla en silencio.
@@ -374,6 +454,8 @@ class _TvPlayerState extends State<TvPlayer> {
   /// Cambia de canal con [move] (que mueve el cursor) y arranca el nuevo.
   void _switchChannel(VoidCallback move) {
     move();
+    // Si el nuevo canal es la propia cámara, el recuadro sobra.
+    if (_camera.visible && _channel.url == _camera.url) unawaited(_hideCamera());
     _preferEngine = null;
     _liveReconnects = 0;
     setState(() {});
@@ -454,6 +536,7 @@ class _TvPlayerState extends State<TvPlayer> {
     final key = event.logicalKey;
     // Atrás lo gestiona el PopScope (evita procesarlo dos veces).
     if (isSystemBackKey(key)) return KeyEventResult.ignored;
+    if (_cameraZoomMode) return _onZoomKey(key, event);
     final isOk = key == LogicalKeyboardKey.select ||
         key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.numpadEnter ||
@@ -514,6 +597,10 @@ class _TvPlayerState extends State<TvPlayer> {
     final engine = _engine;
     final canSwitchToExo = engine?.kind == TvEngineKind.mpv &&
         TvRetryPolicy.exoCanOpen(channel.url ?? '');
+    // La cámara no se ofrece en su propio canal (ya está en pantalla grande).
+    final cameraUrl = await widget.data.cameraUrlSetting();
+    if (!mounted) return;
+    final showCameraOptions = cameraUrl == null || channel.url != cameraUrl;
     final choice = await showTvOptions<String>(
       context,
       title: channel.name,
@@ -530,6 +617,19 @@ class _TvPlayerState extends State<TvPlayer> {
         if (engine?.kind == TvEngineKind.exo)
           ('Usar mpv en este canal (audio y subtítulos)', 'to-mpv'),
         if (canSwitchToExo) ('Usar ExoPlayer en este canal', 'to-exo'),
+        if (showCameraOptions && !_camera.visible) ('Mostrar cámara', 'cam-show'),
+        if (showCameraOptions && _camera.visible) ...[
+          ('Ocultar cámara', 'cam-hide'),
+          (
+            _camera.swapped
+                ? 'Cámara en el recuadro (canal en grande)'
+                : 'Cámara en pantalla grande',
+            'cam-swap'
+          ),
+          ('Zoom de la cámara', 'cam-zoom'),
+          if (_camera.status == TvCameraStatus.error)
+            ('Reintentar cámara', 'cam-retry'),
+        ],
       ],
     );
     if (!mounted) return;
@@ -551,6 +651,17 @@ class _TvPlayerState extends State<TvPlayer> {
           await widget.data.setFavorite(id, !channel.favorite);
           channel.favorite = !channel.favorite;
         }
+      case 'cam-show':
+        await _showCamera();
+      case 'cam-hide':
+        await _hideCamera();
+      case 'cam-swap':
+        _camera.toggleSwap();
+      case 'cam-zoom':
+        _enterZoomMode();
+        return;
+      case 'cam-retry':
+        unawaited(_camera.retryNow());
       case 'to-mpv':
       case 'to-exo':
         _preferEngine =
@@ -582,6 +693,10 @@ class _TvPlayerState extends State<TvPlayer> {
 
   Future<void> _exit() async {
     if (_exiting) return;
+    if (_cameraZoomMode) {
+      _endZoomMode();
+      return;
+    }
     _exiting = true;
     _generation++;
     if (_channel.mediaType == MediaType.movie) {
@@ -620,8 +735,104 @@ class _TvPlayerState extends State<TvPlayer> {
     return h > 0 ? '$h:$m:$s' : '$m:$s';
   }
 
+  /// Video del canal, con clave propia para poder cambiarlo de sitio.
+  Widget _channelLayer({required bool fill}) => KeyedSubtree(
+        key: _channelVideoKey,
+        child: _engine?.buildVideo(fill: fill) ?? const SizedBox.expand(),
+      );
+
+  /// Video de la cámara con su zoom y su estado (conectando / sin señal).
+  Widget _cameraLayer() {
+    final status = _camera.status;
+    return KeyedSubtree(
+      key: _cameraVideoKey,
+      child: ColoredBox(
+        color: Colors.black,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            TvCameraZoomView(
+              zoom: _camera.zoom,
+              child: _camera.buildVideo() ?? const SizedBox.expand(),
+            ),
+            if (status == TvCameraStatus.connecting)
+              const Center(
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                      color: TvTheme.accent, strokeWidth: 3),
+                ),
+              ),
+            if (status == TvCameraStatus.error)
+              Center(
+                child: Text(
+                  'Cámara sin señal',
+                  style: TextStyle(
+                    fontSize: TvTheme.fontBody,
+                    color: TvTheme.textSecondary,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Recuadro de la esquina superior derecha.
+  Widget _buildPip(Widget content) {
+    final width = MediaQuery.sizeOf(context).width * 0.3;
+    return Positioned(
+      key: const ValueKey('tv-player-pip'),
+      top: 32,
+      right: 48,
+      width: width,
+      height: width * 9 / 16,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(TvTheme.radius),
+          border: Border.all(
+            color: _cameraZoomMode ? TvTheme.accent : Colors.white54,
+            width: _cameraZoomMode ? 3 : 2,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(TvTheme.radius - 2),
+          child: content,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildZoomHint() => Positioned(
+        key: const ValueKey('tv-player-zoom-hint'),
+        left: 0,
+        right: 0,
+        bottom: 32,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.black87,
+              borderRadius: BorderRadius.circular(TvTheme.radius),
+            ),
+            child: Text(
+              'Zoom ${_camera.zoom.label}  ·  ←↑↓→ Mover  ·  '
+              'OK Cambiar zoom  ·  Atrás Terminar',
+              style: const TextStyle(
+                fontSize: TvTheme.fontBody,
+                color: TvTheme.textPrimary,
+              ),
+            ),
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
+    final cameraBig = _camera.visible && _camera.swapped;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -636,13 +847,20 @@ class _TvPlayerState extends State<TvPlayer> {
           body: Stack(
             fit: StackFit.expand,
             children: [
-              _engine?.buildVideo(fill: _fill) ?? const SizedBox.expand(),
+              SizedBox.expand(
+                child: cameraBig
+                    ? _cameraLayer()
+                    : _channelLayer(fill: _fill),
+              ),
+              if (_camera.visible)
+                _buildPip(cameraBig ? _channelLayer(fill: false) : _cameraLayer()),
               if (_loading && !_hasError)
                 const Center(
                   child: CircularProgressIndicator(color: TvTheme.accent),
                 ),
               if (_hasError) _buildError(),
               if (_overlayVisible && !_hasError) _buildOverlay(),
+              if (_cameraZoomMode) _buildZoomHint(),
               if (!_number.isEmpty)
                 Positioned(
                   top: 32,

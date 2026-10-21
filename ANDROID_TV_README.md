@@ -40,6 +40,7 @@ Si un canal no se puede reproducir, la pantalla muestra el error con **Reintenta
 - **Control parental**: en Ajustes, *Ocultar contenido adulto* (grupos XXX, Adult, +18…) y un PIN de 4 dígitos que protege desactivarlo.
 - **Copia de seguridad**: *Ajustes → Copia de seguridad* exporta/importa favoritos, listas propias, canales propios, listas M3U por URL y ajustes (nunca el PIN ni listas Xtream). Se guarda en la carpeta `backups` de la app; se puede importar desde ella, desde una URL o desde un archivo.
 - **Guía de programación**: Mantén OK → *Ver programación*. TV Perú usa su web oficial; el resto, el XMLTV de epgshare01 de los países de tus favoritos (por defecto Perú) y, opcionalmente, una URL propia (*Guía personalizada*).
+- **Cámara de seguridad**: en *Ajustes → Cámara de seguridad* escribe su dirección (p. ej. `rtsp://192.168.1.20/stream1`). Se crea el canal *Cámara* (en *Mis canales* y *Favoritos*) y, con cualquier otro canal en pantalla, Mantén OK → *Mostrar cámara* la abre en un recuadro arriba a la derecha, sin audio. Desde el mismo menú: *Cámara en pantalla grande* (intercambia con el canal, el sonido sigue siendo el del canal), *Zoom de la cámara* (OK cambia 1x/2x/3x/4x, las flechas mueven la imagen, Atrás termina) y *Ocultar cámara*. Va por TCP con su propio mpv y se reconecta sola; si no da imagen por hardware, prueba por software.
 - **Accesibilidad**: tamaño de letra (100/115/130 %) y alto contraste.
 - **Pantalla de inicio de Android TV**: fila *Favoritos* y enlaces `fredtv://play?name=…` / `fredtv://search?q=…`; la app también atiende el intent de búsqueda.
 - **mpv**: *Decodificación de video (mpv)* → *Sin copia* es experimental (`hwdec=mediacodec`) y vuelve a la automática si no da imagen.
@@ -90,8 +91,8 @@ Conecta la TV por ADB y ejecuta `flutter run` con la TV como dispositivo.
 
 ## Roadmap
 
-- [ ] Guía de programación (EPG)
+- [x] Guía de programación (EPG)
 - [ ] Búsqueda por voz
-- [ ] Integración con Android TV Channels
-- [ ] Picture-in-Picture (PiP)
+- [~] Integración con Android TV (fila Favoritos y enlaces hechos; falta Android TV Channels)
+- [x] Cámara de seguridad en recuadro (PiP dentro de la app)
 - [x] Reproductor ExoPlayer nativo (con mpv de respaldo)

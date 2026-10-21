@@ -16,10 +16,15 @@ String mpvHwdecFor({required bool zeroCopy, required bool hardwareDecoding}) {
 /// Opciones de mpv según la URL. En HLS se desactivan las conexiones
 /// persistentes: algunos servidores las cierran y el demuxer da el directo por
 /// terminado al recargar la lista (el canal se reiniciaba cada ~8 s).
-Map<String, String> mpvUrlOptions(String url) =>
-    url.toLowerCase().contains('.m3u8')
-        ? const {'demuxer-lavf-o': 'http_persistent=0'}
-        : const {};
+Map<String, String> mpvUrlOptions(String url) {
+  final u = url.trimLeft().toLowerCase();
+  if (u.contains('.m3u8')) return const {'demuxer-lavf-o': 'http_persistent=0'};
+  // RTSP por TCP: por UDP el wifi pierde paquetes y la imagen se ensucia.
+  if (u.startsWith('rtsp://') || u.startsWith('rtsps://')) {
+    return const {'demuxer-lavf-o': 'rtsp_transport=tcp'};
+  }
+  return const {};
+}
 
 /// Motor mpv (FFmpeg) vía media_kit: el más compatible con streams raros.
 class MpvEngine implements TvEngine {
@@ -65,6 +70,7 @@ class MpvEngine implements TvEngine {
               zeroCopy: media.zeroCopy,
               hardwareDecoding: media.hardwareDecoding));
       await platform.setProperty('network-timeout', '15');
+      await platform.setProperty('mute', media.mute ? 'yes' : 'no');
       for (final e in TvBuffer.mpvOptions(media.bufferSecs).entries) {
         await platform.setProperty(e.key, e.value);
       }

@@ -12,6 +12,7 @@ class TvMedia {
     this.bufferSecs = 2,
     this.hardwareDecoding = true,
     this.zeroCopy = false,
+    this.mute = false,
   });
 
   final String url;
@@ -29,6 +30,9 @@ class TvMedia {
 
   /// Solo mpv: decodificación sin copia (experimental).
   final bool zeroCopy;
+
+  /// Solo mpv: sin audio (la cámara en el recuadro no debe sonar encima del canal).
+  final bool mute;
 }
 
 /// Motor de reproducción detrás de `TvPlayer`: ExoPlayer o mpv.

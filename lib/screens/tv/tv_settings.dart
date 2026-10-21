@@ -43,6 +43,7 @@ class _TVSettingsState extends State<TVSettings> {
   bool _hideAdult = false;
   bool _zeroCopy = false;
   String? _epgUrl;
+  String? _cameraUrl;
   bool _hasPin = false;
   int _deadCount = 0;
   String? _message;
@@ -80,6 +81,7 @@ class _TVSettingsState extends State<TVSettings> {
       final hideAdult = await widget.data.hideAdultSetting();
       final zeroCopy = await widget.data.mpvZeroCopySetting();
       final epgUrl = await widget.data.epgUrlSetting();
+      final cameraUrl = await widget.data.cameraUrlSetting();
       final hasPin = await widget.data.parentalPinSet();
       final deadCount = await widget.data.deadChannelCount();
       if (!mounted) return;
@@ -94,6 +96,7 @@ class _TVSettingsState extends State<TVSettings> {
         _hideAdult = hideAdult;
         _zeroCopy = zeroCopy;
         _epgUrl = epgUrl;
+        _cameraUrl = cameraUrl;
         _hasPin = hasPin;
         _deadCount = deadCount;
       });
@@ -308,6 +311,24 @@ class _TVSettingsState extends State<TVSettings> {
     if (url == null && _epgUrl == null) return;
     await widget.data.setEpgUrlSetting(url);
     if (mounted) setState(() => _epgUrl = url);
+  }
+
+  Future<void> _editCameraUrl() async {
+    final url = await showTvTextPrompt(
+      context,
+      title: 'Cámara de seguridad',
+      label: 'Dirección RTSP; vacío para quitarla',
+      initial: _cameraUrl ?? '',
+    );
+    // Igual que la guía: `null` es cancelar, o quitar si ya había una.
+    if (!mounted) return;
+    if (url == null && _cameraUrl == null) return;
+    await widget.data.setCameraUrlSetting(url);
+    if (!mounted) return;
+    setState(() => _cameraUrl = url);
+    _setMessage(url == null
+        ? 'Cámara quitada'
+        : 'Cámara guardada: búscala como canal «Cámara» en Favoritos');
   }
 
   Future<void> _toggleZeroCopy() async {
@@ -645,6 +666,24 @@ class _TVSettingsState extends State<TVSettings> {
                       ),
                     ),
                     onSelect: _editEpgUrl,
+                  ),
+                ),
+                _gap(
+                  TvListRow(
+                    key: const ValueKey('tv-settings-camera'),
+                    icon: Icons.videocam,
+                    title: 'Cámara de seguridad',
+                    subtitle:
+                        'Se ve como canal y en un recuadro (mantén OK en un canal)',
+                    trailing: Text(
+                      _cameraUrl == null ? 'Sin cámara' : 'Configurada',
+                      style: const TextStyle(
+                        fontSize: TvTheme.fontBody,
+                        fontWeight: FontWeight.bold,
+                        color: TvTheme.accent,
+                      ),
+                    ),
+                    onSelect: _editCameraUrl,
                   ),
                 ),
                 const Padding(
