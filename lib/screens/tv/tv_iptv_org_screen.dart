@@ -118,6 +118,7 @@ class _TvIptvOrgScreenState extends State<TvIptvOrgScreen> {
     return switch (p.kind) {
       IptvOrgKind.country => countryName(p.code, lang: l10n.localeName),
       IptvOrgKind.language => l10n.iptvAllSpanish,
+      IptvOrgKind.pluto => p.name,
       IptvOrgKind.category => switch (p.code) {
           'news' => l10n.iptvCatNews,
           'sports' => l10n.iptvCatSports,

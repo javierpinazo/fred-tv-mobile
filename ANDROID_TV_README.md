@@ -50,7 +50,7 @@ Si un canal no se puede reproducir, la pantalla muestra el error con **Reintenta
 
 ## Listas de canales
 
-- **Agregar desde iptv-org** (Ajustes): lista recomendada en español, todos los países y las categorías de [iptv-org](https://github.com/iptv-org/iptv).
+- **Agregar desde iptv-org** (Ajustes): lista recomendada en español, todos los países y las categorías de [iptv-org](https://github.com/iptv-org/iptv). En «Recomendados» también está **Pluto TV Latinoamérica**: el catálogo completo de Pluto TV (Pokémon, Naruto, novelas, documentales…), leído de su API y agrupado por categoría.
 - **Agregar lista M3U por URL** (Ajustes): cualquier lista `http://` o `https://`.
 - **Actualización automática**: al abrir la app se actualizan, en segundo plano, las listas con más de 24 h. Favoritos, historial y *Mis listas* se conservan. También puedes actualizar todas o una sola desde **Ajustes → Mis fuentes**.
 - **Mis listas**: crea tus propias listas, agrega canales con *Mantener OK → Agregar a una lista…* o por URL, y reordénalos. Las listas siguen funcionando cuando se actualizan los enlaces de las fuentes.

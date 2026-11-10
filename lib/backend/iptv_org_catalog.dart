@@ -2,8 +2,11 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:open_tv/backend/m3u.dart' show HttpStatusException;
+import 'package:open_tv/backend/pluto_tv.dart';
 
-enum IptvOrgKind { country, language, category }
+/// [pluto] no es de iptv-org: es el catálogo completo de Pluto TV, que se
+/// ofrece junto a los recomendados.
+enum IptvOrgKind { country, language, category, pluto }
 
 const String _playlistBase = 'https://iptv-org.github.io/iptv';
 const String _apiBase = 'https://iptv-org.github.io/api';
@@ -29,10 +32,13 @@ class IptvOrgPlaylist {
         return '$_playlistBase/languages/$code.m3u';
       case IptvOrgKind.category:
         return '$_playlistBase/categories/$code.m3u';
+      case IptvOrgKind.pluto:
+        return plutoTvChannelsUrl;
     }
   }
 
-  String get sourceName => 'iptv-org · $name';
+  String get sourceName =>
+      kind == IptvOrgKind.pluto ? name : 'iptv-org · $name';
 }
 
 List<IptvOrgPlaylist> parseIptvOrgCountries(String json) {
@@ -84,6 +90,7 @@ class IptvOrgCatalog {
     IptvOrgPlaylist(kind: IptvOrgKind.country, code: 'ec', name: 'Ecuador', flag: '🇪🇨'),
     IptvOrgPlaylist(kind: IptvOrgKind.country, code: 'us', name: 'Estados Unidos', flag: '🇺🇸'),
     IptvOrgPlaylist(kind: IptvOrgKind.language, code: 'spa', name: 'Todo en español'),
+    IptvOrgPlaylist(kind: IptvOrgKind.pluto, code: 'latam', name: plutoTvSourceName),
     IptvOrgPlaylist(kind: IptvOrgKind.category, code: 'news', name: 'Noticias'),
     IptvOrgPlaylist(kind: IptvOrgKind.category, code: 'sports', name: 'Deportes'),
     IptvOrgPlaylist(kind: IptvOrgKind.category, code: 'kids', name: 'Infantil'),

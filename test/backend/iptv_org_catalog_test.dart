@@ -38,6 +38,7 @@ void main() {
         'country:pe', 'country:mx', 'country:ar', 'country:co', 'country:cl',
         'country:es', 'country:ve', 'country:ec', 'country:us',
         'language:spa',
+        'pluto:latam',
         'category:news', 'category:sports', 'category:kids',
         'category:movies', 'category:music', 'category:documentary',
       ],

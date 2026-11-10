@@ -170,8 +170,20 @@ class Sql {
     var keywords = filters.useKeywords
         ? query.split(" ").map((f) => "%$f%").toList()
         : ["%$query%"];
+    // Con varias listas a la vez, un mismo stream (misma URL) que esté en más
+    // de una se muestra una sola vez: gana la copia favorita, luego la vista
+    // y luego la de la lista más antigua. Se decide entre las filas que pasan
+    // el filtro, así que cada grupo sigue mostrando su propia copia.
+    final dedupe = filters.sourceIds!.length > 1 &&
+        filters.seriesId == null &&
+        filters.groupId == null;
+    final history = filters.viewType == ViewType.history;
     var sqlQuery = '''
-        SELECT *, ${ChannelHealthSql.deadSql()} AS dead FROM channels 
+        SELECT *, ${ChannelHealthSql.deadSql()} AS dead${dedupe ? ''',
+          FIRST_VALUE(source_id) OVER (
+            PARTITION BY url
+            ORDER BY favorite DESC, last_watched IS NULL, source_id, id
+          ) AS keep_source_id''' : ''} FROM channels
         WHERE (${getKeywordsSql(keywords.length)})
         AND media_type IN (${generatePlaceholders(mediaTypes.length)})
         AND source_id IN (${generatePlaceholders(filters.sourceIds!.length)})
@@ -190,9 +202,8 @@ class Sql {
     if (filters.viewType == ViewType.favorites && filters.seriesId == null) {
       sqlQuery += "\nAND favorite = 1";
     }
-    if (filters.viewType == ViewType.history) {
+    if (history) {
       sqlQuery += "\nAND last_watched IS NOT NULL";
-      sqlQuery += "\nORDER BY last_watched DESC";
     }
     if (filters.seriesId != null) {
       sqlQuery += "\nAND series_id = ?";
@@ -200,6 +211,12 @@ class Sql {
       sqlQuery += "\nAND group_id = ?";
     } else if (filters.groupName != null) {
       sqlQuery += "\nAND group_name = ?";
+    }
+    if (dedupe) {
+      sqlQuery = "SELECT * FROM ($sqlQuery) WHERE source_id = keep_source_id"
+          "\nORDER BY ${history ? 'last_watched DESC' : 'source_id, id'}";
+    } else if (history) {
+      sqlQuery += "\nORDER BY last_watched DESC";
     }
     sqlQuery += "\nLIMIT ?, ?";
     params.addAll(keywords);

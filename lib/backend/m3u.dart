@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:open_tv/backend/sql.dart';
 import 'package:open_tv/backend/utils.dart';
 import 'package:open_tv/backend/countries.dart';
+import 'package:open_tv/backend/pluto_tv.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/channel_http_headers.dart';
 import 'package:open_tv/models/channel_preserve.dart';
@@ -157,6 +158,12 @@ class HttpStatusException implements Exception {
 Future<void> processM3UUrl(Source source, bool wipe) async {
   var path = await downloadM3U(source.url!);
   try {
+    if (isPlutoTvChannelsUrl(source.url!)) {
+      final file = File(path);
+      await file.writeAsString(
+          plutoTvChannelsToM3u(await file.readAsString()),
+          flush: true);
+    }
     await processM3U(source, wipe, path);
   } finally {
     try {
