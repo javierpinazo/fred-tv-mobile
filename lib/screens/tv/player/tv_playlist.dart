@@ -1,3 +1,4 @@
+import 'package:open_tv/backend/youtube/youtube_channel.dart';
 import 'package:open_tv/models/channel.dart';
 
 /// Cursor circular sobre la lista de canales para el zapping.
@@ -44,13 +45,15 @@ class TvPlaylistCursor {
     _index = index;
   }
 
-  /// Avanza o retrocede saltando los canales caídos; si todos los demás lo
-  /// están, se queda donde está.
+  /// Avanza o retrocede saltando los canales caídos y los de YouTube; si no
+  /// queda ningún otro, se queda donde está.
   void _step(int direction) {
     final n = channels.length;
     for (var i = 1; i < n; i++) {
       final candidate = (_index + direction * i % n + n) % n;
-      if (!channels[candidate].dead) {
+      final channel = channels[candidate];
+      // Los canales de YouTube no se reproducen aquí: abren su lista de programas.
+      if (!channel.dead && !isYoutubeChannelUrl(channel.url)) {
         _moveTo(candidate);
         return;
       }

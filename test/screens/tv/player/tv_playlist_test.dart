@@ -146,4 +146,20 @@ void main() {
     expect(() => TvPlaylistCursor([fakeChannel(1)], 1), throwsArgumentError);
     expect(() => TvPlaylistCursor([fakeChannel(1)], -1), throwsArgumentError);
   });
+
+  test('el zapping salta los canales de YouTube', () {
+    final yt = fakeChannel(2)..url = 'https://www.youtube.com/@curwen';
+    final c = TvPlaylistCursor([fakeChannel(1), yt, fakeChannel(3)], 0);
+    c.next();
+    expect(c.current.id, 3);
+    c.previous();
+    expect(c.current.id, 1);
+  });
+
+  test('si lo único que queda es YouTube, el zapping no se mueve', () {
+    final yt = fakeChannel(2)..url = 'https://www.youtube.com/@curwen';
+    final c = TvPlaylistCursor([fakeChannel(1), yt], 0);
+    c.next();
+    expect(c.current.id, 1);
+  });
 }
