@@ -160,7 +160,8 @@ void main() {
   test('sin ytInitialData lanza', () {
     expect(() => parseYoutubeTab('<html>Before you continue</html>'),
         throwsA(isA<YoutubeParseException>()));
-    expect(() => parseYoutubeTab('<script>var ytInitialData = {"a": ;</script>'),
+    expect(
+        () => parseYoutubeTab('<script>var ytInitialData = {"a": ;</script>'),
         throwsA(isA<YoutubeParseException>()));
     expect(() => parseYoutubeTab('<script>var ytInitialData = [1,2];</script>'),
         throwsA(isA<YoutubeParseException>()));

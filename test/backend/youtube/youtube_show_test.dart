@@ -38,6 +38,12 @@ void main() {
     expect(defs.first.name, 'La Contra');
     expect(defs.first.playlistIds, ['PLa', 'PLb']);
     expect(
+        youtubeShowDefs(
+                '/@curwen', [(id: 'PLt', title: 'Transmisiones en vivo')])
+            .single
+            .name,
+        'Transmisiones en vivo');
+    expect(
         youtubeShowDefs('/channel/UCP0AJJeNkFBYzegTTVbKhPg',
             [(id: 'PLx', title: '#LaEncerrona')]).single.name,
         'La Encerrona');
@@ -94,8 +100,8 @@ void main() {
       show('vacio', []),
       show('sinedad', [p('e')]),
     ];
-    expect(arrangeYoutubeShows(shows).map((s) => s.key),
-        ['vivo', 'hoy', 'ayer']);
+    expect(
+        arrangeYoutubeShows(shows).map((s) => s.key), ['vivo', 'hoy', 'ayer']);
     expect(
         arrangeYoutubeShows(shows,
             order: ['viejo', 'noexiste', 'vacio', 'ayer']).map((s) => s.key),

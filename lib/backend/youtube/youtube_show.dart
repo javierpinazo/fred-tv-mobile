@@ -95,13 +95,28 @@ String youtubeShowKey(String title) {
   return key;
 }
 
-String _displayName(String title) {
-  var name = title.trim();
-  while (name.startsWith('#')) {
-    name = name.substring(1).trim();
+/// Nombre para mostrar de las listas [titles] de un mismo programa. El final
+/// « EN VIVO» / « Podcast» solo se quita cuando hay varias listas: ahí es lo
+/// que las distingue («La Contra EN VIVO» + «La Contra Podcast»), mientras
+/// que en una sola puede ser parte del nombre («Transmisiones en vivo»).
+String _displayName(List<String> titles) {
+  String clean(String title) {
+    var name = title.trim();
+    while (name.startsWith('#')) {
+      name = name.substring(1).trim();
+    }
+    return name;
   }
-  final cut = name.replaceFirst(_nameSuffix, '').trim();
-  return cut.isEmpty ? name : cut;
+
+  if (titles.length == 1) return clean(titles.single);
+  String? best;
+  for (final title in titles) {
+    final name = clean(title);
+    final cut = name.replaceFirst(_nameSuffix, '').trim();
+    final candidate = cut.isEmpty ? name : cut;
+    if (best == null || candidate.length < best.length) best = candidate;
+  }
+  return best!;
 }
 
 /// Programas conocidos del canal [channelKey] (`/channel/UC…` o `/@handle`):
@@ -109,16 +124,15 @@ String _displayName(String title) {
 /// los programas incorporados que no tengan lista.
 List<YoutubeShowDef> youtubeShowDefs(
     String channelKey, List<({String id, String title})> playlists) {
-  final names = <String, String>{};
+  final titles = <String, List<String>>{};
   final ids = <String, List<String>>{};
   for (final playlist in playlists) {
     final key = youtubeShowKey(playlist.title);
     if (key.isEmpty) continue;
-    final name = _displayName(playlist.title);
-    final seen = names[key];
-    if (seen == null || name.length < seen.length) names[key] = name;
+    titles.putIfAbsent(key, () => []).add(playlist.title);
     ids.putIfAbsent(key, () => []).add(playlist.id);
   }
+  final names = {for (final e in titles.entries) e.key: _displayName(e.value)};
   for (final name in _builtInShows[channelKey] ?? const <String>[]) {
     final key = youtubeShowKey(name);
     names[key] = name;

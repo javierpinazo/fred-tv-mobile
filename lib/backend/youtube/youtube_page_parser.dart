@@ -70,9 +70,12 @@ Map _initialData(String html) {
   try {
     data = jsonDecode(html.substring(from, end));
   } on FormatException catch (e) {
-    throw YoutubeParseException('ytInitialData no es JSON válido: ${e.message}');
+    throw YoutubeParseException(
+        'ytInitialData no es JSON válido: ${e.message}');
   }
-  if (data is! Map) throw YoutubeParseException('ytInitialData no es un objeto');
+  if (data is! Map) {
+    throw YoutubeParseException('ytInitialData no es un objeto');
+  }
   return data;
 }
 
@@ -164,7 +167,9 @@ YoutubeProgram? _program(Object? lockup) {
 
 String? _title(Map lockup) {
   if (lockup['metadata']
-      case {'lockupMetadataViewModel': {'title': {'content': final String t}}}) {
+      case {
+        'lockupMetadataViewModel': {'title': {'content': final String t}}
+      }) {
     return t.trim();
   }
   return null;

@@ -29,8 +29,8 @@ void main() {
 
   test('construye la dirección de cada pestaña', () {
     expect(
-        youtubeTabUri('http://m.youtube.com/@PaoloBenzaR/videos',
-                YoutubeTab.streams)
+        youtubeTabUri(
+                'http://m.youtube.com/@PaoloBenzaR/videos', YoutubeTab.streams)
             .toString(),
         'https://www.youtube.com/@PaoloBenzaR/streams?hl=es');
     expect(
