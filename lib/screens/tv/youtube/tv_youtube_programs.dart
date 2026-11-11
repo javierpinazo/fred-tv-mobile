@@ -18,6 +18,9 @@ typedef YoutubeThumbnailBuilder = Widget Function(
 
 enum _Phase { loading, failed, ready }
 
+const double _gridPadding = 10;
+const double _gridSpacing = 18;
+
 /// Últimos programas de un canal de YouTube en mosaico: los directos en curso
 /// primero y después del más reciente al más antiguo.
 class TvYoutubePrograms extends StatefulWidget {
@@ -159,30 +162,40 @@ class _TvYoutubeProgramsState extends State<TvYoutubePrograms> {
           return _message(
               icon: Icons.video_library_outlined, text: context.l10n.ytEmpty);
         }
-        return GridView.builder(
-          padding: const EdgeInsets.all(10),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: TvYoutubePrograms.columns,
-            crossAxisSpacing: 18,
-            mainAxisSpacing: 18,
-            childAspectRatio: 1.12,
-          ),
-          itemCount: _programs.length,
-          itemBuilder: (context, index) {
-            final program = _programs[index];
-            return TvFocusable(
-              key: ValueKey('yt-${program.videoId}'),
-              focusNode: _nodes[index],
-              autofocus: index == 0,
-              onSelect: () => _play(index),
-              builder: (context, focused) => _ProgramCard(
-                program: program,
-                focused: focused,
-                thumbnailBuilder: widget.thumbnailBuilder,
-              ),
-            );
-          },
-        );
+        return LayoutBuilder(builder: (context, constraints) {
+          const columns = TvYoutubePrograms.columns;
+          final tileWidth = (constraints.maxWidth -
+                  2 * _gridPadding -
+                  (columns - 1) * _gridSpacing) /
+              columns;
+          // El alto sigue al tamaño de letra elegido en Ajustes: así el
+          // título nunca queda cortado a media línea.
+          final scaler = MediaQuery.textScalerOf(context);
+          return GridView.builder(
+            padding: const EdgeInsets.all(_gridPadding),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              crossAxisSpacing: _gridSpacing,
+              mainAxisSpacing: _gridSpacing,
+              mainAxisExtent: _ProgramCard.height(tileWidth, scaler),
+            ),
+            itemCount: _programs.length,
+            itemBuilder: (context, index) {
+              final program = _programs[index];
+              return TvFocusable(
+                key: ValueKey('yt-${program.videoId}'),
+                focusNode: _nodes[index],
+                autofocus: index == 0,
+                onSelect: () => _play(index),
+                builder: (context, focused) => _ProgramCard(
+                  program: program,
+                  focused: focused,
+                  thumbnailBuilder: widget.thumbnailBuilder,
+                ),
+              );
+            },
+          );
+        });
     }
   }
 
@@ -221,6 +234,34 @@ class _ProgramCard extends StatelessWidget {
   final bool focused;
   final YoutubeThumbnailBuilder? thumbnailBuilder;
 
+  static const double _padding = 8;
+  static const double _gap = 8;
+
+  /// Margen para el borde de foco que dibuja `TvFocusable` (hasta 5 px por
+  /// lado con alto contraste).
+  static const double _frame = 12;
+  static const double _titleSize = TvTheme.fontSmall;
+  static const double _titleLineHeight = 1.2;
+  static const double _subtitleSize = 14;
+  static const double _subtitleLineHeight = 1.3;
+
+  static double _titleHeight(TextScaler scaler) =>
+      (2 * scaler.scale(_titleSize) * _titleLineHeight).ceilToDouble();
+
+  static double _subtitleHeight(TextScaler scaler) =>
+      (scaler.scale(_subtitleSize) * _subtitleLineHeight).ceilToDouble();
+
+  /// Alto de la tarjeta para un ancho dado: miniatura 16:9, dos líneas de
+  /// título y una de fecha.
+  static double height(double width, TextScaler scaler) =>
+      2 * _padding +
+      (width - 2 * _padding) * 9 / 16 +
+      _gap +
+      _titleHeight(scaler) +
+      4 +
+      _subtitleHeight(scaler) +
+      _frame;
+
   Widget _placeholder() => ColoredBox(
         color: TvTheme.surfaceRaised,
         child: Center(
@@ -254,12 +295,13 @@ class _ProgramCard extends StatelessWidget {
         ? l10n.ytLiveNow
         : (age == null ? '' : youtubeAgeLabel(l10n, age));
     final duration = program.duration;
+    final scaler = MediaQuery.textScalerOf(context);
     return Container(
       decoration: BoxDecoration(
         color: focused ? TvTheme.surfaceRaised : TvTheme.surface,
         borderRadius: BorderRadius.circular(TvTheme.radius - 2),
       ),
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(_padding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -294,26 +336,32 @@ class _ProgramCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          Expanded(
+          const SizedBox(height: _gap),
+          SizedBox(
+            height: _titleHeight(scaler),
             child: Text(
               program.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: TvTheme.fontSmall,
+                fontSize: _titleSize,
                 color: TvTheme.textPrimary,
-                height: 1.2,
+                height: _titleLineHeight,
               ),
             ),
           ),
-          Text(
-            subtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 14,
-              color: program.isLive ? TvTheme.error : TvTheme.textSecondary,
+          const SizedBox(height: 4),
+          SizedBox(
+            height: _subtitleHeight(scaler),
+            child: Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: _subtitleSize,
+                height: _subtitleLineHeight,
+                color: program.isLive ? TvTheme.error : TvTheme.textSecondary,
+              ),
             ),
           ),
         ],

@@ -272,80 +272,55 @@ class _TvYoutubePlayerState extends State<TvYoutubePlayer> {
     );
   }
 
+  /// Estado y posición en una pastilla compacta. El título no se repite: el
+  /// reproductor de YouTube ya lo muestra arriba al pausar o saltar, y abajo
+  /// pone sus propios elementos, que esta pastilla deja libres.
   Widget _bar(BuildContext context, bool paused) {
     final l10n = context.l10n;
     return Align(
-      alignment: Alignment.bottomCenter,
+      alignment: const Alignment(0, 0.72),
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(48, 40, 48, 27),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0x00000000), Color(0xE6000000)],
-          ),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xD9000000),
+          borderRadius: BorderRadius.circular(TvTheme.radius),
         ),
-        child: Column(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              widget.program.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: TvTheme.fontTitle,
-                fontWeight: FontWeight.w600,
-                color: TvTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(paused ? Icons.pause : Icons.play_arrow,
-                    color: TvTheme.textPrimary, size: 26),
-                const SizedBox(width: 10),
-                if (_isLive)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: TvTheme.error,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      l10n.ytLive,
-                      style: const TextStyle(
-                        fontSize: TvTheme.fontSmall,
-                        fontWeight: FontWeight.w700,
-                        color: TvTheme.textPrimary,
-                      ),
-                    ),
-                  )
-                else
-                  Text(
-                    '${_clock(_position)} / ${_clock(_duration)}',
-                    style: TextStyle(
-                        fontSize: TvTheme.fontBody,
-                        color: TvTheme.textSecondary),
-                  ),
-                if (paused) ...[
-                  const SizedBox(width: 18),
-                  Text(
-                    l10n.ytPaused,
-                    style: const TextStyle(
-                        fontSize: TvTheme.fontBody, color: TvTheme.textPrimary),
-                  ),
-                ],
-                const Spacer(),
-                Text(
-                  widget.channel.name,
-                  style: TextStyle(
-                      fontSize: TvTheme.fontBody, color: TvTheme.textSecondary),
+            Icon(paused ? Icons.pause : Icons.play_arrow,
+                color: TvTheme.textPrimary, size: 28),
+            const SizedBox(width: 12),
+            if (_isLive)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: TvTheme.error,
+                  borderRadius: BorderRadius.circular(4),
                 ),
-              ],
-            ),
+                child: Text(
+                  l10n.ytLive,
+                  style: const TextStyle(
+                    fontSize: TvTheme.fontSmall,
+                    fontWeight: FontWeight.w700,
+                    color: TvTheme.textPrimary,
+                  ),
+                ),
+              )
+            else
+              Text(
+                '${_clock(_position)} / ${_clock(_duration)}',
+                style: const TextStyle(
+                    fontSize: TvTheme.fontBody, color: TvTheme.textPrimary),
+              ),
+            if (paused) ...[
+              const SizedBox(width: 18),
+              Text(
+                l10n.ytPaused,
+                style: TextStyle(
+                    fontSize: TvTheme.fontBody, color: TvTheme.textSecondary),
+              ),
+            ],
           ],
         ),
       ),

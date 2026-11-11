@@ -88,6 +88,39 @@ void main() {
         lessThan(t.getTopLeft(find.byKey(const ValueKey('yt-aaaaaaaaaaa'))).dx));
   });
 
+  testWidgets('con letra grande el título conserva sus dos líneas completas',
+      (t) async {
+    const long = YoutubeProgram(
+        videoId: 'ccccccccccc',
+        title: 'SE VA DEL PERÚ ANTES: Keiko no quiere despedirse del Papa y '
+            'otras noticias largas del día de hoy',
+        kind: YoutubeProgramKind.video,
+        duration: '22:45',
+        age: Duration(hours: 17));
+    final data = FakeTvData()
+      ..onYoutubePrograms = (c, {force = false}) async => [long, _a, _b];
+    const scale = 1.5;
+    await pumpTv(
+      t,
+      MediaQuery(
+        data: const MediaQueryData(
+            size: Size(960, 540), textScaler: TextScaler.linear(scale)),
+        child: TvYoutubePrograms(
+            channel: _channel, data: data, thumbnailBuilder: _noImage),
+      ),
+    );
+
+    expect(t.takeException(), isNull);
+    final title = t.getRect(find.text(long.title));
+    final age = t.getRect(find.text('hace 17 h'));
+    // Dos líneas de 16 px × 1,5 de escala × 1,2 de interlineado.
+    expect(title.height, greaterThanOrEqualTo(2 * 16 * scale * 1.2 - 1));
+    expect(age.top, greaterThanOrEqualTo(title.bottom),
+        reason: 'la fecha no pisa el título');
+    final card = t.getRect(find.byKey(const ValueKey('yt-ccccccccccc')));
+    expect(age.bottom, lessThanOrEqualTo(card.bottom));
+  });
+
   testWidgets('pide los programas del canal abierto', (t) async {
     final asked = <String?>[];
     final data = FakeTvData()

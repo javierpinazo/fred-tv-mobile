@@ -115,22 +115,28 @@ void main() {
     expect(s.js, ['ytToggle()', 'ytSeek(30)', 'ytSeek(-30)']);
   });
 
-  testWidgets('una tecla muestra el título y la posición un momento',
-      (t) async {
+  testWidgets('una tecla muestra la posición un momento', (t) async {
     final s = await _open(t);
     s.state(1, pos: 82, dur: 1365);
     await t.pump();
-    expect(find.text('URGENTE: paro de transportes'), findsNothing);
+    expect(find.text('1:22 / 22:45'), findsNothing);
 
     await _key(t, LogicalKeyboardKey.arrowRight);
-    expect(find.text('URGENTE: paro de transportes'), findsOneWidget);
     expect(find.text('1:22 / 22:45'), findsOneWidget);
 
     await t.pump(const Duration(seconds: 5));
+    expect(find.text('1:22 / 22:45'), findsNothing);
+  });
+
+  testWidgets('no repite el título: ya lo muestra el reproductor de YouTube',
+      (t) async {
+    final s = await _open(t);
+    s.state(2, pos: 82);
+    await t.pump();
     expect(find.text('URGENTE: paro de transportes'), findsNothing);
   });
 
-  testWidgets('en pausa deja el título y «En pausa» a la vista', (t) async {
+  testWidgets('en pausa deja «En pausa» y la posición a la vista', (t) async {
     final s = await _open(t);
     s.state(1, pos: 82);
     await t.pump();
@@ -138,8 +144,8 @@ void main() {
     await t.pump();
     await t.pump(const Duration(seconds: 10));
 
-    expect(find.text('URGENTE: paro de transportes'), findsOneWidget);
     expect(find.text('En pausa'), findsOneWidget);
+    expect(find.text('1:22 / 22:45'), findsOneWidget);
   });
 
   testWidgets('un directo muestra EN VIVO en lugar de la posición', (t) async {
@@ -148,7 +154,6 @@ void main() {
     await t.pump();
     await _key(t, LogicalKeyboardKey.select);
 
-    expect(find.text('Centrífugos'), findsOneWidget);
     expect(find.text('EN VIVO'), findsOneWidget);
     expect(find.textContaining('/'), findsNothing);
   });
