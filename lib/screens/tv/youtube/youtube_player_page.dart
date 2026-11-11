@@ -44,12 +44,18 @@ function state(){
     q:player.getPlaybackQuality?player.getPlaybackQuality():'',
     vw:window.innerWidth,vh:window.innerHeight});
 }
+// YouTube enciende por su cuenta los subtítulos automáticos y tapan los
+// rótulos del programa: se descarga el módulo cada vez que puede volver.
+function noCaptions(){
+  try{player.unloadModule('captions');player.unloadModule('cc');}catch(e){}
+}
 function onYouTubeIframeAPIReady(){
   player=new YT.Player('p',{videoId:'$videoId',width:'100%',height:'100%',
     playerVars:{autoplay:1,controls:0,rel:0,playsinline:1,fs:0,iv_load_policy:3,disablekb:1,hl:'$hl'},
     events:{
-      onReady:function(e){e.target.playVideo();state();},
-      onStateChange:state,
+      onReady:function(e){noCaptions();e.target.playVideo();state();},
+      onApiChange:noCaptions,
+      onStateChange:function(){noCaptions();state();},
       onError:function(e){send({t:'error',code:e.data});}
     }});
 }

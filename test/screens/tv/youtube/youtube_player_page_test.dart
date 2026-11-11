@@ -20,6 +20,14 @@ void main() {
     expect(h, contains("hl:'es'"));
   });
 
+  test('apaga los subtítulos automáticos al arrancar y al cambiar de estado', () {
+    final h = youtubePlayerHtml('Ejg0OQPYVgw');
+    expect(h, contains("player.unloadModule('captions')"));
+    expect(h, contains('onReady:function(e){noCaptions();'));
+    expect(h, contains('onApiChange:noCaptions'));
+    expect(h, contains('onStateChange:function(){noCaptions();state();}'));
+  });
+
   test('rechaza ids que no son de YouTube', () {
     for (final bad in [
       '',
