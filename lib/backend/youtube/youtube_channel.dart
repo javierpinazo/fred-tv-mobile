@@ -30,13 +30,13 @@ String? _channelPath(String? url) {
 /// Si [url] es la dirección de un canal de YouTube (no la de un vídeo suelto).
 bool isYoutubeChannelUrl(String? url) => _channelPath(url) != null;
 
-/// Dirección de la pestaña [tab] del canal, pedida en inglés para poder
-/// interpretar sus textos de forma estable.
+/// Dirección de la pestaña [tab] del canal, pedida en español: en inglés
+/// YouTube traduce los títulos de los vídeos.
 Uri youtubeTabUri(String channelUrl, YoutubeTab tab) {
   final path = _channelPath(channelUrl);
   if (path == null) {
     throw ArgumentError.value(
         channelUrl, 'channelUrl', 'no es un canal de YouTube');
   }
-  return Uri.https('www.youtube.com', '$path/${tab.name}', {'hl': 'en'});
+  return Uri.https('www.youtube.com', '$path/${tab.name}', {'hl': 'es'});
 }

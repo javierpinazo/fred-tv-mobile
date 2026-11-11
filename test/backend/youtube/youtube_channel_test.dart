@@ -32,13 +32,13 @@ void main() {
         youtubeTabUri('http://m.youtube.com/@PaoloBenzaR/videos',
                 YoutubeTab.streams)
             .toString(),
-        'https://www.youtube.com/@PaoloBenzaR/streams?hl=en');
+        'https://www.youtube.com/@PaoloBenzaR/streams?hl=es');
     expect(
         youtubeTabUri(
                 'https://www.youtube.com/channel/UC-B7Xv56uNRDkj0vC3QW8Cg',
                 YoutubeTab.videos)
             .toString(),
-        'https://www.youtube.com/channel/UC-B7Xv56uNRDkj0vC3QW8Cg/videos?hl=en');
+        'https://www.youtube.com/channel/UC-B7Xv56uNRDkj0vC3QW8Cg/videos?hl=es');
   });
 
   test('una dirección que no es de canal no tiene pestañas', () {
