@@ -37,8 +37,11 @@ class TVChannelBrowser extends StatefulWidget {
     this.data = const TvData(),
     this.onPlay,
     this.onAddToPlaylist,
+    this.autofocusFirst = false,
   });
 
+  /// Enfoca el primer canal al terminar de cargar (pantallas que lo abren solas).
+  final bool autofocusFirst;
   final bool favoritesOnly;
   final TvData data;
   final TvPlayCallback? onPlay;
@@ -182,6 +185,11 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
       _hasMore = items.length >= pageSize;
       _loadingChannels = false;
     });
+    if (widget.autofocusFirst && items.isNotEmpty) {
+      WidgetsBinding.instance.endOfFrame.then((_) {
+        if (mounted) _channelNode(0).requestFocus();
+      });
+    }
   }
 
   Future<void> _loadMore() async {

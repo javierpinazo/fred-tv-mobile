@@ -55,6 +55,10 @@ abstract class TvEngine {
   Future<void> playOrPause();
   Future<void> seek(Duration to);
 
+  /// Silencia o devuelve el sonido sin reabrir (el canal minimizado suena al
+  /// pasar a pantalla grande).
+  Future<void> setMuted(bool muted);
+
   /// Si permite elegir pista de audio / subtítulos.
   bool get supportsTracks;
   List<IdData<String>> audioTracks();

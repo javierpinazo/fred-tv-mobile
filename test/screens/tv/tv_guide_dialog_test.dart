@@ -177,4 +177,91 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Primera hora'), findsNothing);
   });
+
+  testWidgets('una serie muestra capítulo y datos; el reparto al enfocarla',
+      (t) async {
+    final data = FakeTvData()
+      ..guidePrograms = [
+        GuideProgram(start: DateTime.utc(2026, 10, 19, 13), title: 'Noticias'),
+        GuideProgram(
+          start: DateTime.utc(2026, 10, 19, 14),
+          end: DateTime.utc(2026, 10, 19, 15, 51),
+          title: 'Wasabi',
+          description: 'Un inspector francés viaja a Japón.',
+          kind: GuideProgramKind.movie,
+          year: 2001,
+          genre: 'Action & Adventure',
+          rating: 'R',
+          directors: const ['Gérard Krawczyk'],
+          actors: const ['Jean Reno', 'Ryôko Hirosue'],
+          poster: 'https://images.test/poster.jpg',
+        ),
+        GuideProgram(
+          start: DateTime.utc(2026, 10, 19, 16),
+          end: DateTime.utc(2026, 10, 19, 16, 30),
+          title: 'Las Rutas de Veronica',
+          kind: GuideProgramKind.series,
+          season: 2,
+          episode: 13,
+          episodeTitle: 'Comarca Vaqueira',
+        ),
+      ];
+    await _open(t, data);
+    // 09:30 en Lima: se emite (y está enfocada) la película.
+    expect(isFocused(t, const ValueKey('tv-guide-item-1')), isTrue);
+    expect(find.text('Película · 2001 · Action & Adventure · R · 111 min'),
+        findsOneWidget);
+    expect(find.text('Dirección: Gérard Krawczyk'), findsOneWidget);
+    expect(find.text('Reparto: Jean Reno, Ryôko Hirosue'), findsOneWidget);
+    expect(find.byKey(const ValueKey('tv-guide-poster-1')), findsOneWidget);
+    // La serie, sin enfocar: capítulo y datos, sin póster.
+    expect(find.text('Comarca Vaqueira'), findsOneWidget);
+    expect(find.text('Serie · T2 E13 · 30 min'), findsOneWidget);
+    // Al bajar el foco, la película recoge su ficha.
+    await _key(t, LogicalKeyboardKey.arrowDown);
+    expect(find.text('Reparto: Jean Reno, Ryôko Hirosue'), findsNothing);
+    expect(find.byKey(const ValueKey('tv-guide-poster-1')), findsNothing);
+  });
+
+  testWidgets('la ficha enfocada cabe entera aunque crezca al recibir el foco',
+      (t) async {
+    // 12 películas de una hora desde las 05:00 UTC; a las 11:30 UTC se emite
+    // la número 6, en mitad de la lista.
+    final data = FakeTvData()
+      ..guidePrograms = [
+        for (var i = 0; i < 12; i++)
+          GuideProgram(
+            start: DateTime.utc(2026, 10, 19, 5 + i),
+            end: DateTime.utc(2026, 10, 19, 6 + i),
+            title: 'Película $i',
+            description: 'Una sinopsis larga que ocupa varias líneas. ' * 6,
+            kind: GuideProgramKind.movie,
+            year: 2001,
+            directors: const ['Alguien'],
+            actors: ['Reparto $i'],
+            poster: 'https://images.test/poster.jpg',
+          ),
+      ];
+    await pumpTv(
+      t,
+      Builder(
+        builder: (context) => Center(
+          child: ElevatedButton(
+            onPressed: () => showTvGuide(context,
+                data: data,
+                channel: _channel,
+                clock: () => DateTime.utc(2026, 10, 19, 11, 30)),
+            child: const Text('abrir'),
+          ),
+        ),
+      ),
+    );
+    await t.tap(find.text('abrir'));
+    await t.pumpAndSettle();
+    expect(isFocused(t, const ValueKey('tv-guide-item-6')), isTrue);
+    final list = t.getRect(find.byType(SingleChildScrollView));
+    final row = t.getRect(find.byKey(const ValueKey('tv-guide-item-6')));
+    expect(row.top, greaterThanOrEqualTo(list.top));
+    expect(row.bottom, lessThanOrEqualTo(list.bottom));
+  });
 }

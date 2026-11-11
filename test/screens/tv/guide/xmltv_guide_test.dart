@@ -174,7 +174,8 @@ void main() {
     XmltvGuide guide(MockClient client) => XmltvGuide(
           urls: () async => ['https://epg.test/pe.xml.gz'],
           client: client,
-          parser: (text) async => parseXmltv(text),
+          parser: (bytes, onlyIds) async =>
+              parseXmltvBytes((bytes: bytes, onlyIds: onlyIds)),
         );
 
     test('descarga (gzip), reconoce el canal y devuelve su día', () async {
@@ -248,6 +249,103 @@ void main() {
       await g.load();
       await g.load();
       expect(calls, 1);
+    });
+  });
+
+  group('XmltvGuide: guías extra', () {
+    // Recorte del XMLTV de Uruguay: tiene DW en español y muchos otros canales.
+    const extraXml = '''<tv>
+  <channel id="DW.ESPAÑOL.HD.uy"><display-name>DW ESPAÑOL HD</display-name></channel>
+  <channel id="CANAL.4.uy"><display-name>CANAL 4</display-name></channel>
+  <programme start="20261019140000 +0000" stop="20261019150000 +0000" channel="DW.ESPAÑOL.HD.uy">
+    <title lang="es">Zona docu</title>
+  </programme>
+  <programme start="20261019140000 +0000" stop="20261019150000 +0000" channel="CANAL.4.uy">
+    <title lang="es">Telenoche</title>
+  </programme>
+</tv>''';
+
+    const extra = XmltvExtra(
+      url: 'https://epg.test/uy.xml.gz',
+      xmltvId: 'DW.ESPAÑOL.HD.uy',
+      tvgIds: ['DW.de@Espanol'],
+      names: [
+        {'dw', 'espanol'},
+      ],
+    );
+
+    XmltvGuide guide({bool extraFails = false}) => XmltvGuide(
+          urls: () async => ['https://epg.test/pe.xml.gz'],
+          extras: const [extra],
+          client: MockClient((req) async {
+            if (req.url.path.contains('uy')) {
+              return extraFails
+                  ? http.Response('no', 500)
+                  : http.Response.bytes(utf8.encode(extraXml), 200);
+            }
+            return http.Response.bytes(utf8.encode(_xml), 200);
+          }),
+          parser: (bytes, onlyIds) async =>
+              parseXmltvBytes((bytes: bytes, onlyIds: onlyIds)),
+        );
+
+    test('un canal con guía extra la recibe aunque su país no la tenga',
+        () async {
+      final g = guide();
+      await g.load();
+      final dw = _ch('DW Espanol (1080p)');
+      expect(g.matches(dw), isTrue);
+      final day = await g.day(dw, DateTime(2026, 10, 19));
+      expect(day.single.title, 'Zona docu');
+    });
+
+    test('se reconoce por tvg-id o por nombre (con o sin ñ)', () async {
+      final g = guide();
+      await g.load();
+      expect(g.matches(_ch('DW Español')), isTrue);
+      expect(
+          g.matches(Channel(
+              name: 'Deutsche Welle',
+              tvgId: 'DW.de@Espanol',
+              mediaType: MediaType.livestream,
+              sourceId: 1,
+              favorite: false)),
+          isTrue);
+      expect(g.matches(_ch('DW English (1080p)')), isFalse);
+    });
+
+    test('del archivo extra solo se toma ese canal, no el resto', () async {
+      final g = guide();
+      await g.load();
+      expect(g.matches(_ch('Canal 4 (720p)')), isFalse);
+      // La guía del país sigue funcionando.
+      expect(g.matches(_ch('ATV (1080p)')), isTrue);
+    });
+
+    test('si la guía extra no se puede bajar, el canal queda sin guía',
+        () async {
+      final g = guide(extraFails: true);
+      await g.load();
+      expect(g.matches(_ch('DW Espanol (1080p)')), isFalse);
+      expect(g.matches(_ch('ATV (1080p)')), isTrue);
+    });
+
+    test('las guías extra de fábrica cubren DW y France 24 en español', () {
+      bool covered(String name) =>
+          defaultXmltvExtras.any((e) => e.matches(_ch(name)));
+      expect(covered('DW Espanol (1080p)'), isTrue);
+      expect(covered('France 24 Spanish (1080p)'), isTrue);
+      expect(covered('France 24 Español'), isTrue);
+      expect(covered('France 24 English (1080p)'), isFalse);
+      expect(covered('DW (1080p)'), isFalse);
+    });
+  });
+
+  group('parseXmltv con onlyIds', () {
+    test('solo conserva los canales pedidos', () {
+      final data = parseXmltv(_xml, onlyIds: {'ATV.(ATV).pe'});
+      expect(data.names.keys, ['ATV.(ATV).pe']);
+      expect(data.programs.keys, ['ATV.(ATV).pe']);
     });
   });
 }

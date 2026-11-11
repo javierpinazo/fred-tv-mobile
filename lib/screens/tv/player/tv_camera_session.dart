@@ -8,9 +8,10 @@ import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 
 enum TvCameraStatus { connecting, live, error }
 
-/// Cámara de seguridad en el recuadro del reproductor: su propio mpv, aparte
-/// del que reproduce el canal. Se conecta al mostrarla, se reconecta sola si
-/// se corta y libera el decodificador al ocultarla.
+/// Segundo video en el recuadro del reproductor (la cámara de seguridad o un
+/// canal minimizado): su propio mpv, aparte del que reproduce el canal, sin
+/// audio. Se conecta al mostrarlo, se reconecta solo si se corta y libera el
+/// decodificador al ocultarlo (o lo cede con [takeEngine]).
 class TvCameraSession extends ChangeNotifier {
   TvCameraSession({
     TvEngine Function()? engineFactory,
@@ -36,6 +37,9 @@ class TvCameraSession extends ChangeNotifier {
   final List<StreamSubscription<dynamic>> _subs = [];
   List<TvPlaybackAttempt> _plan = const [];
   String? _url;
+  String _userAgent = tvFallbackUserAgent;
+  Map<String, String> _headers = const {};
+  int _bufferSecs = 0;
   int _generation = 0;
   int _currentAttempt = 0;
   bool _frameShown = false;
@@ -63,14 +67,52 @@ class TvCameraSession extends ChangeNotifier {
 
   // --- Mostrar / ocultar --------------------------------------------------
 
-  Future<void> show(String url) async {
+  /// Intento del plan con el que se conectó (0 = hardware, 1 = software).
+  int get attempt => _currentAttempt;
+
+  /// Plan de reproducción de [url] (el que [takeEngine] hereda al reproductor).
+  List<TvPlaybackAttempt> get plan => _plan;
+
+  /// [bufferSecs] va a 0 para una cámara (el menor retraso); un canal minimizado
+  /// usa el buffer del usuario.
+  Future<void> show(
+    String url, {
+    String userAgent = tvFallbackUserAgent,
+    Map<String, String> headers = const {},
+    int bufferSecs = 0,
+  }) async {
     if (_visible || _disposed) return;
     _visible = true;
     _swapped = false;
     _zoom = TvCameraZoom.none;
     _url = url;
+    _userAgent = userAgent;
+    _headers = headers;
+    _bufferSecs = bufferSecs;
     _plan = TvRetryPolicy.plan(url, mode: TvEngineMode.mpv);
     await _start(0);
+  }
+
+  /// Cede el motor, que ya está reproduciendo, y oculta el recuadro sin
+  /// liberarlo (el canal minimizado pasa a pantalla grande sin recargar).
+  /// `null` si no hay imagen en directo; entonces no se toca nada.
+  TvEngine? takeEngine() {
+    final engine = _engine;
+    if (!_visible || engine == null || _status != TvCameraStatus.live) {
+      return null;
+    }
+    _visible = false;
+    _swapped = false;
+    _zoom = TvCameraZoom.none;
+    _generation++;
+    _cancelTimers();
+    for (final s in _subs) {
+      s.cancel();
+    }
+    _subs.clear();
+    _engine = null;
+    _notify();
+    return engine;
   }
 
   Future<void> hide() async {
@@ -138,9 +180,9 @@ class TvCameraSession extends ChangeNotifier {
       await _engine!
           .open(TvMedia(
             url: _url!,
-            userAgent: tvFallbackUserAgent,
-            // Poco buffer: una cámara se mira en directo, con el menor retraso.
-            bufferSecs: 0,
+            userAgent: _userAgent,
+            headers: _headers,
+            bufferSecs: _bufferSecs,
             hardwareDecoding: plan.hardwareDecoding,
             mute: true,
           ))

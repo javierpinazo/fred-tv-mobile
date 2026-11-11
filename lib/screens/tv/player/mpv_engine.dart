@@ -100,6 +100,14 @@ class MpvEngine implements TvEngine {
   Future<void> seek(Duration to) => _player.seek(to);
 
   @override
+  Future<void> setMuted(bool muted) async {
+    final platform = _player.platform;
+    if (platform is mk.NativePlayer) {
+      await platform.setProperty('mute', muted ? 'yes' : 'no');
+    }
+  }
+
+  @override
   bool get supportsTracks => true;
 
   @override

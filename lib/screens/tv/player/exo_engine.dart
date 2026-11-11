@@ -158,6 +158,10 @@ class ExoEngine implements TvEngine {
   Future<void> seek(Duration to) async => _controller?.seekTo(to);
 
   @override
+  Future<void> setMuted(bool muted) async =>
+      _controller?.setVolume(muted ? 0 : 1);
+
+  @override
   bool get supportsTracks => false;
 
   @override

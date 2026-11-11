@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/channel.dart';
+import 'package:open_tv/screens/tv/guide/guide_labels.dart';
 import 'package:open_tv/screens/tv/guide/tv_guide.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
@@ -156,13 +157,42 @@ class _GuideDialogState extends State<_GuideDialog> {
     );
   }
 
+  Widget _small(String text, {Color? color, int? maxLines}) => Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(
+          text,
+          maxLines: maxLines,
+          overflow: maxLines == null ? null : TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: TvTheme.fontSmall,
+            color: color ?? TvTheme.textSecondary,
+          ),
+        ),
+      );
+
+  /// La fila enfocada crece (sinopsis, reparto, póster) después de que el
+  /// foco la haya centrado: se vuelve a centrar con su tamaño final.
+  void _revealWhenGrown(FocusNode node) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = node.context;
+      if (!mounted || ctx == null || !node.hasFocus) return;
+      Scrollable.ensureVisible(ctx,
+          alignment: 0.5, duration: TvTheme.focusDuration);
+    });
+  }
+
   Widget _row(int i, GuideProgram p, bool isNow) {
+    final l10n = context.l10n;
+    final meta = guideMetaLine(p, l10n);
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: TvFocusable(
         key: ValueKey('tv-guide-item-$i'),
         focusNode: _nodes[i],
         scaleOnFocus: false,
+        onFocusChange: (focused) {
+          if (focused) _revealWhenGrown(_nodes[i]);
+        },
         builder: (context, focused) => Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
@@ -194,22 +224,40 @@ class _GuideDialogState extends State<_GuideDialog> {
                         color: TvTheme.textPrimary,
                       ),
                     ),
+                    if (p.episodeTitle != null)
+                      _small(p.episodeTitle!,
+                          color: TvTheme.textPrimary, maxLines: 1),
+                    if (meta != null)
+                      _small(meta,
+                          color: isNow ? TvTheme.accent : null,
+                          maxLines: focused ? 2 : 1),
                     if (p.description != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          p.description!,
-                          maxLines: focused ? 4 : 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: TvTheme.fontSmall,
-                            color: TvTheme.textSecondary,
-                          ),
-                        ),
-                      ),
+                      _small(p.description!, maxLines: focused ? 4 : 2),
+                    if (focused && p.directors.isNotEmpty)
+                      _small(l10n.guideDirector(p.directors.join(', ')),
+                          maxLines: 1),
+                    if (focused && p.actors.isNotEmpty)
+                      _small(l10n.guideCast(p.actors.join(', ')), maxLines: 2),
                   ],
                 ),
               ),
+              if (focused && p.poster != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 12),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.network(
+                      p.poster!,
+                      key: ValueKey('tv-guide-poster-$i'),
+                      width: 90,
+                      height: 130,
+                      cacheWidth: 180,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const SizedBox(width: 90, height: 130),
+                    ),
+                  ),
+                ),
               if (isNow)
                 Container(
                   margin: const EdgeInsets.only(left: 12),

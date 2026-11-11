@@ -84,6 +84,63 @@ void main() {
     expect(c.current.id, 2);
   });
 
+  test('show salta a un canal de la lista, buscándolo por dirección', () {
+    final c = TvPlaylistCursor(
+        [fakeChannel(1), fakeChannel(2), fakeChannel(3)], 0);
+    c.show(fakeChannel(3));
+    expect(c.current.id, 3);
+    expect(c.channels, hasLength(3));
+    expect(c.goToLast(), isTrue);
+    expect(c.current.id, 1);
+  });
+
+  test('show añade tras el actual el canal que no está en la lista', () {
+    final c = TvPlaylistCursor(
+        [fakeChannel(1), fakeChannel(2), fakeChannel(3)], 1);
+    c.show(fakeChannel(9));
+    expect(c.channels.map((e) => e.id), [1, 2, 9, 3]);
+    expect(c.current.id, 9);
+    expect(c.positionLabel, '3 / 4');
+    expect(c.goToLast(), isTrue);
+    expect(c.current.id, 2);
+    expect(c.last?.id, 9);
+  });
+
+  test('show a un canal añadido sigue bien después de varios añadidos', () {
+    final c = TvPlaylistCursor(
+        [fakeChannel(1), fakeChannel(2), fakeChannel(3)], 2);
+    c.show(fakeChannel(8)); // [1, 2, 3, 8]
+    c.jumpTo(1);
+    c.show(fakeChannel(9)); // [1, 9, 2, 3, 8]
+    expect(c.channels.map((e) => e.id), [1, 9, 2, 3, 8]);
+    expect(c.current.id, 9);
+    c.jumpTo(5);
+    expect(c.current.id, 8);
+    expect(c.baseIndex, 2); // el añadido 8 cae sobre el 3, ya sin contar el 9
+    c.jumpTo(2);
+    expect(c.baseIndex, 0);
+  });
+
+  test('baseIndex ignora los canales añadidos', () {
+    final c = TvPlaylistCursor(
+        [fakeChannel(1), fakeChannel(2), fakeChannel(3)], 0);
+    expect(c.baseIndex, 0);
+    c.show(fakeChannel(9));
+    expect(c.baseIndex, 0); // el añadido cae en el canal que le precede
+    c.next();
+    expect(c.current.id, 2);
+    expect(c.baseIndex, 1);
+    c.next();
+    expect(c.baseIndex, 2);
+  });
+
+  test('el cursor trabaja con una copia de la lista', () {
+    final original = [fakeChannel(1), fakeChannel(2)];
+    final c = TvPlaylistCursor(original, 0);
+    c.show(fakeChannel(9));
+    expect(original, hasLength(2));
+  });
+
   test('lista vacía o índice fuera de rango lanza ArgumentError', () {
     expect(() => TvPlaylistCursor([], 0), throwsArgumentError);
     expect(() => TvPlaylistCursor([fakeChannel(1)], 1), throwsArgumentError);

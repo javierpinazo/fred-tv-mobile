@@ -13,13 +13,26 @@ class GuideException implements Exception {
   String toString() => 'GuideException: $message';
 }
 
-/// Un programa de la guía. [start] es un instante UTC.
+enum GuideProgramKind { movie, series }
+
+/// Un programa de la guía. [start] es un instante UTC. Solo [start] y [title]
+/// son obligatorios: el resto depende de lo que publique cada fuente.
 class GuideProgram {
   const GuideProgram({
     required this.start,
     required this.title,
     this.description,
     this.end,
+    this.kind,
+    this.season,
+    this.episode,
+    this.episodeTitle,
+    this.genre,
+    this.rating,
+    this.year,
+    this.directors = const [],
+    this.actors = const [],
+    this.poster,
   });
 
   final DateTime start;
@@ -28,6 +41,29 @@ class GuideProgram {
 
   /// Fin del programa (UTC), si la fuente lo da.
   final DateTime? end;
+
+  /// Película o serie; `null` si la fuente no lo dice (noticias, directos…).
+  final GuideProgramKind? kind;
+  final int? season;
+  final int? episode;
+
+  /// Título del capítulo, cuando es distinto del de la serie.
+  final String? episodeTitle;
+  final String? genre;
+
+  /// Clasificación por edad tal como la da la fuente (`TV-G`, `R`…).
+  final String? rating;
+
+  /// Año de estreno.
+  final int? year;
+  final List<String> directors;
+  final List<String> actors;
+
+  /// Dirección de la imagen del póster.
+  final String? poster;
+
+  /// Duración, si se conoce el fin.
+  Duration? get duration => end?.difference(start);
 
   /// Hora de inicio en Lima como `02:00 PM`.
   String get timeLabel => formatLimaTime(start);

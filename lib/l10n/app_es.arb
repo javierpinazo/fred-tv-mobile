@@ -160,6 +160,43 @@
   "guideNowBadge": "AHORA",
   "guideLoadFailed": "No se pudo cargar la guía",
   "guideEmptyDay": "Sin programación para este día",
+  "guideKindMovie": "Película",
+  "guideKindSeries": "Serie",
+  "guideSeasonEpisode": "T{season} E{episode}",
+  "@guideSeasonEpisode": {
+    "placeholders": {
+      "season": {
+        "type": "String"
+      },
+      "episode": {
+        "type": "String"
+      }
+    }
+  },
+  "guideEpisode": "Cap. {episode}",
+  "@guideEpisode": {
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      }
+    }
+  },
+  "guideCast": "Reparto: {names}",
+  "@guideCast": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "guideDirector": "Dirección: {names}",
+  "@guideDirector": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "playerSetCameraFirst": "Primero define la cámara en Ajustes",
   "playerMenuAudio": "Audio",
   "playerMenuSubtitles": "Subtítulos",
@@ -179,6 +216,12 @@
   "playerKeyHintLive": "↑↓ Cambiar canal  ·  OK Info  ·  Mantén OK Opciones  ·  Atrás Salir",
   "playerKeyHintVod": "←→ 10 s  ·  OK Pausa  ·  Mantén OK Opciones  ·  Atrás Salir",
   "playerCamNoSignal": "Cámara sin señal",
+  "playerPickFavorite": "Elige el canal que quedará en pantalla grande",
+  "playerPipMinimize": "Minimizar este canal",
+  "playerPipPromote": "Pasar el canal minimizado a pantalla grande",
+  "playerPipClose": "Cerrar el canal minimizado",
+  "playerPipNoSignal": "Sin señal",
+  "playerPipSame": "Elige otro canal: este ya está en pantalla",
   "playerZoomHint": "Zoom {zoom}  ·  ←↑↓→ Mover  ·  OK Cambiar zoom  ·  Atrás Terminar",
   "@playerZoomHint": {
     "placeholders": {

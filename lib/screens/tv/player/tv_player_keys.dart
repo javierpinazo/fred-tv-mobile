@@ -13,6 +13,10 @@ enum TvPlayerCommand {
   toggleOverlay,
   openOptions,
   lastChannel,
+
+  /// Tecla amarilla: minimiza el canal o, si ya hay uno minimizado, lo pasa a
+  /// pantalla grande.
+  togglePip,
   exit,
 }
 
@@ -84,6 +88,9 @@ TvPlayerCommand mapTvPlayerKey(LogicalKeyboardKey key, {required bool isLive}) {
   }
   if (key == LogicalKeyboardKey.mediaLast) {
     return isLive ? TvPlayerCommand.lastChannel : TvPlayerCommand.none;
+  }
+  if (key == LogicalKeyboardKey.colorF2Yellow) {
+    return isLive ? TvPlayerCommand.togglePip : TvPlayerCommand.none;
   }
   if (key == LogicalKeyboardKey.mediaRewind) {
     return isLive ? TvPlayerCommand.none : TvPlayerCommand.seekBack;

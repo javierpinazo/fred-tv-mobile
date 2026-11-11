@@ -22,6 +22,7 @@ import 'package:open_tv/models/media_type.dart';
 import 'package:open_tv/models/view_type.dart';
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/user_playlist.dart';
+import 'package:open_tv/screens/tv/guide/pluto_guide.dart';
 import 'package:open_tv/screens/tv/guide/tv_guide.dart';
 import 'package:open_tv/screens/tv/guide/xmltv_guide.dart';
 import 'package:open_tv/screens/tv/player/tv_buffer.dart';
@@ -51,8 +52,11 @@ class TvData {
   const TvData();
 
   static final IptvOrgCatalog _catalog = IptvOrgCatalog();
-  static final XmltvGuide _xmltv = XmltvGuide(urls: _epgUrls);
-  static final TvGuide _guide = TvGuide(providers: [TvPeruGuide(), _xmltv]);
+  static final XmltvGuide _xmltv =
+      XmltvGuide(urls: _epgUrls, extras: defaultXmltvExtras);
+  // Pluto TV va primero: reconoce sus canales por la dirección, sin dudas.
+  static final TvGuide _guide =
+      TvGuide(providers: [PlutoGuide(), TvPeruGuide(), _xmltv]);
 
   /// XMLTV a descargar: el de cada país de tus favoritos y vistos (por defecto
   /// Perú) y la URL personalizada, si la hay.

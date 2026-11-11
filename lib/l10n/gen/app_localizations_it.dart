@@ -297,6 +297,32 @@ class AppLocalizationsIt extends AppLocalizations {
   String get guideEmptyDay => 'Nessuna programmazione per questo giorno';
 
   @override
+  String get guideKindMovie => 'Film';
+
+  @override
+  String get guideKindSeries => 'Serie';
+
+  @override
+  String guideSeasonEpisode(String season, String episode) {
+    return 'S$season E$episode';
+  }
+
+  @override
+  String guideEpisode(String episode) {
+    return 'Ep. $episode';
+  }
+
+  @override
+  String guideCast(String names) {
+    return 'Cast: $names';
+  }
+
+  @override
+  String guideDirector(String names) {
+    return 'Regia: $names';
+  }
+
+  @override
   String get playerSetCameraFirst =>
       'Prima imposta la telecamera nelle Impostazioni';
 
@@ -357,6 +383,26 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get playerCamNoSignal => 'Telecamera senza segnale';
+
+  @override
+  String get playerPickFavorite =>
+      'Scegli il canale da vedere a schermo intero';
+
+  @override
+  String get playerPipMinimize => 'Riduci questo canale';
+
+  @override
+  String get playerPipPromote => 'Porta il canale ridotto a schermo intero';
+
+  @override
+  String get playerPipClose => 'Chiudi il canale ridotto';
+
+  @override
+  String get playerPipNoSignal => 'Nessun segnale';
+
+  @override
+  String get playerPipSame =>
+      'Scegli un altro canale: questo è già in riproduzione';
 
   @override
   String playerZoomHint(String zoom) {

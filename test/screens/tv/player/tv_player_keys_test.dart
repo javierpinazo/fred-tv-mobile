@@ -38,6 +38,11 @@ void main() {
     expect(_vod(LogicalKeyboardKey.arrowRight), TvPlayerCommand.seekForward);
   });
 
+  test('la tecla amarilla minimiza o recupera el canal, solo en directo', () {
+    expect(_live(LogicalKeyboardKey.colorF2Yellow), TvPlayerCommand.togglePip);
+    expect(_vod(LogicalKeyboardKey.colorF2Yellow), TvPlayerCommand.none);
+  });
+
   test('rewind / fast forward solo en VOD', () {
     expect(_live(LogicalKeyboardKey.mediaRewind), TvPlayerCommand.none);
     expect(_live(LogicalKeyboardKey.mediaFastForward), TvPlayerCommand.none);

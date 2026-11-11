@@ -7,6 +7,7 @@ import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/id_data.dart';
 import 'package:open_tv/models/media_type.dart';
+import 'package:open_tv/screens/tv/guide/guide_labels.dart';
 import 'package:open_tv/screens/tv/guide/tv_guide.dart';
 import 'package:open_tv/screens/tv/player/exo_engine.dart';
 import 'package:open_tv/screens/tv/player/tv_camera.dart';
@@ -18,6 +19,7 @@ import 'package:open_tv/screens/tv/player/tv_player_keys.dart';
 import 'package:open_tv/screens/tv/player/tv_playlist.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
+import 'package:open_tv/screens/tv/tv_favorite_picker.dart';
 import 'package:open_tv/screens/tv/widgets/tv_dialogs.dart';
 import 'package:open_tv/screens/tv/widgets/tv_guide_dialog.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
@@ -81,6 +83,13 @@ class _TvPlayerState extends State<TvPlayer> {
   final GlobalKey _cameraVideoKey = GlobalKey();
   bool _cameraZoomMode = false;
 
+  // Canal minimizado en el recuadro (ver `_minimizeChannel`): reutiliza la
+  // sesión de la cámara, con su propio mpv y sin audio.
+  final TvCameraSession _mini = TvCameraSession();
+  final GlobalKey _miniVideoKey = GlobalKey();
+  Channel? _miniChannel;
+  bool _promoting = false;
+
   Timer? _overlayTimer;
   Timer? _firstFrameTimer;
   Timer? _stallTimer;
@@ -107,6 +116,7 @@ class _TvPlayerState extends State<TvPlayer> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _cursor = TvPlaylistCursor(widget.playlist, widget.initialIndex);
     _camera.addListener(_onCameraChanged);
+    _mini.addListener(_onCameraChanged);
     _play(0);
     _showOverlay();
   }
@@ -123,6 +133,9 @@ class _TvPlayerState extends State<TvPlayer> {
     }
     _engine?.dispose();
     _camera
+      ..removeListener(_onCameraChanged)
+      ..dispose();
+    _mini
       ..removeListener(_onCameraChanged)
       ..dispose();
     _focus.dispose();
@@ -162,12 +175,7 @@ class _TvPlayerState extends State<TvPlayer> {
         _showError();
         return;
       }
-      final headers = await widget.data.channelHeaders(id);
-      final userAgent = headers?.userAgent ?? tvFallbackUserAgent;
-      final extraHeaders = {
-        if (headers?.referrer != null) 'Referer': headers!.referrer!,
-        if (headers?.httpOrigin != null) 'Origin': headers!.httpOrigin!,
-      };
+      final (userAgent, extraHeaders) = await _requestHeaders(id);
       if (attemptIndex == 0) {
         unawaited(_loadGuide(channel));
         await widget.data.addToHistory(id);
@@ -208,9 +216,29 @@ class _TvPlayerState extends State<TvPlayer> {
     }
   }
 
+  /// User agent y cabeceras extra (Referer, Origin) guardadas para el canal [id].
+  Future<(String, Map<String, String>)> _requestHeaders(int id) async {
+    final headers = await widget.data.channelHeaders(id);
+    return (
+      headers?.userAgent ?? tvFallbackUserAgent,
+      {
+        if (headers?.referrer != null) 'Referer': headers!.referrer!,
+        if (headers?.httpOrigin != null) 'Origin': headers!.httpOrigin!,
+      },
+    );
+  }
+
   /// Cambia de motor (ExoPlayer o mpv) liberando el anterior.
   Future<void> _useEngine(TvEngineKind kind) async {
     if (_engine?.kind == kind) return;
+    await _releaseEngine();
+    if (!mounted) return;
+    _attach(kind == TvEngineKind.exo ? ExoEngine() : MpvEngine());
+    setState(() {});
+  }
+
+  /// Deja de usar el motor actual y lo libera.
+  Future<void> _releaseEngine() async {
     for (final s in _engineSubs) {
       await s.cancel();
     }
@@ -221,8 +249,10 @@ class _TvPlayerState extends State<TvPlayer> {
     // El widget de video viejo debe salir del árbol antes de liberarlo.
     await WidgetsBinding.instance.endOfFrame;
     await old?.dispose();
-    if (!mounted) return;
-    final engine = kind == TvEngineKind.exo ? ExoEngine() : MpvEngine();
+  }
+
+  /// Pasa a usar [engine] como el motor del canal y escucha sus eventos.
+  void _attach(TvEngine engine) {
     _engine = engine;
     _engineSubs.addAll([
       engine.firstFrame.listen(_onFirstFrame),
@@ -232,7 +262,6 @@ class _TvPlayerState extends State<TvPlayer> {
         if (mounted) setState(() => _playing = playing);
       }),
     ]);
-    setState(() {});
   }
 
   /// Muestra el error y le da el foco a "Reintentar" (el `autofocus` pierde
@@ -414,6 +443,96 @@ class _TvPlayerState extends State<TvPlayer> {
     return KeyEventResult.handled;
   }
 
+  // --- Canal minimizado ---------------------------------------------------
+
+  bool get _miniActive => _mini.visible && _miniChannel != null;
+
+  /// Manda el canal actual al recuadro, sin audio, y pone en pantalla grande el
+  /// canal visto antes o, si no hay, uno de los favoritos a elegir.
+  Future<void> _minimizeChannel() async {
+    if (!_isLive || _miniActive || _camera.visible || _promoting) return;
+    final minimized = _channel;
+    final url = minimized.url;
+    if (url == null) return;
+    Channel? target;
+    if (!_cursor.hasLast) {
+      // Mientras se elige, el canal que se va a minimizar no debe seguir sonando.
+      unawaited(_engine?.setMuted(true));
+      target = await pickFavoriteChannel(context, widget.data);
+      if (!mounted) return;
+      unawaited(_engine?.setMuted(false));
+      if (target == null) return;
+      if (target.url == url) {
+        _notice(context.l10n.playerPipSame);
+        return;
+      }
+    }
+    final id = await widget.data.resolveChannelId(minimized);
+    final (userAgent, headers) =
+        id == null ? (tvFallbackUserAgent, <String, String>{}) : await _requestHeaders(id);
+    final bufferSecs = await widget.data.bufferSeconds();
+    if (!mounted || _exiting) return;
+    _miniChannel = minimized;
+    final chosen = target;
+    _switchChannel(() => chosen == null ? _cursor.goToLast() : _cursor.show(chosen));
+    unawaited(_mini.show(url,
+        userAgent: userAgent, headers: headers, bufferSecs: bufferSecs));
+  }
+
+  /// El canal minimizado pasa a pantalla grande, con sonido y sin recargarlo,
+  /// y el que estaba en grande desaparece.
+  Future<void> _promoteMini() async {
+    final channel = _miniChannel;
+    if (channel == null || !_mini.visible || _promoting || _exiting) return;
+    _promoting = true;
+    try {
+      final engine = _mini.takeEngine();
+      _miniChannel = null;
+      if (engine == null) {
+        // Aún sin imagen: se reproduce como un cambio de canal normal.
+        await _mini.hide();
+        if (mounted) _switchChannel(() => _cursor.show(channel));
+        return;
+      }
+      final plan = _mini.plan;
+      final attempt = _mini.attempt;
+      _generation++;
+      _firstFrameTimer?.cancel();
+      _stallTimer?.cancel();
+      _reconnectTimer?.cancel();
+      await _releaseEngine();
+      if (!mounted) {
+        await engine.dispose();
+        return;
+      }
+      _cursor.show(channel);
+      _preferEngine = null;
+      _liveReconnects = 0;
+      _plan = plan;
+      _attemptIndex = attempt;
+      _frameShown = true;
+      _hasError = false;
+      _loading = false;
+      _playing = true;
+      _attach(engine);
+      await engine.setMuted(false);
+      if (!mounted) return;
+      setState(() {});
+      _showOverlay();
+      unawaited(_loadGuide(_channel));
+      unawaited(_reportSuccess(_channel));
+      final id = await widget.data.resolveChannelId(_channel);
+      if (id != null) await widget.data.addToHistory(id);
+    } finally {
+      _promoting = false;
+    }
+  }
+
+  Future<void> _closeMini() async {
+    _miniChannel = null;
+    await _mini.hide();
+  }
+
   // --- Comandos -----------------------------------------------------------
 
   /// Programa actual y siguiente (solo canales con guía); falla en silencio.
@@ -457,6 +576,8 @@ class _TvPlayerState extends State<TvPlayer> {
     move();
     // Si el nuevo canal es la propia cámara, el recuadro sobra.
     if (_camera.visible && _channel.url == _camera.url) unawaited(_hideCamera());
+    // Lo mismo si se llega al canal que estaba minimizado.
+    if (_miniActive && _channel.url == _miniChannel!.url) unawaited(_closeMini());
     _preferEngine = null;
     _liveReconnects = 0;
     setState(() {});
@@ -522,6 +643,8 @@ class _TvPlayerState extends State<TvPlayer> {
         _zap(true);
       case TvPlayerCommand.lastChannel:
         _goLast();
+      case TvPlayerCommand.togglePip:
+        unawaited(_miniActive ? _promoteMini() : _minimizeChannel());
       case TvPlayerCommand.showOverlay:
         _showOverlay();
       case TvPlayerCommand.toggleOverlay:
@@ -598,10 +721,13 @@ class _TvPlayerState extends State<TvPlayer> {
     final engine = _engine;
     final canSwitchToExo = engine?.kind == TvEngineKind.mpv &&
         TvRetryPolicy.exoCanOpen(channel.url ?? '');
-    // La cámara no se ofrece en su propio canal (ya está en pantalla grande).
+    // La cámara no se ofrece en su propio canal (ya está en pantalla grande) ni
+    // con un canal minimizado: el recuadro es uno solo.
     final cameraUrl = await widget.data.cameraUrlSetting();
     if (!mounted) return;
-    final showCameraOptions = cameraUrl == null || channel.url != cameraUrl;
+    final showCameraOptions =
+        !_miniActive && (cameraUrl == null || channel.url != cameraUrl);
+    final canMinimize = _isLive && !_miniActive && !_camera.visible;
     final l10n = context.l10n;
     final choice = await showTvOptions<String>(
       context,
@@ -612,6 +738,11 @@ class _TvPlayerState extends State<TvPlayer> {
           (l10n.playerMenuSubtitles, 'subs'),
         if (_cursor.hasLast) (l10n.playerMenuLast, 'last'),
         (l10n.playerMenuFit, 'fit'),
+        if (canMinimize) (l10n.playerPipMinimize, 'mini-min'),
+        if (_miniActive) ...[
+          (l10n.playerPipPromote, 'mini-promote'),
+          (l10n.playerPipClose, 'mini-close'),
+        ],
         if (widget.data.hasGuide(channel)) (l10n.menuShowGuide, 'guide'),
         (
           channel.favorite ? l10n.menuFavoriteRemove : l10n.menuFavoriteAdd,
@@ -654,6 +785,12 @@ class _TvPlayerState extends State<TvPlayer> {
           await widget.data.setFavorite(id, !channel.favorite);
           channel.favorite = !channel.favorite;
         }
+      case 'mini-min':
+        await _minimizeChannel();
+      case 'mini-promote':
+        await _promoteMini();
+      case 'mini-close':
+        await _closeMini();
       case 'cam-show':
         await _showCamera();
       case 'cam-hide':
@@ -706,7 +843,7 @@ class _TvPlayerState extends State<TvPlayer> {
       unawaited(_savePosition(_channel, _engine?.position.inSeconds ?? 0));
     }
     if (!mounted) return;
-    Navigator.of(context).pop(_cursor.index);
+    Navigator.of(context).pop(_cursor.baseIndex);
   }
 
   Future<void> _savePosition(Channel channel, int seconds) async {
@@ -757,25 +894,74 @@ class _TvPlayerState extends State<TvPlayer> {
               zoom: _camera.zoom,
               child: _camera.buildVideo() ?? const SizedBox.expand(),
             ),
-            if (status == TvCameraStatus.connecting)
-              const Center(
-                child: SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(
-                      color: TvTheme.accent, strokeWidth: 3),
+            ..._pipStatus(status, context.l10n.playerCamNoSignal),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Indicador de conexión o de falta de señal del recuadro.
+  List<Widget> _pipStatus(TvCameraStatus status, String noSignal) => [
+        if (status == TvCameraStatus.connecting)
+          const Center(
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                  color: TvTheme.accent, strokeWidth: 3),
+            ),
+          ),
+        if (status == TvCameraStatus.error)
+          Center(
+            child: Text(
+              noSignal,
+              style: TextStyle(
+                fontSize: TvTheme.fontBody,
+                color: TvTheme.textSecondary,
+              ),
+            ),
+          ),
+      ];
+
+  /// Canal minimizado: su video, el estado y el nombre con el icono de silencio.
+  Widget _miniLayer() {
+    return KeyedSubtree(
+      key: _miniVideoKey,
+      child: ColoredBox(
+        color: Colors.black,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _mini.buildVideo() ?? const SizedBox.expand(),
+            ..._pipStatus(_mini.status, context.l10n.playerPipNoSignal),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                color: Colors.black54,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.volume_off,
+                        size: 18, color: TvTheme.textSecondary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _miniChannel?.name ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: TvTheme.fontSmall,
+                          color: TvTheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            if (status == TvCameraStatus.error)
-              Center(
-                child: Text(
-                  context.l10n.playerCamNoSignal,
-                  style: TextStyle(
-                    fontSize: TvTheme.fontBody,
-                    color: TvTheme.textSecondary,
-                  ),
-                ),
-              ),
+            ),
           ],
         ),
       ),
@@ -855,6 +1041,7 @@ class _TvPlayerState extends State<TvPlayer> {
               ),
               if (_camera.visible)
                 _buildPip(cameraBig ? _channelLayer(fill: false) : _cameraLayer()),
+              if (_miniActive) _buildPip(_miniLayer()),
               if (_loading && !_hasError)
                 const Center(
                   child: CircularProgressIndicator(color: TvTheme.accent),
@@ -895,8 +1082,11 @@ class _TvPlayerState extends State<TvPlayer> {
   String? _guideLine(AppLocalizations l10n) {
     final g = _guideNow;
     if (g == null || (g.now == null && g.next == null)) return null;
+    final meta = g.now == null ? null : guideShortMeta(g.now!, l10n);
     return [
-      if (g.now != null) l10n.playerGuideNow(g.now!.title),
+      if (g.now != null)
+        l10n.playerGuideNow(
+            meta == null ? g.now!.title : '${g.now!.title} ($meta)'),
       if (g.next != null) '${g.next!.timeLabel}: ${g.next!.title}',
     ].join('  ·  ');
   }

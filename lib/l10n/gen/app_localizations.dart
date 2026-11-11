@@ -604,6 +604,42 @@ abstract class AppLocalizations {
   /// **'Sin programación para este día'**
   String get guideEmptyDay;
 
+  /// No description provided for @guideKindMovie.
+  ///
+  /// In es, this message translates to:
+  /// **'Película'**
+  String get guideKindMovie;
+
+  /// No description provided for @guideKindSeries.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie'**
+  String get guideKindSeries;
+
+  /// No description provided for @guideSeasonEpisode.
+  ///
+  /// In es, this message translates to:
+  /// **'T{season} E{episode}'**
+  String guideSeasonEpisode(String season, String episode);
+
+  /// No description provided for @guideEpisode.
+  ///
+  /// In es, this message translates to:
+  /// **'Cap. {episode}'**
+  String guideEpisode(String episode);
+
+  /// No description provided for @guideCast.
+  ///
+  /// In es, this message translates to:
+  /// **'Reparto: {names}'**
+  String guideCast(String names);
+
+  /// No description provided for @guideDirector.
+  ///
+  /// In es, this message translates to:
+  /// **'Dirección: {names}'**
+  String guideDirector(String names);
+
   /// No description provided for @playerSetCameraFirst.
   ///
   /// In es, this message translates to:
@@ -717,6 +753,42 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cámara sin señal'**
   String get playerCamNoSignal;
+
+  /// No description provided for @playerPickFavorite.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige el canal que quedará en pantalla grande'**
+  String get playerPickFavorite;
+
+  /// No description provided for @playerPipMinimize.
+  ///
+  /// In es, this message translates to:
+  /// **'Minimizar este canal'**
+  String get playerPipMinimize;
+
+  /// No description provided for @playerPipPromote.
+  ///
+  /// In es, this message translates to:
+  /// **'Pasar el canal minimizado a pantalla grande'**
+  String get playerPipPromote;
+
+  /// No description provided for @playerPipClose.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar el canal minimizado'**
+  String get playerPipClose;
+
+  /// No description provided for @playerPipNoSignal.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin señal'**
+  String get playerPipNoSignal;
+
+  /// No description provided for @playerPipSame.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige otro canal: este ya está en pantalla'**
+  String get playerPipSame;
 
   /// No description provided for @playerZoomHint.
   ///

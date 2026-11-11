@@ -96,4 +96,5 @@ Conecta la TV por ADB y ejecuta `flutter run` con la TV como dispositivo.
 - [ ] Búsqueda por voz
 - [~] Integración con Android TV (fila Favoritos y enlaces hechos; falta Android TV Channels)
 - [x] Cámara de seguridad en recuadro (PiP dentro de la app)
+- [x] Canal minimizado en el recuadro (tecla amarilla u Opciones): mientras ves otro canal, el minimizado sigue sin audio y se pasa a pantalla grande sin recargar
 - [x] Reproductor ExoPlayer nativo (con mpv de respaldo)

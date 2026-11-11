@@ -42,6 +42,11 @@ This fork adds a remote-friendly interface and makes the app stable on Android T
 - Set the RTSP address in *Settings → Security camera* and it shows up as one more channel.
 - With any channel on screen, *Hold OK → Show camera* opens it in a small box, without audio; you can **swap it with the channel** on the big screen, **zoom** (1x to 4x with panning) and hide it. It uses its own mpv over TCP and reconnects on its own.
 
-The TV interface is covered by more than 410 automated tests.
+**Minimize a channel (two channels at once)**
+- While a live channel is on screen, press the **yellow button** (or *Hold OK → Minimize this channel*) to move it into the small box, muted. The big screen switches to the previous channel or, if there isn't one, to a list of your favorites to choose from.
+- When you want the minimized channel back, press **yellow** again (or *Hold OK → Bring the minimized channel to the big screen*): it takes over the big screen with sound, without reloading, and the other channel is closed. *Close the minimized channel* just drops it.
+- The box is shared with the security camera, so only one of them can be shown at a time. Two simultaneous streams depend on your TV's decoders and your provider's connection limit.
+
+The TV interface is covered by more than 420 automated tests.
 
 **Adding a language:** copy `lib/l10n/app_en.arb` to `app_<code>.arb`, translate the values, add the language name to `languageNativeNames` in `lib/l10n/l10n.dart` and its country names to `lib/backend/country_names_l10n.dart`, then run `flutter gen-l10n`. The phone/tablet interface (original upstream UI) is still English only.

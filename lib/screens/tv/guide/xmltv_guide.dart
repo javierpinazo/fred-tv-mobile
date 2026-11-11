@@ -53,10 +53,14 @@ DateTime? _parseXmltvTime(String? raw) {
 
 /// Lee un XMLTV (sin dependencias de XML: las listas son regulares y pueden ser
 /// grandes, así que se recorren con expresiones regulares).
-XmltvData parseXmltv(String xml) {
+///
+/// Con [onlyIds] solo se conservan esos canales (para tomar uno o dos de un
+/// archivo grande sin guardar el resto).
+XmltvData parseXmltv(String xml, {Set<String>? onlyIds}) {
   final data = XmltvData();
   for (final m in _channelRe.allMatches(xml)) {
     final id = cleanHtmlText(m.group(1)!);
+    if (onlyIds != null && !onlyIds.contains(id)) continue;
     final names = [
       for (final n in _displayNameRe.allMatches(m.group(2)!))
         if (cleanHtmlText(n.group(1)!).isNotEmpty) cleanHtmlText(n.group(1)!)
@@ -70,6 +74,7 @@ XmltvData parseXmltv(String xml) {
     final body = m.group(2)!;
     final title = _titleRe.firstMatch(body)?.group(1);
     if (start == null || channel == null || title == null) continue;
+    if (onlyIds != null && !onlyIds.contains(cleanHtmlText(channel))) continue;
     final titleText = cleanHtmlText(title);
     if (titleText.isEmpty) continue;
     final desc = cleanHtmlText(_descRe.firstMatch(body)?.group(1) ?? '');
@@ -159,7 +164,83 @@ class XmltvIndex {
   }
 }
 
-typedef XmltvParser = Future<XmltvData> Function(String text);
+/// Descomprime (si es gzip), decodifica y lee un XMLTV. Pensada para
+/// ejecutarse en otro isolate: los archivos grandes tardan.
+XmltvData parseXmltvBytes(({Uint8List bytes, Set<String>? onlyIds}) input) {
+  var bytes = input.bytes;
+  if (bytes.length > 2 && bytes[0] == 0x1f && bytes[1] == 0x8b) {
+    bytes = Uint8List.fromList(gzip.decode(bytes));
+  }
+  return parseXmltv(utf8.decode(bytes, allowMalformed: true),
+      onlyIds: input.onlyIds);
+}
+
+typedef XmltvParser = Future<XmltvData> Function(
+    Uint8List bytes, Set<String>? onlyIds);
+
+/// Guía de un canal concreto tomada de un XMLTV que no es el de su país (por
+/// ejemplo DW en español: el XMLTV de Alemania solo trae la señal en inglés).
+class XmltvExtra {
+  const XmltvExtra({
+    required this.url,
+    required this.xmltvId,
+    this.tvgIds = const [],
+    this.names = const [],
+  });
+
+  final String url;
+
+  /// Id del canal dentro de ese XMLTV.
+  final String xmltvId;
+
+  /// `tvg-id` de iptv-org que identifican el canal.
+  final List<String> tvgIds;
+
+  /// Grupos de palabras: el canal vale si su nombre contiene todas las de
+  /// alguno (sin tildes ni ñ: `{'dw', 'espanol'}`).
+  final List<Set<String>> names;
+
+  bool matches(Channel channel) {
+    final tvgId = channel.tvgId?.toLowerCase();
+    if (tvgId != null && tvgIds.any((t) => t.toLowerCase() == tvgId)) {
+      return true;
+    }
+    final tokens = normalizeChannelName(channel.name)
+        .replaceAll('ñ', 'n')
+        .split(' ')
+        .toSet();
+    return names.any(tokens.containsAll);
+  }
+}
+
+const String _epgUruguay =
+    'https://epgshare01.online/epgshare01/epg_ripper_UY1.xml.gz';
+
+/// Canales internacionales en español cuya guía solo viene bien en el XMLTV de
+/// Uruguay.
+const List<XmltvExtra> defaultXmltvExtras = [
+  XmltvExtra(
+    url: _epgUruguay,
+    xmltvId: 'DW.ESPAÑOL.HD.uy',
+    tvgIds: ['DW.de@Espanol'],
+    names: [
+      {'dw', 'espanol'},
+      {'dw', 'spanish'},
+      {'dw', 'latinoamerica'},
+    ],
+  ),
+  XmltvExtra(
+    url: _epgUruguay,
+    xmltvId: 'FRANCE.24.ESPAÑOL.HD.uy',
+    tvgIds: ['France24.fr@Spanish'],
+    names: [
+      {'france', '24', 'espanol'},
+      {'france', '24', 'spanish'},
+      {'france24', 'espanol'},
+      {'france24', 'spanish'},
+    ],
+  ),
+];
 
 /// Guía desde uno o varios XMLTV (por ejemplo los de epgshare01 por país).
 /// La lista se descarga y se indexa con [load]; hasta entonces no reconoce
@@ -167,15 +248,21 @@ typedef XmltvParser = Future<XmltvData> Function(String text);
 class XmltvGuide implements GuideProvider {
   XmltvGuide({
     required this.urls,
+    this.extras = const [],
     http.Client? client,
     XmltvParser? parser,
     this.ttl = const Duration(hours: 6),
     this.maxBytes = 25 * 1024 * 1024,
   })  : _client = client,
-        _parser = parser ?? ((text) => compute(parseXmltv, text));
+        _parser = parser ??
+            ((bytes, onlyIds) => compute(
+                parseXmltvBytes, (bytes: bytes, onlyIds: onlyIds)));
 
   /// Direcciones a descargar (se consultan en cada recarga).
   final Future<List<String>> Function() urls;
+
+  /// Guías de canales sueltos que se toman de otros XMLTV.
+  final List<XmltvExtra> extras;
   final http.Client? _client;
   final XmltvParser _parser;
   final Duration ttl;
@@ -203,9 +290,16 @@ class XmltvGuide implements GuideProvider {
     final merged = XmltvData();
     var anyOk = false;
     final list = await urls();
+    // De un XMLTV que solo se baja por las guías extra se toman esos canales
+    // y nada más (`null` = el archivo entero).
+    final jobs = <String, Set<String>?>{for (final url in list) url: null};
+    for (final e in extras) {
+      if (list.contains(e.url)) continue;
+      (jobs[e.url] ??= <String>{}).add(e.xmltvId);
+    }
     final client = _client ?? http.Client();
     try {
-      for (final url in list) {
+      for (final MapEntry(key: url, value: onlyIds) in jobs.entries) {
         try {
           final streamed = await client
               .send(http.Request('GET', Uri.parse(url)))
@@ -215,12 +309,10 @@ class XmltvGuide implements GuideProvider {
             debugPrint('XmltvGuide: $url pesa demasiado, se omite');
             continue;
           }
-          var bytes = await streamed.stream.toBytes();
-          if (bytes.length > 2 && bytes[0] == 0x1f && bytes[1] == 0x8b) {
-            bytes = Uint8List.fromList(gzip.decode(bytes));
-          }
-          final data = await _parser(utf8.decode(bytes, allowMalformed: true));
-          merged.names.addAll(data.names);
+          final data =
+              await _parser(await streamed.stream.toBytes(), onlyIds);
+          // Los canales de las guías extra no entran en el índice por nombre.
+          if (onlyIds == null) merged.names.addAll(data.names);
           merged.programs.addAll(data.programs);
           anyOk = true;
         } catch (e) {
@@ -230,7 +322,7 @@ class XmltvGuide implements GuideProvider {
     } finally {
       if (_client == null) client.close();
     }
-    if (list.isEmpty || anyOk) {
+    if (jobs.isEmpty || anyOk) {
       _data = merged;
       _index = XmltvIndex(merged.names, onlyIds: merged.programs.keys.toSet());
       _matchCache.clear();
@@ -238,8 +330,16 @@ class XmltvGuide implements GuideProvider {
     }
   }
 
-  String? _idFor(Channel channel) =>
-      _matchCache.putIfAbsent(channel.name, () => _index?.match(channel.name));
+  String? _idFor(Channel channel) => _matchCache.putIfAbsent(
+      '${channel.tvgId ?? ''}|${channel.name}', () {
+        if (_index == null) return null;
+        for (final e in extras) {
+          if (_data.programs.containsKey(e.xmltvId) && e.matches(channel)) {
+            return e.xmltvId;
+          }
+        }
+        return _index!.match(channel.name);
+      });
 
   @override
   bool matches(Channel channel) => _idFor(channel) != null;

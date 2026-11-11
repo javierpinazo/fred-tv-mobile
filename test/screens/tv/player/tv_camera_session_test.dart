@@ -15,6 +15,7 @@ class _FakeEngine implements TvEngine {
   final done = StreamController<bool>.broadcast();
   final opened = <TvMedia>[];
   bool disposed = false;
+  bool? muted;
   Duration pos = Duration.zero;
   Object? openError;
 
@@ -48,6 +49,8 @@ class _FakeEngine implements TvEngine {
   Future<void> playOrPause() async {}
   @override
   Future<void> seek(Duration to) async {}
+  @override
+  Future<void> setMuted(bool value) async => muted = value;
   @override
   bool get supportsTracks => false;
   @override
@@ -213,6 +216,55 @@ void main() {
     expect(slow.status, TvCameraStatus.error);
     await slow.retryNow();
     expect(engines, hasLength(2));
+  });
+
+  test('un canal minimizado usa su user agent, sus cabeceras y su buffer',
+      () async {
+    await session.show('https://tv.example/a.m3u8',
+        userAgent: 'UA', headers: {'Referer': 'r'}, bufferSecs: 6);
+    final media = engines.single.opened.single;
+    expect(media.userAgent, 'UA');
+    expect(media.headers, {'Referer': 'r'});
+    expect(media.bufferSecs, 6);
+    expect(media.mute, isTrue);
+    // Siempre mpv, aunque ExoPlayer pudiera abrir la dirección.
+    expect(session.plan.every((a) => a.engine == TvEngineKind.mpv), isTrue);
+  });
+
+  test('takeEngine cede el motor en directo sin liberarlo', () async {
+    await session.show(url);
+    engines.single.frame.add(null);
+    await settle();
+    final engine = session.takeEngine();
+    expect(engine, same(engines.single));
+    expect(engines.single.disposed, isFalse);
+    expect(session.visible, isFalse);
+    expect(session.buildVideo(), isNull);
+    expect(session.attempt, 0);
+    // La sesión ya no escucha al motor cedido.
+    engines.single.error.add('x');
+    engines.single.done.add(true);
+    await settle();
+    expect(session.status, TvCameraStatus.live);
+    expect(engines, hasLength(1));
+  });
+
+  test('takeEngine no cede nada mientras conecta o si está oculta', () async {
+    expect(session.takeEngine(), isNull);
+    await session.show(url);
+    expect(session.takeEngine(), isNull);
+    expect(session.visible, isTrue);
+    expect(engines.single.disposed, isFalse);
+  });
+
+  test('tras ceder el motor se puede mostrar otra vez con uno nuevo', () async {
+    await session.show(url);
+    engines.single.frame.add(null);
+    await settle();
+    session.takeEngine();
+    await session.show('rtsp://192.168.1.20/stream2');
+    expect(engines, hasLength(2));
+    expect(engines.last.opened.single.url, 'rtsp://192.168.1.20/stream2');
   });
 
   test('cerrar la sesión libera el motor', () async {
