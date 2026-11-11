@@ -32,11 +32,26 @@ bool isYoutubeChannelUrl(String? url) => _channelPath(url) != null;
 
 /// Dirección de la pestaña [tab] del canal, pedida en español: en inglés
 /// YouTube traduce los títulos de los vídeos.
-Uri youtubeTabUri(String channelUrl, YoutubeTab tab) {
+Uri youtubeTabUri(String channelUrl, YoutubeTab tab) => Uri.https(
+    'www.youtube.com', '${youtubeChannelKey(channelUrl)}/${tab.name}', _es);
+
+const _es = {'hl': 'es'};
+
+/// Lo que identifica al canal de [channelUrl]: `/channel/UC…` o `/@handle`.
+/// Lanza [ArgumentError] si no es la dirección de un canal.
+String youtubeChannelKey(String channelUrl) {
   final path = _channelPath(channelUrl);
   if (path == null) {
     throw ArgumentError.value(
         channelUrl, 'channelUrl', 'no es un canal de YouTube');
   }
-  return Uri.https('www.youtube.com', '$path/${tab.name}', {'hl': 'es'});
+  return path;
 }
+
+/// Dirección de la pestaña con las listas del canal.
+Uri youtubePlaylistsUri(String channelUrl) => Uri.https(
+    'www.youtube.com', '${youtubeChannelKey(channelUrl)}/playlists', _es);
+
+/// Dirección de la lista [playlistId].
+Uri youtubePlaylistUri(String playlistId) =>
+    Uri.https('www.youtube.com', '/playlist', {'list': playlistId, ..._es});

@@ -47,4 +47,15 @@ void main() {
             'https://www.youtube.com/watch?v=Ejg0OQPYVgw', YoutubeTab.videos),
         throwsArgumentError);
   });
+
+  test('direcciones de listas', () {
+    expect(youtubeChannelKey('https://youtube.com/@DWEspanol/videos'),
+        '/@DWEspanol');
+    expect(
+        youtubePlaylistsUri('https://www.youtube.com/channel/UCabc').toString(),
+        'https://www.youtube.com/channel/UCabc/playlists?hl=es');
+    expect(youtubePlaylistUri('PLx1').toString(),
+        'https://www.youtube.com/playlist?list=PLx1&hl=es');
+    expect(() => youtubeChannelKey('https://example.com'), throwsArgumentError);
+  });
 }

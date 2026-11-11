@@ -30,6 +30,37 @@ final _ageEn = RegExp(
 /// de la página y sin los directos programados. No depende del idioma de la
 /// página salvo para la antigüedad (español o inglés). Lanza [YoutubeParseException] si no trae `ytInitialData` válido.
 List<YoutubeProgram> parseYoutubeTab(String html) {
+  final data = _initialData(html);
+
+  final programs = <YoutubeProgram>[];
+  for (final lockup in _collect(data, 'lockupViewModel')) {
+    final program = _program(lockup);
+    if (program != null) programs.add(program);
+  }
+  return programs;
+}
+
+final _playlistId = RegExp(r'^PL[A-Za-z0-9_-]{8,}$');
+
+/// Listas de un canal (pestaña `/playlists`), en el orden de la página y sin
+/// repetir. Lanza [YoutubeParseException] si no trae `ytInitialData` válido.
+List<({String id, String title})> parseYoutubePlaylists(String html) {
+  final data = _initialData(html);
+  final seen = <String>{};
+  final playlists = <({String id, String title})>[];
+  for (final lockup in _collect(data, 'lockupViewModel')) {
+    if (lockup is! Map) continue;
+    final id = lockup['contentId'];
+    if (id is! String || !_playlistId.hasMatch(id)) continue;
+    final title = _title(lockup);
+    if (title == null || title.isEmpty || !seen.add(id)) continue;
+    playlists.add((id: id, title: title));
+  }
+  return playlists;
+}
+
+/// El objeto `ytInitialData` incrustado en la página.
+Map _initialData(String html) {
   final start = html.indexOf(_marker);
   if (start < 0) throw YoutubeParseException('la página no trae ytInitialData');
   final from = start + _marker.length;
@@ -42,13 +73,7 @@ List<YoutubeProgram> parseYoutubeTab(String html) {
     throw YoutubeParseException('ytInitialData no es JSON válido: ${e.message}');
   }
   if (data is! Map) throw YoutubeParseException('ytInitialData no es un objeto');
-
-  final programs = <YoutubeProgram>[];
-  for (final lockup in _collect(data, 'lockupViewModel')) {
-    final program = _program(lockup);
-    if (program != null) programs.add(program);
-  }
-  return programs;
+  return data;
 }
 
 /// «hace 16 h», «Transmitido hace 1 día», «2 weeks ago»… → antigüedad

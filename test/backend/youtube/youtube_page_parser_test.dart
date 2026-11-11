@@ -202,4 +202,31 @@ void main() {
     expect(parseYoutubeAge('Programado para el 11/11/26, 9:30'), isNull);
     expect(parseYoutubeAge(''), isNull);
   });
+
+  test('lee las listas del canal y salta lo que no es lista', () {
+    Map<String, dynamic> item(String id, String? title, {String? type}) => {
+          'contentId': id,
+          if (type != null) 'contentType': type,
+          'metadata': {
+            if (title != null)
+              'lockupMetadataViewModel': {
+                'title': {'content': title}
+              }
+          },
+        };
+    final html = _page([
+      item('PL4_L4CSNdHPUIm8ajOHFvHniKhc8Z26hY', '#LaEncerrona',
+          type: 'LOCKUP_CONTENT_TYPE_PODCAST'),
+      item('PLb7sHDpNJW0s', ' ESPECIALES CANAL YA '),
+      item('aaaaaaaaaaa', 'un vídeo'),
+      item('PLsinTitulo99', null),
+      item('PLb7sHDpNJW0s', 'repetida'),
+    ]);
+    expect(parseYoutubePlaylists(html), [
+      (id: 'PL4_L4CSNdHPUIm8ajOHFvHniKhc8Z26hY', title: '#LaEncerrona'),
+      (id: 'PLb7sHDpNJW0s', title: 'ESPECIALES CANAL YA'),
+    ]);
+    expect(() => parseYoutubePlaylists('<html></html>'),
+        throwsA(isA<YoutubeParseException>()));
+  });
 }
