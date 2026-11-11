@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:open_tv/backend/sql.dart';
+import 'package:open_tv/backend/youtube/youtube_seed.dart';
 import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/source_type.dart';
@@ -59,11 +60,22 @@ class _TvBootstrapState extends State<TvBootstrap> {
     setState(() => _phase = _Phase.preparing);
     try {
       await (widget.prepare ?? () => ensureDefaultTvSources(data: widget.data))();
+      if (widget.prepare == null) await _seedYoutube();
       if (!mounted) return;
       _goHome();
     } catch (e) {
       debugPrint('TvBootstrap: error preparando las fuentes: $e');
       if (mounted) setState(() => _phase = _Phase.failed);
+    }
+  }
+
+  /// Canales de YouTube iniciales. Si falla no impide entrar: se reintenta
+  /// en el siguiente arranque.
+  Future<void> _seedYoutube() async {
+    try {
+      await ensureYoutubeChannels();
+    } catch (e) {
+      debugPrint('TvBootstrap: no se pudieron crear los canales de YouTube: $e');
     }
   }
 
