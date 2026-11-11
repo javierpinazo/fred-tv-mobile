@@ -929,4 +929,71 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get iptvCatDocumentary => 'Dokumentationen';
+
+  @override
+  String get ytLive => 'LIVE';
+
+  @override
+  String get ytLiveNow => 'Jetzt live';
+
+  @override
+  String get ytLoadFailed =>
+      'Die YouTube-Sendungen konnten nicht geladen werden';
+
+  @override
+  String get ytEmpty => 'Dieser Kanal hat keine aktuellen Sendungen';
+
+  @override
+  String ytAgeMinutes(int n) {
+    return 'vor $n Min.';
+  }
+
+  @override
+  String ytAgeHours(int n) {
+    return 'vor $n Std.';
+  }
+
+  @override
+  String ytAgeDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'vor $n Tagen',
+      one: 'vor 1 Tag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytAgeWeeks(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'vor $n Wochen',
+      one: 'vor 1 Woche',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytAgeMonths(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'vor $n Monaten',
+      one: 'vor 1 Monat',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytAgeYears(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'vor $n Jahren',
+      one: 'vor 1 Jahr',
+    );
+    return '$_temp0';
+  }
 }

@@ -921,4 +921,70 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get iptvCatDocumentary => 'Documentari';
+
+  @override
+  String get ytLive => 'IN DIRETTA';
+
+  @override
+  String get ytLiveNow => 'In diretta ora';
+
+  @override
+  String get ytLoadFailed => 'Impossibile caricare i programmi di YouTube';
+
+  @override
+  String get ytEmpty => 'Questo canale non ha programmi recenti';
+
+  @override
+  String ytAgeMinutes(int n) {
+    return '$n min fa';
+  }
+
+  @override
+  String ytAgeHours(int n) {
+    return '$n h fa';
+  }
+
+  @override
+  String ytAgeDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n giorni fa',
+      one: '1 giorno fa',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytAgeWeeks(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n settimane fa',
+      one: '1 settimana fa',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytAgeMonths(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n mesi fa',
+      one: '1 mese fa',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytAgeYears(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n anni fa',
+      one: '1 anno fa',
+    );
+    return '$_temp0';
+  }
 }

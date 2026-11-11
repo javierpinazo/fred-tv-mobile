@@ -915,4 +915,71 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get iptvCatDocumentary => 'Documentários';
+
+  @override
+  String get ytLive => 'AO VIVO';
+
+  @override
+  String get ytLiveNow => 'Ao vivo agora';
+
+  @override
+  String get ytLoadFailed =>
+      'Não foi possível carregar os programas do YouTube';
+
+  @override
+  String get ytEmpty => 'Este canal não tem programas recentes';
+
+  @override
+  String ytAgeMinutes(int n) {
+    return 'há $n min';
+  }
+
+  @override
+  String ytAgeHours(int n) {
+    return 'há $n h';
+  }
+
+  @override
+  String ytAgeDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'há $n dias',
+      one: 'há 1 dia',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytAgeWeeks(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'há $n semanas',
+      one: 'há 1 semana',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytAgeMonths(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'há $n meses',
+      one: 'há 1 mês',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytAgeYears(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'há $n anos',
+      one: 'há 1 ano',
+    );
+    return '$_temp0';
+  }
 }

@@ -919,4 +919,70 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get iptvCatDocumentary => 'Documentales';
+
+  @override
+  String get ytLive => 'EN VIVO';
+
+  @override
+  String get ytLiveNow => 'En vivo ahora';
+
+  @override
+  String get ytLoadFailed => 'No se pudieron cargar los programas de YouTube';
+
+  @override
+  String get ytEmpty => 'Este canal no tiene programas recientes';
+
+  @override
+  String ytAgeMinutes(int n) {
+    return 'hace $n min';
+  }
+
+  @override
+  String ytAgeHours(int n) {
+    return 'hace $n h';
+  }
+
+  @override
+  String ytAgeDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'hace $n días',
+      one: 'hace 1 día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytAgeWeeks(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'hace $n semanas',
+      one: 'hace 1 semana',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytAgeMonths(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'hace $n meses',
+      one: 'hace 1 mes',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytAgeYears(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'hace $n años',
+      one: 'hace 1 año',
+    );
+    return '$_temp0';
+  }
 }

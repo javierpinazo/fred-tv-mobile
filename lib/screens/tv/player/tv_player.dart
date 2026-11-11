@@ -19,6 +19,8 @@ import 'package:open_tv/screens/tv/player/tv_player_keys.dart';
 import 'package:open_tv/screens/tv/player/tv_playlist.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
+import 'package:open_tv/screens/tv/youtube/tv_youtube_programs.dart';
+import 'package:open_tv/backend/youtube/youtube_channel.dart';
 import 'package:open_tv/screens/tv/tv_favorite_picker.dart';
 import 'package:open_tv/screens/tv/widgets/tv_dialogs.dart';
 import 'package:open_tv/screens/tv/widgets/tv_guide_dialog.dart';
@@ -32,7 +34,19 @@ Future<int?> openTvPlayer(
   required List<Channel> playlist,
   required int index,
   TvData data = const TvData(),
-}) {
+}) async {
+  // Un canal de YouTube no se reproduce directamente: abre sus programas.
+  if (index >= 0 &&
+      index < playlist.length &&
+      isYoutubeChannelUrl(playlist[index].url)) {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            TvYoutubePrograms(channel: playlist[index], data: data),
+      ),
+    );
+    return index;
+  }
   return Navigator.of(context).push<int>(
     MaterialPageRoute<int>(
       builder: (_) => TvPlayer(

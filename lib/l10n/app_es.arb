@@ -503,5 +503,57 @@
   "iptvCatKids": "Infantil",
   "iptvCatMovies": "Películas",
   "iptvCatMusic": "Música",
-  "iptvCatDocumentary": "Documentales"
+  "iptvCatDocumentary": "Documentales",
+  "ytLive": "EN VIVO",
+  "ytLiveNow": "En vivo ahora",
+  "ytLoadFailed": "No se pudieron cargar los programas de YouTube",
+  "ytEmpty": "Este canal no tiene programas recientes",
+  "ytAgeMinutes": "hace {n} min",
+  "@ytAgeMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "ytAgeHours": "hace {n} h",
+  "@ytAgeHours": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "ytAgeDays": "{n, plural, =1{hace 1 día} other{hace {n} días}}",
+  "@ytAgeDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "ytAgeWeeks": "{n, plural, =1{hace 1 semana} other{hace {n} semanas}}",
+  "@ytAgeWeeks": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "ytAgeMonths": "{n, plural, =1{hace 1 mes} other{hace {n} meses}}",
+  "@ytAgeMonths": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "ytAgeYears": "{n, plural, =1{hace 1 año} other{hace {n} años}}",
+  "@ytAgeYears": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  }
 }

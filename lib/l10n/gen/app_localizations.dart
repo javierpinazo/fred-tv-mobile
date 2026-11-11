@@ -1623,6 +1623,66 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Documentales'**
   String get iptvCatDocumentary;
+
+  /// No description provided for @ytLive.
+  ///
+  /// In es, this message translates to:
+  /// **'EN VIVO'**
+  String get ytLive;
+
+  /// No description provided for @ytLiveNow.
+  ///
+  /// In es, this message translates to:
+  /// **'En vivo ahora'**
+  String get ytLiveNow;
+
+  /// No description provided for @ytLoadFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar los programas de YouTube'**
+  String get ytLoadFailed;
+
+  /// No description provided for @ytEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Este canal no tiene programas recientes'**
+  String get ytEmpty;
+
+  /// No description provided for @ytAgeMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'hace {n} min'**
+  String ytAgeMinutes(int n);
+
+  /// No description provided for @ytAgeHours.
+  ///
+  /// In es, this message translates to:
+  /// **'hace {n} h'**
+  String ytAgeHours(int n);
+
+  /// No description provided for @ytAgeDays.
+  ///
+  /// In es, this message translates to:
+  /// **'{n, plural, =1{hace 1 día} other{hace {n} días}}'**
+  String ytAgeDays(int n);
+
+  /// No description provided for @ytAgeWeeks.
+  ///
+  /// In es, this message translates to:
+  /// **'{n, plural, =1{hace 1 semana} other{hace {n} semanas}}'**
+  String ytAgeWeeks(int n);
+
+  /// No description provided for @ytAgeMonths.
+  ///
+  /// In es, this message translates to:
+  /// **'{n, plural, =1{hace 1 mes} other{hace {n} meses}}'**
+  String ytAgeMonths(int n);
+
+  /// No description provided for @ytAgeYears.
+  ///
+  /// In es, this message translates to:
+  /// **'{n, plural, =1{hace 1 año} other{hace {n} años}}'**
+  String ytAgeYears(int n);
 }
 
 class _AppLocalizationsDelegate

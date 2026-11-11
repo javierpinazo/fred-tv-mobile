@@ -15,6 +15,8 @@ import 'package:open_tv/backend/sql.dart';
 import 'package:open_tv/backend/user_playlists_sql.dart';
 import 'package:open_tv/screens/tv/player/tv_camera.dart';
 import 'package:open_tv/backend/utils.dart';
+import 'package:open_tv/backend/youtube/youtube_channel_service.dart';
+import 'package:open_tv/backend/youtube/youtube_program.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/channel_http_headers.dart';
 import 'package:open_tv/models/filters.dart';
@@ -52,6 +54,7 @@ class TvData {
   const TvData();
 
   static final IptvOrgCatalog _catalog = IptvOrgCatalog();
+  static final YoutubeChannelService _youtube = YoutubeChannelService();
   static final XmltvGuide _xmltv =
       XmltvGuide(urls: _epgUrls, extras: defaultXmltvExtras);
   // Pluto TV va primero: reconoce sus canales por la dirección, sin dudas.
@@ -118,6 +121,14 @@ class TvData {
     }
     tvSourcesVersion.value++;
   }
+
+  // --- Canales de YouTube -------------------------------------------------
+
+  /// Últimos programas del canal de YouTube [channel], listos para mostrar.
+  /// Lanza si no se pudieron leer.
+  Future<List<YoutubeProgram>> youtubePrograms(Channel channel,
+          {bool force = false}) =>
+      _youtube.programs(channel.url ?? '', force: force);
 
   // --- Guía de programación -----------------------------------------------
 

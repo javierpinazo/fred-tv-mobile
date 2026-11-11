@@ -252,5 +252,15 @@
   "iptvCatKids": "Kids",
   "iptvCatMovies": "Movies",
   "iptvCatMusic": "Music",
-  "iptvCatDocumentary": "Documentaries"
+  "iptvCatDocumentary": "Documentaries",
+  "ytLive": "LIVE",
+  "ytLiveNow": "Live now",
+  "ytLoadFailed": "Could not load the YouTube programs",
+  "ytEmpty": "This channel has no recent programs",
+  "ytAgeMinutes": "{n} min ago",
+  "ytAgeHours": "{n} h ago",
+  "ytAgeDays": "{n, plural, =1{1 day ago} other{{n} days ago}}",
+  "ytAgeWeeks": "{n, plural, =1{1 week ago} other{{n} weeks ago}}",
+  "ytAgeMonths": "{n, plural, =1{1 month ago} other{{n} months ago}}",
+  "ytAgeYears": "{n, plural, =1{1 year ago} other{{n} years ago}}"
 }

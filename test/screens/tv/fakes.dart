@@ -5,6 +5,7 @@ import 'package:open_tv/backend/backup_sql.dart';
 import 'package:open_tv/backend/iptv_org_catalog.dart';
 import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/backend/sql.dart' show pageSize;
+import 'package:open_tv/backend/youtube/youtube_program.dart';
 import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/channel_http_headers.dart';
@@ -64,6 +65,15 @@ class FakeTvData extends TvData {
   SourceRefreshResult refreshResult =
       const SourceRefreshResult(refreshed: 0, failedNames: []);
   int _nextSourceId = 100;
+
+  /// Programas de YouTube que devuelve [youtubePrograms] (o el error que lanza).
+  Future<List<YoutubeProgram>> Function(Channel channel, {bool force})?
+      onYoutubePrograms;
+
+  @override
+  Future<List<YoutubeProgram>> youtubePrograms(Channel channel,
+          {bool force = false}) =>
+      onYoutubePrograms?.call(channel, force: force) ?? Future.value(const []);
 
   /// Canales vistos hace poco (más reciente primero).
   List<Channel> recents = [];
@@ -518,6 +528,27 @@ Future<void> pumpTv(WidgetTester t, Widget child) async {
     home: Scaffold(body: child),
   ));
   await t.pumpAndSettle();
+}
+
+/// Monta una app de TV y empuja encima una ruta: la pantalla de [builder] o lo
+/// que abra [open]. No espera a que se asiente (puede haber una carga girando).
+Future<void> pumpTvRoute(
+  WidgetTester t,
+  WidgetBuilder? builder, {
+  Future<void> Function(BuildContext context)? open,
+}) async {
+  late BuildContext home;
+  await pumpTv(t, Builder(builder: (context) {
+    home = context;
+    return const SizedBox.expand();
+  }));
+  if (open != null) {
+    open(home);
+  } else {
+    Navigator.of(home).push(MaterialPageRoute<void>(builder: builder!));
+  }
+  await t.pump();
+  await t.pump(const Duration(milliseconds: 500));
 }
 
 /// `true` si el [TvFocusable] con esa key (o dentro del widget con esa key) tiene el foco.
