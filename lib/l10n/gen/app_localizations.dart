@@ -1707,6 +1707,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'En pausa'**
   String get ytPaused;
+
+  /// No description provided for @ytAllRecent.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo lo último'**
+  String get ytAllRecent;
+
+  /// No description provided for @ytShowMoveFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Poner primero'**
+  String get ytShowMoveFirst;
+
+  /// No description provided for @ytShowMoveUp.
+  ///
+  /// In es, this message translates to:
+  /// **'Subir'**
+  String get ytShowMoveUp;
+
+  /// No description provided for @ytShowMoveDown.
+  ///
+  /// In es, this message translates to:
+  /// **'Bajar'**
+  String get ytShowMoveDown;
 }
 
 class _AppLocalizationsDelegate

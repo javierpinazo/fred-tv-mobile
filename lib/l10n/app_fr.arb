@@ -266,5 +266,9 @@
   "ytPlayerFailed": "Impossible de lire cette vidéo ici",
   "ytOpenInYoutube": "Ouvrir dans YouTube",
   "ytBack": "Retour",
-  "ytPaused": "En pause"
+  "ytPaused": "En pause",
+  "ytAllRecent": "Les plus récents",
+  "ytShowMoveFirst": "Mettre en premier",
+  "ytShowMoveUp": "Monter",
+  "ytShowMoveDown": "Descendre"
 }

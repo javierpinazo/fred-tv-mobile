@@ -15,8 +15,10 @@ import 'package:open_tv/backend/sql.dart';
 import 'package:open_tv/backend/user_playlists_sql.dart';
 import 'package:open_tv/screens/tv/player/tv_camera.dart';
 import 'package:open_tv/backend/utils.dart';
+import 'package:open_tv/backend/youtube/youtube_channel.dart';
 import 'package:open_tv/backend/youtube/youtube_channel_service.dart';
-import 'package:open_tv/backend/youtube/youtube_program.dart';
+import 'package:open_tv/backend/youtube/youtube_show.dart';
+import 'package:open_tv/backend/youtube/youtube_show_order.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/channel_http_headers.dart';
 import 'package:open_tv/models/filters.dart';
@@ -124,11 +126,35 @@ class TvData {
 
   // --- Canales de YouTube -------------------------------------------------
 
-  /// Últimos programas del canal de YouTube [channel], listos para mostrar.
+  /// Últimas emisiones del canal de YouTube [channel] y sus programas.
   /// Lanza si no se pudieron leer.
-  Future<List<YoutubeProgram>> youtubePrograms(Channel channel,
-          {bool force = false}) =>
-      _youtube.programs(channel.url ?? '', force: force);
+  Future<YoutubeChannelPage> youtubeChannelPage(Channel channel,
+      {bool force = false}) async {
+    return _youtube.channelPage(
+      channel.url ?? '',
+      preferred: await youtubeShowOrder(channel),
+      force: force,
+    );
+  }
+
+  /// Orden de los programas de [channel]: el que dejó el usuario o, si no ha
+  /// ordenado nada, el programa prioritario inicial del canal (si lo tiene).
+  Future<List<String>> youtubeShowOrder(Channel channel) async {
+    final key = youtubeChannelKey(channel.url ?? '');
+    final saved = decodeYoutubeShowOrder(
+        await Sql.getSetting(youtubeShowOrderSettingKey), key);
+    if (saved.isNotEmpty) return saved;
+    final first = defaultYoutubeShowKey(key);
+    return [if (first != null) first];
+  }
+
+  Future<void> setYoutubeShowOrder(Channel channel, List<String> order) async {
+    final key = youtubeChannelKey(channel.url ?? '');
+    await Sql.setSetting(
+        youtubeShowOrderSettingKey,
+        encodeYoutubeShowOrder(
+            await Sql.getSetting(youtubeShowOrderSettingKey), key, order));
+  }
 
   // --- Guía de programación -----------------------------------------------
 

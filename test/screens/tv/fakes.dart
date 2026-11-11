@@ -5,7 +5,9 @@ import 'package:open_tv/backend/backup_sql.dart';
 import 'package:open_tv/backend/iptv_org_catalog.dart';
 import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/backend/sql.dart' show pageSize;
+import 'package:open_tv/backend/youtube/youtube_channel_service.dart';
 import 'package:open_tv/backend/youtube/youtube_program.dart';
+import 'package:open_tv/backend/youtube/youtube_show.dart';
 import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/models/channel_http_headers.dart';
@@ -70,10 +72,29 @@ class FakeTvData extends TvData {
   Future<List<YoutubeProgram>> Function(Channel channel, {bool force})?
       onYoutubePrograms;
 
+  /// Programas (series) que acompañan a las emisiones de [onYoutubePrograms].
+  List<YoutubeShow> youtubeShows = const [];
+
+  /// Orden de programas guardado por canal (por la dirección del canal).
+  final Map<String, List<String>> youtubeOrders = {};
+
   @override
-  Future<List<YoutubeProgram>> youtubePrograms(Channel channel,
-          {bool force = false}) =>
-      onYoutubePrograms?.call(channel, force: force) ?? Future.value(const []);
+  Future<YoutubeChannelPage> youtubeChannelPage(Channel channel,
+      {bool force = false}) async {
+    final programs =
+        await (onYoutubePrograms?.call(channel, force: force) ??
+            Future.value(const <YoutubeProgram>[]));
+    return YoutubeChannelPage(programs: programs, shows: youtubeShows);
+  }
+
+  @override
+  Future<List<String>> youtubeShowOrder(Channel channel) async =>
+      youtubeOrders[channel.url] ?? const [];
+
+  @override
+  Future<void> setYoutubeShowOrder(Channel channel, List<String> order) async {
+    youtubeOrders[channel.url!] = order;
+  }
 
   /// Canales vistos hace poco (más reciente primero).
   List<Channel> recents = [];

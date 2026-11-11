@@ -266,5 +266,9 @@
   "ytPlayerFailed": "Não foi possível reproduzir este vídeo aqui",
   "ytOpenInYoutube": "Abrir no YouTube",
   "ytBack": "Voltar",
-  "ytPaused": "Em pausa"
+  "ytPaused": "Em pausa",
+  "ytAllRecent": "Mais recentes",
+  "ytShowMoveFirst": "Colocar primeiro",
+  "ytShowMoveUp": "Subir",
+  "ytShowMoveDown": "Descer"
 }

@@ -997,4 +997,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get ytPaused => 'En pausa';
+
+  @override
+  String get ytAllRecent => 'Todo lo último';
+
+  @override
+  String get ytShowMoveFirst => 'Poner primero';
+
+  @override
+  String get ytShowMoveUp => 'Subir';
+
+  @override
+  String get ytShowMoveDown => 'Bajar';
 }

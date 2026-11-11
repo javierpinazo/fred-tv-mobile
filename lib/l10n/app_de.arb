@@ -266,5 +266,9 @@
   "ytPlayerFailed": "Dieses Video kann hier nicht abgespielt werden",
   "ytOpenInYoutube": "In YouTube öffnen",
   "ytBack": "Zurück",
-  "ytPaused": "Pausiert"
+  "ytPaused": "Pausiert",
+  "ytAllRecent": "Neueste",
+  "ytShowMoveFirst": "Ganz nach oben",
+  "ytShowMoveUp": "Nach oben",
+  "ytShowMoveDown": "Nach unten"
 }
