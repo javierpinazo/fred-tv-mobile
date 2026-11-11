@@ -996,4 +996,16 @@ class AppLocalizationsDe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get ytPlayerFailed => 'Dieses Video kann hier nicht abgespielt werden';
+
+  @override
+  String get ytOpenInYoutube => 'In YouTube öffnen';
+
+  @override
+  String get ytBack => 'Zurück';
+
+  @override
+  String get ytPaused => 'Pausiert';
 }

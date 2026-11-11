@@ -6,6 +6,7 @@ import 'package:open_tv/models/channel.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
+import 'package:open_tv/screens/tv/youtube/tv_youtube_player.dart';
 import 'package:open_tv/screens/tv/youtube/youtube_age_label.dart';
 
 /// Reproduce [program] del canal [channel]; termina al cerrar el reproductor.
@@ -14,9 +15,6 @@ typedef YoutubePlay = Future<void> Function(
 
 typedef YoutubeThumbnailBuilder = Widget Function(
     BuildContext context, YoutubeProgram program);
-
-/// Lo que se usa para reproducir cuando no se indica `onPlay`.
-YoutubePlay defaultYoutubePlay = (context, channel, program) async {};
 
 enum _Phase { loading, failed, ready }
 
@@ -88,7 +86,7 @@ class _TvYoutubeProgramsState extends State<TvYoutubePrograms> {
   }
 
   Future<void> _play(int index) async {
-    final play = widget.onPlay ?? defaultYoutubePlay;
+    final play = widget.onPlay ?? openTvYoutubePlayer;
     await play(context, widget.channel, _programs[index]);
     if (!mounted || index >= _nodes.length) return;
     _nodes[index].requestFocus();

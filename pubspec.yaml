@@ -57,6 +57,8 @@ dependencies:
   package_info_plus: ^8.3.0
   video_player: ^2.10.0 # ExoPlayer (Media3) en Android: motor principal de TV
   wakelock_plus: ^1.2.8 # mantiene la pantalla encendida con ExoPlayer
+  webview_flutter: 4.13.0
+  webview_flutter_android: 4.10.0
 
 dev_dependencies:
   flutter_test:

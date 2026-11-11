@@ -262,5 +262,9 @@
   "ytAgeDays": "{n, plural, =1{1 day ago} other{{n} days ago}}",
   "ytAgeWeeks": "{n, plural, =1{1 week ago} other{{n} weeks ago}}",
   "ytAgeMonths": "{n, plural, =1{1 month ago} other{{n} months ago}}",
-  "ytAgeYears": "{n, plural, =1{1 year ago} other{{n} years ago}}"
+  "ytAgeYears": "{n, plural, =1{1 year ago} other{{n} years ago}}",
+  "ytPlayerFailed": "This video cannot be played here",
+  "ytOpenInYoutube": "Open in YouTube",
+  "ytBack": "Back",
+  "ytPaused": "Paused"
 }

@@ -262,5 +262,9 @@
   "ytAgeDays": "{n, plural, =1{1 giorno fa} other{{n} giorni fa}}",
   "ytAgeWeeks": "{n, plural, =1{1 settimana fa} other{{n} settimane fa}}",
   "ytAgeMonths": "{n, plural, =1{1 mese fa} other{{n} mesi fa}}",
-  "ytAgeYears": "{n, plural, =1{1 anno fa} other{{n} anni fa}}"
+  "ytAgeYears": "{n, plural, =1{1 anno fa} other{{n} anni fa}}",
+  "ytPlayerFailed": "Impossibile riprodurre questo video qui",
+  "ytOpenInYoutube": "Apri in YouTube",
+  "ytBack": "Indietro",
+  "ytPaused": "In pausa"
 }

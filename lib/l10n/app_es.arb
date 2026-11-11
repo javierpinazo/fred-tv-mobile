@@ -555,5 +555,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "ytPlayerFailed": "No se pudo reproducir este vídeo aquí",
+  "ytOpenInYoutube": "Abrir en YouTube",
+  "ytBack": "Volver",
+  "ytPaused": "En pausa"
 }

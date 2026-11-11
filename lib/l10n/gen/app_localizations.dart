@@ -1683,6 +1683,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{n, plural, =1{hace 1 año} other{hace {n} años}}'**
   String ytAgeYears(int n);
+
+  /// No description provided for @ytPlayerFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo reproducir este vídeo aquí'**
+  String get ytPlayerFailed;
+
+  /// No description provided for @ytOpenInYoutube.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir en YouTube'**
+  String get ytOpenInYoutube;
+
+  /// No description provided for @ytBack.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver'**
+  String get ytBack;
+
+  /// No description provided for @ytPaused.
+  ///
+  /// In es, this message translates to:
+  /// **'En pausa'**
+  String get ytPaused;
 }
 
 class _AppLocalizationsDelegate

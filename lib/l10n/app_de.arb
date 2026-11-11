@@ -262,5 +262,9 @@
   "ytAgeDays": "{n, plural, =1{vor 1 Tag} other{vor {n} Tagen}}",
   "ytAgeWeeks": "{n, plural, =1{vor 1 Woche} other{vor {n} Wochen}}",
   "ytAgeMonths": "{n, plural, =1{vor 1 Monat} other{vor {n} Monaten}}",
-  "ytAgeYears": "{n, plural, =1{vor 1 Jahr} other{vor {n} Jahren}}"
+  "ytAgeYears": "{n, plural, =1{vor 1 Jahr} other{vor {n} Jahren}}",
+  "ytPlayerFailed": "Dieses Video kann hier nicht abgespielt werden",
+  "ytOpenInYoutube": "In YouTube öffnen",
+  "ytBack": "Zurück",
+  "ytPaused": "Pausiert"
 }

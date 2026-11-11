@@ -982,4 +982,16 @@ class AppLocalizationsPt extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get ytPlayerFailed => 'Não foi possível reproduzir este vídeo aqui';
+
+  @override
+  String get ytOpenInYoutube => 'Abrir no YouTube';
+
+  @override
+  String get ytBack => 'Voltar';
+
+  @override
+  String get ytPaused => 'Em pausa';
 }

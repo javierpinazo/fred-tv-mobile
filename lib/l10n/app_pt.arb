@@ -262,5 +262,9 @@
   "ytAgeDays": "{n, plural, =1{há 1 dia} other{há {n} dias}}",
   "ytAgeWeeks": "{n, plural, =1{há 1 semana} other{há {n} semanas}}",
   "ytAgeMonths": "{n, plural, =1{há 1 mês} other{há {n} meses}}",
-  "ytAgeYears": "{n, plural, =1{há 1 ano} other{há {n} anos}}"
+  "ytAgeYears": "{n, plural, =1{há 1 ano} other{há {n} anos}}",
+  "ytPlayerFailed": "Não foi possível reproduzir este vídeo aqui",
+  "ytOpenInYoutube": "Abrir no YouTube",
+  "ytBack": "Voltar",
+  "ytPaused": "Em pausa"
 }
