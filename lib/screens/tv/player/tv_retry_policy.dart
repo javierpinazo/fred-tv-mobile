@@ -27,6 +27,9 @@ enum TvEngineMode {
       name == 'mpv' ? TvEngineMode.mpv : TvEngineMode.auto;
 }
 
+/// Qué hacer con el reproductor al volver la app del segundo plano.
+enum TvResumeAction { none, reopen, resume }
+
 class TvPlaybackAttempt {
   const TvPlaybackAttempt({
     required this.engine,
@@ -59,6 +62,19 @@ abstract final class TvRetryPolicy {
   /// ExoPlayer, en cambio, queda parado tras un error.
   static bool errorIsTransientWhilePlaying(TvEngineKind engine) =>
       engine == TvEngineKind.mpv;
+
+  /// Al volver del segundo plano: un directo se reabre (lo que quedó en
+  /// buffer ya es viejo), una película que sonaba continúa y todo lo demás
+  /// (pausa del usuario, pantalla de error) se deja como estaba.
+  static TvResumeAction onResume({
+    required bool isLive,
+    required bool hasError,
+    required bool wasPlaying,
+  }) {
+    if (hasError) return TvResumeAction.none;
+    if (isLive) return TvResumeAction.reopen;
+    return wasPlaying ? TvResumeAction.resume : TvResumeAction.none;
+  }
 
   static const TvPlaybackAttempt _exo =
       TvPlaybackAttempt(engine: TvEngineKind.exo);

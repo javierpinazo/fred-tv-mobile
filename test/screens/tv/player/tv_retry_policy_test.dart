@@ -122,4 +122,31 @@ void main() {
     expect(TvRetryPolicy.errorIsTransientWhilePlaying(TvEngineKind.exo), isFalse);
     expect(TvRetryPolicy.stallCheckDelay, const Duration(seconds: 4));
   });
+
+  group('TvRetryPolicy.onResume', () {
+    test(
+        'un directo se reabre',
+        () => expect(
+            TvRetryPolicy.onResume(
+                isLive: true, hasError: false, wasPlaying: false),
+            TvResumeAction.reopen));
+    test(
+        'una película que sonaba continúa',
+        () => expect(
+            TvRetryPolicy.onResume(
+                isLive: false, hasError: false, wasPlaying: true),
+            TvResumeAction.resume));
+    test(
+        'una película en pausa se queda en pausa',
+        () => expect(
+            TvRetryPolicy.onResume(
+                isLive: false, hasError: false, wasPlaying: false),
+            TvResumeAction.none));
+    test(
+        'con la pantalla de error no se hace nada',
+        () => expect(
+            TvRetryPolicy.onResume(
+                isLive: true, hasError: true, wasPlaying: true),
+            TvResumeAction.none));
+  });
 }

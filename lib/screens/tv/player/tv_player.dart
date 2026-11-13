@@ -74,7 +74,7 @@ class TvPlayer extends StatefulWidget {
   State<TvPlayer> createState() => _TvPlayerState();
 }
 
-class _TvPlayerState extends State<TvPlayer> {
+class _TvPlayerState extends State<TvPlayer> with WidgetsBindingObserver {
   static const _overlayDuration = Duration(seconds: 4);
   static const _seekStep = Duration(seconds: 10);
 
@@ -121,12 +121,18 @@ class _TvPlayerState extends State<TvPlayer> {
   int _liveReconnects = 0;
   int _generation = 0;
 
+  // Segundo plano (Inicio, otra app): se paran los reintentos y se recupera
+  // la reproducción al volver.
+  bool _backgrounded = false;
+  bool _wasPlaying = false;
+
   Channel get _channel => _cursor.current;
   bool get _isLive => _channel.mediaType == MediaType.livestream;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _cursor = TvPlaylistCursor(widget.playlist, widget.initialIndex);
     _camera.addListener(_onCameraChanged);
@@ -137,6 +143,7 @@ class _TvPlayerState extends State<TvPlayer> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _overlayTimer?.cancel();
     _numberTimer?.cancel();
     _firstFrameTimer?.cancel();
@@ -156,6 +163,41 @@ class _TvPlayerState extends State<TvPlayer> {
     _retryFocus.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
+  }
+
+  // --- Ciclo de vida ------------------------------------------------------
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      if (_backgrounded || _exiting) return;
+      _backgrounded = true;
+      _wasPlaying = _playing;
+      _generation++; // invalida un _play en curso
+      _firstFrameTimer?.cancel();
+      _stallTimer?.cancel();
+      _reconnectTimer?.cancel();
+      final engine = _engine;
+      if (engine != null) {
+        unawaited(engine.pause().catchError((Object e) {
+          debugPrint('TvPlayer: no se pudo pausar en segundo plano: $e');
+        }));
+      }
+    } else if (state == AppLifecycleState.resumed && _backgrounded) {
+      _backgrounded = false;
+      switch (TvRetryPolicy.onResume(
+          isLive: _isLive, hasError: _hasError, wasPlaying: _wasPlaying)) {
+        case TvResumeAction.reopen:
+          _liveReconnects = 0;
+          _play(0);
+        case TvResumeAction.resume:
+          unawaited(_engine?.play());
+        case TvResumeAction.none:
+          break;
+      }
+      if (_camera.visible) unawaited(_camera.retryNow());
+      if (_mini.visible) unawaited(_mini.retryNow());
+    }
   }
 
   // --- Reproducción -------------------------------------------------------
@@ -299,7 +341,9 @@ class _TvPlayerState extends State<TvPlayer> {
   }
 
   void _onFailure(int generation) {
-    if (!mounted || _exiting || generation != _generation) return;
+    if (!mounted || _exiting || _backgrounded || generation != _generation) {
+      return;
+    }
     _firstFrameTimer?.cancel();
     if (TvRetryPolicy.next(_plan, _attemptIndex) != null) {
       _play(_attemptIndex + 1);
@@ -381,7 +425,12 @@ class _TvPlayerState extends State<TvPlayer> {
   }
 
   void _reconnectLive() {
-    if (_exiting || _hasError || _reconnectTimer?.isActive == true) return;
+    if (_exiting ||
+        _hasError ||
+        _backgrounded ||
+        _reconnectTimer?.isActive == true) {
+      return;
+    }
     if (_liveReconnects >= TvRetryPolicy.maxLiveReconnects) {
       _showError();
       return;
