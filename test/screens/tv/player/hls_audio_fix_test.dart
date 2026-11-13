@@ -9,6 +9,10 @@ const _soloVideo = '#EXTM3U\n'
     'RESOLUTION=1920x1080,CODECS="avc1.640029",CLOSED-CAPTIONS=NONE\n'
     'tracks-v1a1/mono.ts.m3u8\n';
 
+const _conAudio = '#EXTM3U\n'
+    '#EXT-X-STREAM-INF:BANDWIDTH=1,CODECS="avc1.64001f,mp4a.40.2"\n'
+    'a.m3u8\n';
+
 void main() {
   group('hlsAddAudioCodec', () {
     final base = Uri.parse('https://iptv.test/CANAL/index.m3u8');
@@ -48,6 +52,8 @@ void main() {
   });
 
   group('HlsAudioFix.prepare', () {
+    setUp(HlsAudioFix.debugClearVerdicts);
+
     test('devuelve null si el manifiesto ya declara audio', () async {
       final client = MockClient((_) async => http.Response(
           '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1,CODECS="avc1.64001f,mp4a.40.2"\na.m3u8\n',
@@ -110,6 +116,60 @@ void main() {
       expect(res.body, contains('mp4a.40.2'));
       await fix.close();
       local.close();
+    });
+
+    test('no vuelve a descargar un manifiesto que ya se sabe que trae audio',
+        () async {
+      var calls = 0;
+      final client = MockClient((_) async {
+        calls++;
+        return http.Response(_conAudio, 200);
+      });
+      for (var i = 0; i < 2; i++) {
+        expect(
+            await HlsAudioFix.prepare('https://x.test/i.m3u8',
+                userAgent: 'UA', client: client),
+            isNull);
+      }
+      expect(calls, 1);
+    });
+
+    test('el veredicto caduca a los 30 minutos', () async {
+      var calls = 0;
+      var now = DateTime(2026, 1, 1, 12);
+      final client = MockClient((_) async {
+        calls++;
+        return http.Response(_conAudio, 200);
+      });
+      await HlsAudioFix.prepare('https://x.test/i.m3u8',
+          userAgent: 'UA', client: client, now: () => now);
+      now = now.add(const Duration(minutes: 31));
+      await HlsAudioFix.prepare('https://x.test/i.m3u8',
+          userAgent: 'UA', client: client, now: () => now);
+      expect(calls, 2);
+    });
+
+    test('un fallo de descarga no se recuerda', () async {
+      var calls = 0;
+      final client = MockClient((_) async {
+        calls++;
+        return http.Response('', 500);
+      });
+      await HlsAudioFix.prepare('https://x.test/i.m3u8',
+          userAgent: 'UA', client: client);
+      await HlsAudioFix.prepare('https://x.test/i.m3u8',
+          userAgent: 'UA', client: client);
+      expect(calls, 2);
+    });
+
+    test('un canal que necesita la corrección se prepara siempre', () async {
+      final client = MockClient((_) async => http.Response(_soloVideo, 200));
+      for (var i = 0; i < 2; i++) {
+        final fix = await HlsAudioFix.prepare('https://x.test/i.m3u8',
+            userAgent: 'UA', client: client);
+        expect(fix, isNotNull);
+        await fix!.close();
+      }
     });
   });
 }
