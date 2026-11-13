@@ -44,6 +44,13 @@ class TvChannelCard extends StatelessWidget {
                         ? CachedNetworkImage(
                             imageUrl: image,
                             fit: BoxFit.contain,
+                            // Se decodifica al tamaño de la tarjeta, no al del
+                            // archivo (un logo grande ocupa varios MB).
+                            memCacheWidth: (TvTheme.tileMaxExtent *
+                                    MediaQuery.devicePixelRatioOf(context))
+                                .round(),
+                            fadeInDuration: Duration.zero,
+                            fadeOutDuration: Duration.zero,
                             placeholder: (_, __) => _fallbackIcon(),
                             errorWidget: (_, __, ___) => _fallbackIcon(),
                           )
