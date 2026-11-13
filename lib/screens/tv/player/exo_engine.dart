@@ -17,6 +17,14 @@ VideoFormat? exoFormatHint(String url) {
   return null;
 }
 
+/// `true` si el cambio de [before] a [after] altera lo que dibuja el video
+/// (tamaño, rotación, inicialización). La posición y el buffer cambian varias
+/// veces por segundo y no deben reconstruir el árbol del video.
+bool exoVideoLayoutChanged(VideoPlayerValue before, VideoPlayerValue after) =>
+    before.isInitialized != after.isInitialized ||
+    before.size != after.size ||
+    before.rotationCorrection != after.rotationCorrection;
+
 /// Motor ExoPlayer (Media3) vía `video_player`: HLS/DASH nativo y decodificación
 /// por hardware optimizada para Android. No permite elegir pistas.
 class ExoEngine implements TvEngine {
@@ -33,6 +41,22 @@ class ExoEngine implements TvEngine {
   bool _completedSent = false;
   bool _lastPlaying = false;
   bool _disposed = false;
+  VideoPlayerValue? _lastValue;
+
+  // Un único temporizador de posición, activo solo mientras haya oyentes.
+  Timer? _positionTimer;
+  late final StreamController<Duration> _position =
+      StreamController<Duration>.broadcast(
+    onListen: () {
+      _positionTimer ??= Timer.periodic(const Duration(milliseconds: 500), (_) {
+        if (!_position.isClosed) _position.add(position);
+      });
+    },
+    onCancel: () {
+      _positionTimer?.cancel();
+      _positionTimer = null;
+    },
+  );
 
   @override
   TvEngineKind get kind => TvEngineKind.exo;
@@ -53,9 +77,7 @@ class ExoEngine implements TvEngine {
   Duration get position => _controller?.value.position ?? Duration.zero;
 
   @override
-  Stream<Duration> get positionStream =>
-      Stream<Duration>.periodic(const Duration(milliseconds: 500), (_) => position)
-          .asBroadcastStream();
+  Stream<Duration> get positionStream => _position.stream;
 
   @override
   Duration get duration => _controller?.value.duration ?? Duration.zero;
@@ -66,6 +88,7 @@ class ExoEngine implements TvEngine {
     _errorSent = false;
     _completedSent = false;
     _lastPlaying = false;
+    _lastValue = null;
     if (old != null) {
       old.removeListener(_onValue);
       try {
@@ -138,7 +161,9 @@ class ExoEngine implements TvEngine {
       _completedSent = true;
       _completed.add(true);
     }
-    _tick.value++;
+    final before = _lastValue;
+    _lastValue = v;
+    if (before == null || exoVideoLayoutChanged(before, v)) _tick.value++;
   }
 
   @override
@@ -215,6 +240,9 @@ class ExoEngine implements TvEngine {
     await _closeFix();
     _disposed = true;
     unawaited(WakelockPlus.disable());
+    _positionTimer?.cancel();
+    _positionTimer = null;
+    await _position.close();
     _tick.dispose();
     await _firstFrame.close();
     await _errors.close();
