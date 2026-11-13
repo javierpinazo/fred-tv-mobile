@@ -204,11 +204,21 @@ class _TVHomeState extends State<TVHome> {
           backgroundColor: TvTheme.background,
           body: Padding(
             padding: TvTheme.safeArea,
-            child: Row(
+            // El menú se despliega por encima: el contenido conserva siempre
+            // su ancho y la grilla no se recoloca al entrar o salir del menú.
+            child: Stack(
               children: [
-                _buildSidebar(),
-                const SizedBox(width: 8),
-                Expanded(child: _buildContent()),
+                Padding(
+                  padding:
+                      const EdgeInsets.only(left: TvTheme.sidebarCollapsed + 8),
+                  child: _buildContent(),
+                ),
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: _buildSidebar(),
+                ),
               ],
             ),
           ),

@@ -238,6 +238,14 @@ void main() {
     expect(find.text('dw'), findsWidgets);
   });
 
+  testWidgets('el contenido no cambia de ancho al entrar o salir del menú',
+      (t) async {
+    await _home(t, _fake()); // foco en el menú: desplegado
+    final open = t.getSize(find.byType(IndexedStack)).width;
+    await _key(t, LogicalKeyboardKey.arrowRight); // entra al contenido
+    expect(t.getSize(find.byType(IndexedStack)).width, open);
+  });
+
   testWidgets('cambiar las fuentes sin haber abierto Favoritos no lanza',
       (t) async {
     await _home(t, _fake());
