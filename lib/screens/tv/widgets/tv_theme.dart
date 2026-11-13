@@ -36,8 +36,8 @@ abstract final class TvTheme {
 
   static const double sidebarCollapsed = 84.0;
   static const double sidebarExpanded = 220.0;
-  static const double groupsWidth = 240.0;
-  static const double tileMaxExtent = 200.0;
+  static const double groupsWidth = 208.0;
+  static const double tileMaxExtent = 150.0;
   static const double tileAspectRatio = 16 / 12;
 }
 

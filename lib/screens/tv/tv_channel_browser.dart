@@ -12,6 +12,7 @@ import 'package:open_tv/screens/tv/player/tv_player.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/widgets/tv_channel_card.dart';
 import 'package:open_tv/screens/tv/widgets/tv_channel_menu.dart';
+import 'package:open_tv/screens/tv/widgets/tv_grid_skeleton.dart';
 import 'package:open_tv/screens/tv/widgets/tv_guide_dialog.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
@@ -452,22 +453,31 @@ class TVChannelBrowserState extends State<TVChannelBrowser> {
   }
 
   Widget _buildGrid() {
-    if (_loadingChannels) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    if (_loadingChannels) return const TvGridSkeleton();
     if (_channels.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Text(
-            widget.favoritesOnly
-                ? context.l10n.browserEmptyFavorites
-                : context.l10n.browserEmptyGroup,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: TvTheme.fontBody,
-              color: TvTheme.textSecondary,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.favoritesOnly ? Icons.star_border : Icons.tv_off,
+                size: 56,
+                color: TvTheme.textSecondary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                widget.favoritesOnly
+                    ? context.l10n.browserEmptyFavorites
+                    : context.l10n.browserEmptyGroup,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: TvTheme.fontBody,
+                  color: TvTheme.textSecondary,
+                ),
+              ),
+            ],
           ),
         ),
       );

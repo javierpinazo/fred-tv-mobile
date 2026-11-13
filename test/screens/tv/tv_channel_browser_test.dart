@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +8,7 @@ import 'package:open_tv/models/media_type.dart';
 import 'package:open_tv/models/view_type.dart';
 import 'package:open_tv/screens/tv/guide/tv_guide.dart';
 import 'package:open_tv/screens/tv/tv_channel_browser.dart';
+import 'package:open_tv/screens/tv/widgets/tv_grid_skeleton.dart';
 
 import 'fakes.dart';
 
@@ -46,8 +49,8 @@ void main() {
     await focusKey(t, 'tv-channel-1');
     final before = t.getRect(find.byKey(_ch(1)));
     await _key(t, LogicalKeyboardKey.arrowDown);
-    expect(isFocused(t, _ch(5)), isTrue);
-    final after = t.getRect(find.byKey(_ch(5)));
+    expect(isFocused(t, _ch(6)), isTrue); // 5 columnas
+    final after = t.getRect(find.byKey(_ch(6)));
     expect(after.top, greaterThan(before.top));
     expect((after.left - before.left).abs(), lessThan(12));
   });
@@ -335,5 +338,33 @@ void main() {
     await _longPress(t);
     expect(find.text('Agregar a favoritos'), findsOneWidget);
     expect(find.text('Ver programación'), findsNothing);
+  });
+
+  testWidgets('mientras cargan los canales se ve el esqueleto, no un spinner',
+      (t) async {
+    final gate = Completer<List<Channel>>();
+    await pumpTvRoute(
+      t,
+      (_) => Scaffold(
+        body: TVChannelBrowser(
+            data: FakeTvData(onSearchChannels: (_) => gate.future)),
+      ),
+    );
+    expect(find.byType(TvGridSkeleton), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    gate.complete(const []);
+    await t.pumpAndSettle();
+    expect(find.byType(TvGridSkeleton), findsNothing);
+  });
+
+  testWidgets('un grupo vacío muestra icono y texto', (t) async {
+    await pumpTv(t, TVChannelBrowser(data: FakeTvData()));
+    expect(find.byIcon(Icons.tv_off), findsOneWidget);
+  });
+
+  testWidgets('Favoritos vacío muestra su icono', (t) async {
+    await pumpTv(
+        t, TVChannelBrowser(favoritesOnly: true, data: FakeTvData()));
+    expect(find.byIcon(Icons.star_border), findsOneWidget);
   });
 }
