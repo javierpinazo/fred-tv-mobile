@@ -143,6 +143,15 @@ void main() {
                 isLive: false, hasError: false, wasPlaying: false),
             TvResumeAction.none));
     test(
+        'si aún estaba cargando se reabre, también una película',
+        () => expect(
+            TvRetryPolicy.onResume(
+                isLive: false,
+                hasError: false,
+                wasPlaying: false,
+                isLoading: true),
+            TvResumeAction.reopen));
+    test(
         'con la pantalla de error no se hace nada',
         () => expect(
             TvRetryPolicy.onResume(

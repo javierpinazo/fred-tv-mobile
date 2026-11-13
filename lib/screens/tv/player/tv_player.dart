@@ -186,7 +186,10 @@ class _TvPlayerState extends State<TvPlayer> with WidgetsBindingObserver {
     } else if (state == AppLifecycleState.resumed && _backgrounded) {
       _backgrounded = false;
       switch (TvRetryPolicy.onResume(
-          isLive: _isLive, hasError: _hasError, wasPlaying: _wasPlaying)) {
+          isLive: _isLive,
+          hasError: _hasError,
+          wasPlaying: _wasPlaying,
+          isLoading: _loading)) {
         case TvResumeAction.reopen:
           _liveReconnects = 0;
           _play(0);

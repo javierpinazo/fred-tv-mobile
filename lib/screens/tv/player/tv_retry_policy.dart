@@ -70,9 +70,11 @@ abstract final class TvRetryPolicy {
     required bool isLive,
     required bool hasError,
     required bool wasPlaying,
+    bool isLoading = false,
   }) {
     if (hasError) return TvResumeAction.none;
-    if (isLive) return TvResumeAction.reopen;
+    // Si aún estaba abriendo, el intento se canceló al pasar a segundo plano.
+    if (isLive || isLoading) return TvResumeAction.reopen;
     return wasPlaying ? TvResumeAction.resume : TvResumeAction.none;
   }
 
