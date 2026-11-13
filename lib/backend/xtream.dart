@@ -94,7 +94,7 @@ Future<dynamic> getXtreamHttpData(String action, Source source,
     [Map<String, String>? extraQueryParams]) async {
   try {
     var url = buildXtreamUrl(source, action, extraQueryParams);
-    final response = await http.get(url);
+    final response = await http.get(url).timeout(const Duration(seconds: 60));
     if (response.statusCode != 200) {
       return null;
     }

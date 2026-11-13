@@ -16,6 +16,7 @@ import 'package:open_tv/setup.dart';
 import 'package:open_tv/screens/tv/tv_appearance.dart';
 import 'package:open_tv/screens/tv/tv_bootstrap.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
+import 'package:open_tv/screens/tv/tv_startup.dart';
 import 'package:media_kit/media_kit.dart';
 
 /// Detecta si la app corre en un Android TV (UiMode televisión o leanback).
@@ -81,6 +82,8 @@ Future<void> main() async {
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+    installTvErrorGuards();
+    configureTvImageCache();
     final data = const TvData();
     TvAppearance.textScale.value = await data.textScaleSetting();
     TvAppearance.applyHighContrast(await data.highContrastSetting());
