@@ -17,6 +17,7 @@ import 'package:open_tv/screens/tv/tv_appearance.dart';
 import 'package:open_tv/screens/tv/tv_bootstrap.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/tv_startup.dart';
+import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 import 'package:media_kit/media_kit.dart';
 
 /// Detecta si la app corre en un Android TV (UiMode televisión o leanback).
@@ -158,10 +159,12 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         brightness: Brightness.light,
       ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-      ),
+      darkTheme: isTv
+          ? tvMaterialTheme()
+          : ThemeData(
+              useMaterial3: true,
+              brightness: Brightness.dark,
+            ),
       themeMode: isTv ? ThemeMode.dark : ThemeMode.system,
       debugShowCheckedModeBanner: false,
       home: isTv

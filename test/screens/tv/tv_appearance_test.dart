@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_tv/screens/tv/tv_appearance.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
@@ -46,5 +47,15 @@ void main() {
     expect(TvAppearance.epoch.value, before + 1);
     TvAppearance.applyHighContrast(true); // sin cambio: no reconstruye
     expect(TvAppearance.epoch.value, before + 1);
+  });
+
+  test('tvMaterialTheme usa los colores de TvTheme', () {
+    final theme = tvMaterialTheme();
+    expect(theme.brightness, Brightness.dark);
+    expect(theme.colorScheme.primary, TvTheme.accent);
+    expect(theme.scaffoldBackgroundColor, TvTheme.background);
+    expect(theme.progressIndicatorTheme.color, TvTheme.accent);
+    expect(theme.snackBarTheme.behavior, SnackBarBehavior.floating);
+    expect(theme.snackBarTheme.backgroundColor, TvTheme.surfaceRaised);
   });
 }

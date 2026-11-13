@@ -21,6 +21,7 @@ import 'package:open_tv/screens/tv/tv_platform.dart';
 import 'package:open_tv/screens/tv/player/tv_retry_policy.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
+import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
 Channel fakeChannel(
   int i, {
@@ -542,7 +543,7 @@ Future<void> pumpTv(WidgetTester t, Widget child) async {
   t.view.devicePixelRatio = 2;
   addTearDown(t.view.reset);
   await t.pumpWidget(MaterialApp(
-    theme: ThemeData.dark(useMaterial3: true),
+    theme: tvMaterialTheme(),
     locale: const Locale('es'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,

@@ -37,3 +37,28 @@ abstract final class TvTheme {
   static const double tileMaxExtent = 200.0;
   static const double tileAspectRatio = 16 / 12;
 }
+
+/// Tema Material de la interfaz de TV: indicadores de carga, avisos y fondos
+/// salen de los mismos colores que `TvTheme`.
+ThemeData tvMaterialTheme() => ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: TvTheme.accent,
+        brightness: Brightness.dark,
+      ).copyWith(primary: TvTheme.accent, surface: TvTheme.surface),
+      scaffoldBackgroundColor: TvTheme.background,
+      progressIndicatorTheme: ProgressIndicatorThemeData(color: TvTheme.accent),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        width: 520,
+        backgroundColor: TvTheme.surfaceRaised,
+        contentTextStyle: const TextStyle(
+          fontSize: TvTheme.fontBody,
+          color: TvTheme.textPrimary,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(TvTheme.radius),
+        ),
+      ),
+    );
