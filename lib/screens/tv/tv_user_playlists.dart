@@ -538,20 +538,25 @@ class TvUserPlaylistsScreenState extends State<TvUserPlaylistsScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.add_link,
-                            size: 36, color: TvTheme.accent),
-                        const SizedBox(height: 6),
-                        Flexible(
-                          child: Text(
-                            context.l10n.playlistAddChannelByUrl,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: TvTheme.fontSmall,
-                              color: TvTheme.textPrimary,
-                              height: 1.1,
-                            ),
+                        // El icono se encoge si la tarjeta es pequeña: el texto
+                        // de 2 líneas conserva su sitio.
+                        const Expanded(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Icon(Icons.add_link,
+                                size: 36, color: TvTheme.accent),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          context.l10n.playlistAddChannelByUrl,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: TvTheme.fontSmall,
+                            color: TvTheme.textPrimary,
+                            height: 1.1,
                           ),
                         ),
                       ],

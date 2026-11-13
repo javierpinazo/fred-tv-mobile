@@ -16,8 +16,12 @@ class TvChannelCard extends StatelessWidget {
   final Channel channel;
   final bool focused;
 
-  Widget _fallbackIcon() =>
-      Icon(Icons.live_tv, color: TvTheme.textSecondary, size: 40);
+  // Se encoge si el espacio del logo es menor que 40 px (tarjetas pequeñas con
+  // nombre de 2 líneas); sin FittedBox el glifo desborda y pisa el nombre.
+  Widget _fallbackIcon() => FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Icon(Icons.live_tv, color: TvTheme.textSecondary, size: 40),
+      );
 
   Widget _logo(BuildContext context, String image) {
     return Container(

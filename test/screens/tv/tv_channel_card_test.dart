@@ -56,6 +56,36 @@ void main() {
         TvTheme.textSecondary);
   });
 
+  testWidgets('a tamaño de TV el icono de respaldo no pisa un nombre de 2 líneas',
+      (t) async {
+    await pumpTv(
+      t,
+      Center(
+        child: SizedBox(
+          width: 112,
+          height: 84,
+          child: TvChannelCard(
+            channel: Channel(
+              name: 'Carlos León Moya',
+              image: '',
+              url: 'http://test/a.m3u8',
+              mediaType: MediaType.livestream,
+              sourceId: 1,
+              favorite: false,
+            ),
+            focused: false,
+          ),
+        ),
+      ),
+    );
+    final icon = t.getRect(find.byIcon(Icons.live_tv));
+    final name = t.getRect(find.text('Carlos León Moya'));
+    // El icono debe encogerse (cuadrado) y caber encima del nombre; si solo se
+    // recorta su caja, el glifo se dibuja a 40 px y pisa el texto.
+    expect((icon.width - icon.height).abs(), lessThan(0.5));
+    expect(icon.bottom, lessThanOrEqualTo(name.top + 0.5));
+  });
+
   testWidgets('sin logo muestra el icono de respaldo', (t) async {
     await pumpTv(t, card(image: ''));
     expect(find.byType(CachedNetworkImage), findsNothing);
