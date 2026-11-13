@@ -8,7 +8,7 @@ import 'package:open_tv/models/source.dart';
 import 'package:open_tv/models/source_type.dart';
 import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/tv_home.dart';
-import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
+import 'package:open_tv/screens/tv/widgets/tv_button.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
 const String _defaultSourceName = 'IPTV Español';
@@ -140,50 +140,21 @@ class _TvBootstrapState extends State<TvBootstrap> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _button(
-              context.l10n.commonRetry,
+            TvButton(
               key: const ValueKey('tv-bootstrap-retry'),
+              label: context.l10n.commonRetry,
               autofocus: true,
               onSelect: _prepare,
             ),
             const SizedBox(width: 20),
-            _button(
-              context.l10n.commonContinue,
+            TvButton(
               key: const ValueKey('tv-bootstrap-continue'),
+              label: context.l10n.commonContinue,
               onSelect: _goHome,
             ),
           ],
         ),
       ],
-    );
-  }
-
-  Widget _button(
-    String label, {
-    required Key key,
-    bool autofocus = false,
-    required VoidCallback onSelect,
-  }) {
-    return TvFocusable(
-      key: key,
-      autofocus: autofocus,
-      onSelect: onSelect,
-      builder: (context, focused) => Container(
-        constraints: const BoxConstraints(minWidth: 180, minHeight: 60),
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: focused ? TvTheme.surfaceRaised : TvTheme.surface,
-          borderRadius: BorderRadius.circular(TvTheme.radius - 2),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: TvTheme.fontBody,
-            color: TvTheme.textPrimary,
-          ),
-        ),
-      ),
     );
   }
 }

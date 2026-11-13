@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:open_tv/backend/youtube/youtube_program.dart';
 import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/models/channel.dart';
-import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
+import 'package:open_tv/screens/tv/widgets/tv_button.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 import 'package:open_tv/screens/tv/youtube/youtube_player_page.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -355,12 +355,13 @@ class _TvYoutubePlayerState extends State<TvYoutubePlayer> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _button(l10n.ytOpenInYoutube,
+                TvButton(
+                    label: l10n.ytOpenInYoutube,
                     onSelect: _openExternally,
                     primary: true,
                     focusNode: _failNode),
                 const SizedBox(width: 20),
-                _button(l10n.ytBack, onSelect: _close),
+                TvButton(label: l10n.ytBack, onSelect: _close),
               ],
             ),
           ],
@@ -369,29 +370,4 @@ class _TvYoutubePlayerState extends State<TvYoutubePlayer> {
     );
   }
 
-  Widget _button(String label,
-      {required VoidCallback onSelect,
-      bool primary = false,
-      FocusNode? focusNode}) {
-    return TvFocusable(
-      focusNode: focusNode,
-      onSelect: onSelect,
-      builder: (context, focused) => Container(
-        constraints: const BoxConstraints(minWidth: 160, minHeight: 56),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: primary
-              ? TvTheme.accent
-              : (focused ? TvTheme.surfaceRaised : TvTheme.surface),
-          borderRadius: BorderRadius.circular(TvTheme.radius - 2),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-              fontSize: TvTheme.fontBody, color: TvTheme.textPrimary),
-        ),
-      ),
-    );
-  }
 }

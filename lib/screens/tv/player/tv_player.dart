@@ -22,9 +22,9 @@ import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/youtube/tv_youtube_programs.dart';
 import 'package:open_tv/backend/youtube/youtube_channel.dart';
 import 'package:open_tv/screens/tv/tv_favorite_picker.dart';
+import 'package:open_tv/screens/tv/widgets/tv_button.dart';
 import 'package:open_tv/screens/tv/widgets/tv_dialogs.dart';
 import 'package:open_tv/screens/tv/widgets/tv_guide_dialog.dart';
-import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 import 'package:open_tv/select_dialog.dart';
 
@@ -1305,8 +1305,8 @@ class _TvPlayerState extends State<TvPlayer> with WidgetsBindingObserver {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _errorButton(
-                context.l10n.commonRetry,
+              TvButton(
+                label: context.l10n.commonRetry,
                 focusNode: _retryFocus,
                 onSelect: () {
                   _liveReconnects = 0;
@@ -1314,12 +1314,12 @@ class _TvPlayerState extends State<TvPlayer> with WidgetsBindingObserver {
                 },
               ),
               const SizedBox(width: 16),
-              _errorButton(
-                context.l10n.playerNextChannel,
+              TvButton(
+                label: context.l10n.playerNextChannel,
                 onSelect: () => _zap(true),
               ),
               const SizedBox(width: 16),
-              _errorButton(context.l10n.playerBack, onSelect: _exit),
+              TvButton(label: context.l10n.playerBack, onSelect: _exit),
             ],
           ),
         ],
@@ -1327,30 +1327,4 @@ class _TvPlayerState extends State<TvPlayer> with WidgetsBindingObserver {
     );
   }
 
-  Widget _errorButton(
-    String label, {
-    FocusNode? focusNode,
-    required VoidCallback onSelect,
-  }) {
-    return TvFocusable(
-      focusNode: focusNode,
-      onSelect: onSelect,
-      builder: (context, focused) => Container(
-        constraints: const BoxConstraints(minWidth: 160, minHeight: 56),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: focused ? TvTheme.surfaceRaised : TvTheme.surface,
-          borderRadius: BorderRadius.circular(TvTheme.radius - 2),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: TvTheme.fontBody,
-            color: TvTheme.textPrimary,
-          ),
-        ),
-      ),
-    );
-  }
 }

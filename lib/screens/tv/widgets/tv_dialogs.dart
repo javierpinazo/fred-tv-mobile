@@ -1,40 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:open_tv/l10n/l10n.dart';
+import 'package:open_tv/screens/tv/widgets/tv_button.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_text_field.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
-
-Widget _button(
-  String label, {
-  Key? key,
-  required VoidCallback onSelect,
-  bool autofocus = false,
-  bool filled = false,
-}) {
-  return TvFocusable(
-    key: key,
-    autofocus: autofocus,
-    onSelect: onSelect,
-    builder: (context, focused) => Container(
-      constraints: const BoxConstraints(minWidth: 140, minHeight: 56),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: filled
-            ? TvTheme.accent
-            : (focused ? TvTheme.surfaceRaised : TvTheme.surface),
-        borderRadius: BorderRadius.circular(TvTheme.radius - 2),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: TvTheme.fontBody,
-          color: TvTheme.textPrimary,
-        ),
-      ),
-    ),
-  );
-}
 
 Widget _dialog({required Widget child}) {
   return Dialog(
@@ -72,15 +41,15 @@ Future<bool> showTvConfirm(
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _button(
-                confirmLabel ?? ctx.l10n.commonDelete,
+              TvButton(
                 key: const ValueKey('tv-confirm-ok'),
+                label: confirmLabel ?? ctx.l10n.commonDelete,
                 onSelect: () => Navigator.of(ctx).pop(true),
               ),
               const SizedBox(width: 20),
-              _button(
-                cancelLabel ?? ctx.l10n.commonCancel,
+              TvButton(
                 key: const ValueKey('tv-confirm-cancel'),
+                label: cancelLabel ?? ctx.l10n.commonCancel,
                 autofocus: true,
                 onSelect: () => Navigator.of(ctx).pop(false),
               ),
@@ -126,19 +95,19 @@ Future<String?> showTvTextPrompt(
               autofocus: true,
             ),
             const SizedBox(height: 20),
-            _button(
-              confirmLabel ?? ctx.l10n.commonSave,
+            TvButton(
               key: const ValueKey('tv-prompt-confirm'),
-              filled: true,
+              label: confirmLabel ?? ctx.l10n.commonSave,
+              primary: true,
               onSelect: () {
                 final text = controller.text.trim();
                 Navigator.of(ctx).pop(text.isEmpty ? null : text);
               },
             ),
             const SizedBox(height: 12),
-            _button(
-              ctx.l10n.commonCancel,
+            TvButton(
               key: const ValueKey('tv-prompt-cancel'),
+              label: ctx.l10n.commonCancel,
               onSelect: () => Navigator.of(ctx).pop(),
             ),
           ],
