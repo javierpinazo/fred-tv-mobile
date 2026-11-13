@@ -4,6 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:open_tv/backend/source_refresher.dart';
 import 'package:open_tv/screens/tv/tv_channel_browser.dart';
 import 'package:open_tv/screens/tv/tv_home.dart';
+import 'package:open_tv/screens/tv/tv_platform.dart';
+import 'package:open_tv/screens/tv/tv_search.dart';
+import 'package:open_tv/screens/tv/tv_settings.dart';
+import 'package:open_tv/screens/tv/tv_user_playlists.dart';
 
 import 'fakes.dart';
 
@@ -202,4 +206,55 @@ void main() {
     await t.pumpAndSettle();
     expect(data.groupCalls.length, before + 1);
   });
+
+  testWidgets('al arrancar solo se construye Canales', (t) async {
+    await _home(t, _fake());
+    expect(find.byType(TVSettings, skipOffstage: false), findsNothing);
+    expect(find.byType(TVSearch, skipOffstage: false), findsNothing);
+    expect(
+        find.byType(TvUserPlaylistsScreen, skipOffstage: false), findsNothing);
+  });
+
+  testWidgets('una pestaña visitada se conserva al salir de ella', (t) async {
+    await _home(t, _fake());
+    await _goToTab(t, 4);
+    expect(find.byType(TVSettings), findsOneWidget);
+    for (var i = 0; i < 4; i++) {
+      await _key(t, LogicalKeyboardKey.arrowUp);
+    }
+    expect(find.byType(TVSettings, skipOffstage: false), findsOneWidget);
+  });
+
+  testWidgets('un enlace de búsqueda al arrancar construye Buscar con la consulta',
+      (t) async {
+    await pumpTv(
+      t,
+      TVHome(
+        data: _fake(),
+        platform: _LinkPlatform('fredtv://search?q=dw'),
+      ),
+    );
+    expect(find.byType(TVSearch), findsOneWidget);
+    expect(find.text('dw'), findsWidgets);
+  });
+
+  testWidgets('cambiar las fuentes sin haber abierto Favoritos no lanza',
+      (t) async {
+    await _home(t, _fake());
+    tvSourcesVersion.value++;
+    await t.pumpAndSettle();
+    expect(t.takeException(), isNull);
+  });
+}
+
+class _LinkPlatform extends TvPlatform {
+  _LinkPlatform(this.initial);
+
+  final String initial;
+
+  @override
+  Future<String?> initialLink() async => initial;
+
+  @override
+  Stream<String> get links => const Stream.empty();
 }

@@ -60,6 +60,9 @@ class _TVHomeState extends State<TVHome> {
   Key _browserKey = UniqueKey();
   Key _searchKey = UniqueKey();
   String? _searchQuery;
+  // Pestañas ya construidas: cada una se crea la primera vez que se visita y
+  // después se conserva viva (mantiene su scroll y su foco).
+  final Set<int> _builtTabs = {0};
   StreamSubscription<String>? _linkSub;
   final GlobalKey<TVChannelBrowserState> _favoritesKey = GlobalKey();
   final GlobalKey<TvUserPlaylistsScreenState> _playlistsKey = GlobalKey();
@@ -105,6 +108,7 @@ class _TVHomeState extends State<TVHome> {
           _searchQuery = query;
           _searchKey = UniqueKey();
           _selectedIndex = 3;
+          _builtTabs.add(3);
         });
         WidgetsBinding.instance.endOfFrame.then((_) {
           if (mounted) _navNodes[3].requestFocus();
@@ -158,7 +162,10 @@ class _TVHomeState extends State<TVHome> {
 
   void _onNavFocused(int index) {
     if (index == _selectedIndex) return;
-    setState(() => _selectedIndex = index);
+    setState(() {
+      _selectedIndex = index;
+      _builtTabs.add(index);
+    });
     if (index == 1) _favoritesKey.currentState?.reload();
     if (index == 2) _playlistsKey.currentState?.reload();
   }
@@ -325,7 +332,10 @@ class _TVHomeState extends State<TVHome> {
         for (var i = 0; i < tabs.length; i++)
           ExcludeFocus(
             excluding: i != _selectedIndex,
-            child: FocusScope(node: _tabScopes[i], child: tabs[i]),
+            child: FocusScope(
+              node: _tabScopes[i],
+              child: _builtTabs.contains(i) ? tabs[i] : const SizedBox.shrink(),
+            ),
           ),
       ],
     );
