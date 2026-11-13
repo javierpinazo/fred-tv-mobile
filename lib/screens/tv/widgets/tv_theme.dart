@@ -6,6 +6,9 @@ abstract final class TvTheme {
   static const Color surface = Color(0xFF1C1C22);
   static const Color surfaceRaised = Color(0xFF2A2A33);
   static const Color accent = Color(0xFF3D8BFF);
+  /// Placa gris detrás de los logos: los oscuros no se pierden en la tarjeta.
+  static const Color logoPlate = Color(0xFF4A4A57);
+  static const Color surfaceFocused = Color(0xFF34343F);
   /// Alto contraste: se activa desde Ajustes (ver `TvAppearance`).
   static bool highContrast = false;
 

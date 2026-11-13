@@ -40,6 +40,22 @@ void main() {
     expect(img.fadeOutDuration, Duration.zero);
   });
 
+  testWidgets('la tarjeta muestra el nombre limpio y la calidad aparte',
+      (t) async {
+    await pumpTv(t, card(name: 'ADN TV (720p) [Not 24/7]', image: ''));
+    expect(find.text('ADN TV'), findsOneWidget);
+    expect(find.text('720p'), findsOneWidget);
+  });
+
+  testWidgets('el nombre resalta con foco', (t) async {
+    await pumpTv(t, card(name: 'ADN TV', image: '', focused: true));
+    expect(t.widget<Text>(find.text('ADN TV')).style!.color,
+        TvTheme.textPrimary);
+    await pumpTv(t, card(name: 'ADN TV', image: '', focused: false));
+    expect(t.widget<Text>(find.text('ADN TV')).style!.color,
+        TvTheme.textSecondary);
+  });
+
   testWidgets('sin logo muestra el icono de respaldo', (t) async {
     await pumpTv(t, card(image: ''));
     expect(find.byType(CachedNetworkImage), findsNothing);
