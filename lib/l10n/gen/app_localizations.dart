@@ -166,6 +166,18 @@ abstract class AppLocalizations {
   /// **'Favoritos'**
   String get navFavorites;
 
+  /// No description provided for @navOnDemand.
+  ///
+  /// In es, this message translates to:
+  /// **'On demand'**
+  String get navOnDemand;
+
+  /// No description provided for @onDemandComingSoon.
+  ///
+  /// In es, this message translates to:
+  /// **'Próximamente'**
+  String get onDemandComingSoon;
+
   /// No description provided for @navMyLists.
   ///
   /// In es, this message translates to:

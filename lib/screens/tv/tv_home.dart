@@ -9,6 +9,7 @@ import 'package:open_tv/screens/tv/tv_data.dart';
 import 'package:open_tv/screens/tv/player/tv_player.dart';
 import 'package:open_tv/screens/tv/tv_focus.dart';
 import 'package:open_tv/screens/tv/tv_links.dart';
+import 'package:open_tv/screens/tv/tv_ondemand.dart';
 import 'package:open_tv/screens/tv/tv_platform.dart';
 import 'package:open_tv/screens/tv/tv_search.dart';
 import 'package:open_tv/screens/tv/tv_settings.dart';
@@ -19,14 +20,21 @@ import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 const _tabIcons = <IconData>[
   Icons.live_tv,
   Icons.star,
+  Icons.movie_outlined,
   Icons.playlist_play,
   Icons.search,
   Icons.settings,
 ];
 
+// Posición de cada pestaña en el menú.
+const _tabFavorites = 1;
+const _tabPlaylists = 3;
+const _tabSearch = 4;
+
 List<String> _tabLabels(AppLocalizations l10n) => [
       l10n.navChannels,
       l10n.navFavorites,
+      l10n.navOnDemand,
       l10n.navMyLists,
       l10n.navSearch,
       l10n.navSettings,
@@ -107,11 +115,11 @@ class _TVHomeState extends State<TVHome> {
         setState(() {
           _searchQuery = query;
           _searchKey = UniqueKey();
-          _selectedIndex = 3;
-          _builtTabs.add(3);
+          _selectedIndex = _tabSearch;
+          _builtTabs.add(_tabSearch);
         });
         WidgetsBinding.instance.endOfFrame.then((_) {
-          if (mounted) _navNodes[3].requestFocus();
+          if (mounted) _navNodes[_tabSearch].requestFocus();
         });
       case TvPlayLink(:final name, :final source):
         Channel? channel;
@@ -166,8 +174,8 @@ class _TVHomeState extends State<TVHome> {
       _selectedIndex = index;
       _builtTabs.add(index);
     });
-    if (index == 1) _favoritesKey.currentState?.reload();
-    if (index == 2) _playlistsKey.currentState?.reload();
+    if (index == _tabFavorites) _favoritesKey.currentState?.reload();
+    if (index == _tabPlaylists) _playlistsKey.currentState?.reload();
   }
 
   // --- Recarga tras cambios en las fuentes --------------------------------
@@ -322,6 +330,7 @@ class _TVHomeState extends State<TVHome> {
         onPlay: widget.onPlay,
         onAddToPlaylist: addToPlaylist,
       ),
+      const TvOnDemandScreen(),
       TvUserPlaylistsScreen(
         key: _playlistsKey,
         data: widget.data,

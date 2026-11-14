@@ -10,6 +10,8 @@
   "commonOff": "Off",
   "navChannels": "Channels",
   "navFavorites": "Favorites",
+  "navOnDemand": "On demand",
+  "onDemandComingSoon": "Coming soon",
   "navMyLists": "My lists",
   "navSearch": "Search",
   "navSettings": "Settings",

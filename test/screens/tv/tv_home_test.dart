@@ -76,22 +76,40 @@ void main() {
     expect(isFocused(t, const ValueKey('tv-group-0')), isTrue);
   });
 
-  testWidgets('el menú recorre las 5 pestañas con ↑↓', (t) async {
+  testWidgets('el menú recorre las 6 pestañas con ↑↓', (t) async {
     await _home(t, _fake());
-    for (var i = 1; i < 5; i++) {
+    for (var i = 1; i < 6; i++) {
       await _key(t, LogicalKeyboardKey.arrowDown);
       expect(isFocused(t, _nav(i)), isTrue, reason: 'pestaña $i');
     }
     await _key(t, LogicalKeyboardKey.arrowDown); // borde inferior
-    expect(isFocused(t, _nav(4)), isTrue);
+    expect(isFocused(t, _nav(5)), isTrue);
     await _key(t, LogicalKeyboardKey.arrowUp);
-    expect(isFocused(t, _nav(3)), isTrue);
+    expect(isFocused(t, _nav(4)), isTrue);
+  });
+
+  testWidgets('On demand va justo debajo de Favoritos', (t) async {
+    await _home(t, _fake());
+    final labels = ['Canales', 'Favoritos', 'On demand', 'Mis listas', 'Buscar', 'Ajustes'];
+    final ys = [
+      for (var i = 0; i < labels.length; i++)
+        t.getTopLeft(find.byKey(_nav(i))).dy
+    ];
+    expect(ys, orderedEquals([...ys]..sort()));
+    for (final l in labels) {
+      expect(find.text(l), findsWidgets, reason: l);
+    }
+    await _goToTab(t, 2);
+    await _key(t, LogicalKeyboardKey.arrowRight);
+    expect(isFocused(t, const ValueKey('tv-ondemand-cineaparte')), isTrue);
+    await _key(t, LogicalKeyboardKey.arrowLeft);
+    expect(isFocused(t, _nav(2)), isTrue);
   });
 
   testWidgets('Buscar: → enfoca el campo sin abrir teclado (regresión H3)',
       (t) async {
     await _home(t, _fake());
-    await _goToTab(t, 3);
+    await _goToTab(t, 4);
     await _key(t, LogicalKeyboardKey.arrowRight);
     expect(isFocused(t, const ValueKey('tv-search-field')), isTrue);
     expect(t.testTextInput.isVisible, isFalse);
@@ -99,14 +117,14 @@ void main() {
 
   testWidgets('Ajustes: → enfoca la primera fila', (t) async {
     await _home(t, _fake());
-    await _goToTab(t, 4);
+    await _goToTab(t, 5);
     await _key(t, LogicalKeyboardKey.arrowRight);
     expect(isFocused(t, const ValueKey('tv-settings-iptv')), isTrue);
   });
 
   testWidgets('Mis listas sin listas: → enfoca "Nueva lista"', (t) async {
     await _home(t, _fake());
-    await _goToTab(t, 2);
+    await _goToTab(t, 3);
     await _key(t, LogicalKeyboardKey.arrowRight);
     expect(isFocused(t, const ValueKey('tv-playlist-new')), isTrue);
   });
@@ -133,7 +151,7 @@ void main() {
   testWidgets('Atrás con el teclado abierto lo cierra y otro Atrás vuelve al menú',
       (t) async {
     await _home(t, _fake());
-    await _goToTab(t, 3);
+    await _goToTab(t, 4);
     await _key(t, LogicalKeyboardKey.arrowRight);
     await _ok(t); // abre el teclado propio
     expect(find.byKey(const ValueKey('tv-key-q')), findsOneWidget);
@@ -143,13 +161,13 @@ void main() {
     expect(isFocused(t, const ValueKey('tv-search-field')), isTrue);
     await t.binding.handlePopRoute();
     await t.pumpAndSettle();
-    expect(isFocused(t, _nav(3)), isTrue);
+    expect(isFocused(t, _nav(4)), isTrue);
   });
 
   testWidgets('Atrás con el teclado de sistema en edición vuelve al menú',
       (t) async {
     await _home(t, _fake());
-    await _goToTab(t, 3);
+    await _goToTab(t, 4);
     await _key(t, LogicalKeyboardKey.arrowRight);
     await _ok(t);
     await focusKey(t, 'tv-key-system');
@@ -157,7 +175,7 @@ void main() {
     expect(t.testTextInput.isVisible, isTrue);
     await t.binding.handlePopRoute();
     await t.pumpAndSettle();
-    expect(isFocused(t, _nav(3)), isTrue);
+    expect(isFocused(t, _nav(4)), isTrue);
   });
 
   testWidgets('pestaña sin enfocables: → deja el foco en el menú', (t) async {
@@ -217,9 +235,9 @@ void main() {
 
   testWidgets('una pestaña visitada se conserva al salir de ella', (t) async {
     await _home(t, _fake());
-    await _goToTab(t, 4);
+    await _goToTab(t, 5);
     expect(find.byType(TVSettings), findsOneWidget);
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 5; i++) {
       await _key(t, LogicalKeyboardKey.arrowUp);
     }
     expect(find.byType(TVSettings, skipOffstage: false), findsOneWidget);

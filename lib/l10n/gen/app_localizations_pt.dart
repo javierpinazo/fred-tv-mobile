@@ -39,6 +39,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get navFavorites => 'Favoritos';
 
   @override
+  String get navOnDemand => 'On demand';
+
+  @override
+  String get onDemandComingSoon => 'Em breve';
+
+  @override
   String get navMyLists => 'Minhas listas';
 
   @override
