@@ -36,6 +36,9 @@ class _TvOnDemandScreenState extends State<TvOnDemandScreen> {
           const SizedBox(height: 24),
           Expanded(
             child: SingleChildScrollView(
+              // Margen para que la tarjeta ampliada y su borde de foco no
+              // queden recortados por el borde de la lista.
+              padding: const EdgeInsets.all(12),
               child: Wrap(
                 spacing: 20,
                 runSpacing: 20,
