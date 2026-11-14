@@ -12,6 +12,8 @@
   "navFavorites": "Favoriten",
   "navOnDemand": "On Demand",
   "onDemandComingSoon": "Demnächst",
+  "onDemandWatch": "Ansehen",
+  "onDemandLoadError": "Die Filme konnten nicht geladen werden",
   "navMyLists": "Meine Listen",
   "navSearch": "Suchen",
   "navSettings": "Einstellungen",

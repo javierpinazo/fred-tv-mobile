@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:open_tv/backend/ondemand/cineaparte_provider.dart';
 import 'package:open_tv/backend/ondemand/on_demand_provider.dart';
 
-/// Cineaparte (con Vimeo) está programado pero aún no se conecta a la
-/// pantalla de la TV. Al ponerlo en `true` su tarjeta pasa a estar activa.
-const kOnDemandCineaparteEnabled = false;
+/// Cineaparte (películas gratuitas con Vimeo y YouTube) está conectado a la
+/// pantalla de la TV. En `false` su tarjeta vuelve a «Próximamente».
+const kOnDemandCineaparteEnabled = true;
 
 /// Un servicio de películas que lista la pantalla «On demand».
 class OnDemandService {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_tv/backend/ondemand/on_demand_registry.dart';
 import 'package:open_tv/l10n/l10n.dart';
+import 'package:open_tv/screens/tv/ondemand/tv_cineaparte_screen.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
@@ -53,6 +54,13 @@ class _TvOnDemandScreenState extends State<TvOnDemandScreen> {
     );
   }
 
+  void _open(BuildContext context, OnDemandService s) {
+    final provider = s.provider;
+    if (provider == null) return;
+    Navigator.of(context).push<void>(MaterialPageRoute<void>(
+        builder: (_) => TvCineaparteScreen(provider: provider)));
+  }
+
   Widget _card(BuildContext context, OnDemandService s) {
     final l10n = context.l10n;
     return SizedBox(
@@ -61,7 +69,7 @@ class _TvOnDemandScreenState extends State<TvOnDemandScreen> {
       child: TvFocusable(
         key: ValueKey('tv-ondemand-${s.id}'),
         // Servicios todavía sin conectar: se pueden enfocar pero no abren nada.
-        onSelect: s.enabled ? () {} : null,
+        onSelect: s.enabled ? () => _open(context, s) : null,
         builder: (context, focused) => Container(
           decoration: BoxDecoration(
             color: focused ? TvTheme.surfaceFocused : TvTheme.surface,

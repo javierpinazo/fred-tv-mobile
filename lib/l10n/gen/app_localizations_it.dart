@@ -45,6 +45,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get onDemandComingSoon => 'Prossimamente';
 
   @override
+  String get onDemandWatch => 'Guarda';
+
+  @override
+  String get onDemandLoadError => 'Impossibile caricare i film';
+
+  @override
   String get navMyLists => 'Le mie liste';
 
   @override

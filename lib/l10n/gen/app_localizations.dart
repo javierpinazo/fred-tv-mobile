@@ -178,6 +178,18 @@ abstract class AppLocalizations {
   /// **'Próximamente'**
   String get onDemandComingSoon;
 
+  /// No description provided for @onDemandWatch.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver'**
+  String get onDemandWatch;
+
+  /// No description provided for @onDemandLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar las películas'**
+  String get onDemandLoadError;
+
   /// No description provided for @navMyLists.
   ///
   /// In es, this message translates to:
