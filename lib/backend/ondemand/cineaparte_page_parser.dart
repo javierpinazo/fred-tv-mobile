@@ -5,6 +5,24 @@ final _youtube =
     RegExp(r'(?:www\.)?youtube\.com/embed/([A-Za-z0-9_-]{11})');
 final _iframeSrc = RegExp(r'''src=['"]([^'"]+)['"]''');
 final _unicode = RegExp(r'\\u([0-9a-fA-F]{4})');
+final _entity = RegExp(r'&(#x[0-9a-fA-F]+|#[0-9]+|amp|quot|apos|lt|gt|nbsp);');
+
+/// Entidades HTML que trae la portada dentro de los textos (`&amp;`, `&#039;`).
+String _decodeEntities(String text) => text.replaceAllMapped(_entity, (m) {
+      final e = m.group(1)!;
+      if (e.startsWith('#x')) {
+        return String.fromCharCode(int.parse(e.substring(2), radix: 16));
+      }
+      if (e.startsWith('#')) return String.fromCharCode(int.parse(e.substring(1)));
+      return const {
+        'amp': '&',
+        'quot': '"',
+        'apos': "'",
+        'lt': '<',
+        'gt': '>',
+        'nbsp': ' ',
+      }[e]!;
+    });
 
 /// Valor de cada `aTodo<nombre>.push(...)` de la portada, en orden. Los
 /// valores son literales JS entre comillas dobles o números; la portada no
@@ -64,11 +82,16 @@ List<OnDemandTitle> parseCineapartePage(String html) {
         'La portada de Cineaparte no trae el catálogo.');
   }
   final posters = _column(html, 'AficheURL');
+  final frames = _column(html, 'FotogramaURL');
   final synopses = _column(html, 'SinopsisCortada');
   final details = _column(html, 'Tipo');
   final available = _column(html, 'Disponible');
   final vod = _column(html, 'AccesoVOD');
   final embeds = _column(html, 'VideoEmbedURL');
+  if (vod.isEmpty || embeds.isEmpty) {
+    throw OnDemandUnavailableException(
+        'La portada de Cineaparte cambió: faltan los vídeos.');
+  }
 
   final n = [
     ids.length,
@@ -88,10 +111,13 @@ List<OnDemandTitle> parseCineapartePage(String html) {
     if (source == null) continue;
     out.add(OnDemandTitle(
       id: ids[i],
-      title: titles[i],
-      synopsis: synopses[i],
-      posterUrl: posters[i],
-      details: details[i],
+      title: _decodeEntities(titles[i]),
+      synopsis: _decodeEntities(synopses[i]),
+      // El fotograma es opcional: sin cartel se usa si la portada lo trae.
+      posterUrl: posters[i].isNotEmpty
+          ? posters[i]
+          : (i < frames.length ? frames[i] : ''),
+      details: _decodeEntities(details[i]),
       source: source,
     ));
   }

@@ -14,7 +14,8 @@ String page(List<Map<String, Object>> rows) {
     b.writeln('aTodoIds.push(${r['id'] ?? 1})');
     b.writeln('aTodoTitulo.push("${r['title'] ?? 'Peli'}");');
     b.writeln('aTodoURL.push("/p/1/peli")');
-    b.writeln('aTodoAficheURL.push("https://x/${r['id'] ?? 1}.jpg");');
+    b.writeln('aTodoAficheURL.push("${r['poster'] ?? 'https://x/${r['id'] ?? 1}.jpg'}");');
+    b.writeln('aTodoFotogramaURL.push("https://x/frame-${r['id'] ?? 1}.jpg");');
     b.writeln('aTodoSinopsisCortada.push("${r['syn'] ?? 'Sinopsis'}");');
     b.writeln('aTodoTipo.push("Largometraje, 2018, 77 min.");');
     b.writeln('aTodoDisponible.push("${r['disp'] ?? ''}");');
@@ -92,6 +93,39 @@ void main() {
 
   test('sin matrices aTodo* → OnDemandUnavailableException', () {
     expect(() => parseCineapartePage('<html>nada</html>'),
+        throwsA(isA<OnDemandUnavailableException>()));
+  });
+
+  test('decodifica entidades HTML en título y sinopsis', () {
+    final t = parseCineapartePage(page([
+      {
+        'title': 'Pa&#039; otro d&iacute;a &amp;amp; &quot;ya&quot;',
+        'syn': 'Rock&amp;roll &lt;3 &#x41;',
+        'embed': vimeo('1'),
+      },
+    ]));
+    expect(t.single.title, "Pa' otro d&iacute;a &amp; \"ya\"");
+    expect(t.single.synopsis, 'Rock&roll <3 A');
+  });
+
+  test('sin cartel usa el fotograma', () {
+    final t = parseCineapartePage(page([
+      {'id': 732, 'poster': '', 'embed': vimeo('1')},
+      {'id': 5, 'embed': vimeo('2')},
+    ]));
+    expect(t[0].posterUrl, 'https://x/frame-732.jpg');
+    expect(t[1].posterUrl, 'https://x/5.jpg');
+  });
+
+  test('si falta la matriz de vídeos o de acceso lanza, no devuelve vacío', () {
+    final full = page([
+      {'embed': vimeo('1')},
+    ]);
+    expect(
+        () => parseCineapartePage(full.replaceAll('aTodoVideoEmbedURL', 'aTodoOtro')),
+        throwsA(isA<OnDemandUnavailableException>()));
+    expect(
+        () => parseCineapartePage(full.replaceAll('aTodoAccesoVOD', 'aTodoOtro')),
         throwsA(isA<OnDemandUnavailableException>()));
   });
 }

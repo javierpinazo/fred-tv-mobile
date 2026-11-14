@@ -36,13 +36,15 @@ class FakeSurface implements YoutubePlayerSurface {
       _handler!('{"t":"state","s":$s,"pos":$pos,"dur":$dur,"live":false}');
 }
 
-Future<FakeSurface> _open(WidgetTester t) async {
+Future<FakeSurface> _open(WidgetTester t, {void Function(bool)? wakelock}) async {
   final surface = FakeSurface();
   await pumpTvRoute(
     t,
     (_) => TvVimeoPlayer(
-        videoId: '1229366069', title: 'Expectante', surface: surface,
-        keepAwake: false),
+        videoId: '1229366069',
+        title: 'Expectante',
+        surface: surface,
+        wakelock: wakelock ?? (_) {}),
   );
   return surface;
 }
@@ -74,6 +76,9 @@ void main() {
   testWidgets('carga la página con el origen y muestra la carga', (t) async {
     final s = await _open(t);
     expect(s.baseUrl, vimeoPlayerOrigin);
+    // Vimeo bloquea por dominio algunas películas de Cineaparte: el origen
+    // tiene que ser el suyo.
+    expect(vimeoPlayerOrigin, 'https://www.cineaparte.com/');
     expect(s.html, contains('1229366069'));
     expect(find.byKey(const ValueKey('vm-surface')), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -101,5 +106,14 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byType(TvVimeoPlayer), findsNothing);
     expect(s.disposed, isTrue);
+  });
+
+  testWidgets('mantiene la pantalla encendida mientras reproduce', (t) async {
+    final calls = <bool>[];
+    await _open(t, wakelock: calls.add);
+    expect(calls, [true]);
+    Navigator.of(t.element(find.byType(TvVimeoPlayer))).pop();
+    await t.pumpAndSettle();
+    expect(calls, [true, false]);
   });
 }

@@ -7,9 +7,11 @@ import 'package:open_tv/screens/tv/widgets/tv_button.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 import 'package:open_tv/screens/tv/youtube/tv_youtube_player.dart';
 import 'package:open_tv/screens/tv/youtube/youtube_player_page.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 /// Origen con el que se carga la página del reproductor de Vimeo.
-const vimeoPlayerOrigin = 'https://fredtv.example.app/';
+/// Es el de Cineaparte: Vimeo bloquea por dominio algunas de sus películas.
+const vimeoPlayerOrigin = 'https://www.cineaparte.com/';
 
 final _vimeoId = RegExp(r'^\d{1,12}$');
 
@@ -58,6 +60,8 @@ function vmSeek(d){pl.getCurrentTime().then(function(c){pl.setCurrentTime(Math.m
 ''';
 }
 
+void _keepScreenOn(bool on) => unawaited(WakelockPlus.toggle(enable: on));
+
 /// Reproductor de Vimeo a pantalla completa, manejado con el mando: OK pausa
 /// o reanuda, ←/→ saltan 10 s, Atrás cierra. Termina solo al acabar la
 /// película. Todavía no lo abre ninguna pantalla.
@@ -68,14 +72,15 @@ class TvVimeoPlayer extends StatefulWidget {
     this.title,
     this.surface,
     this.readyTimeout = const Duration(seconds: 20),
-    this.keepAwake = true,
+    this.wakelock = _keepScreenOn,
   });
 
   final String videoId;
   final String? title;
   final YoutubePlayerSurface? surface;
   final Duration readyTimeout;
-  final bool keepAwake;
+  /// Enciende (`true`) o suelta (`false`) la pantalla encendida.
+  final void Function(bool on) wakelock;
 
   @override
   State<TvVimeoPlayer> createState() => _TvVimeoPlayerState();
@@ -98,6 +103,7 @@ class _TvVimeoPlayerState extends State<TvVimeoPlayer> {
     _surface = widget.surface ?? WebViewYoutubeSurface();
     _surface.onMessage = _onMessage;
     _readyTimer = Timer(widget.readyTimeout, _fail);
+    widget.wakelock(true);
   }
 
   @override
@@ -119,6 +125,7 @@ class _TvVimeoPlayerState extends State<TvVimeoPlayer> {
     _keysNode.dispose();
     _failNode.dispose();
     unawaited(_surface.dispose());
+    widget.wakelock(false);
     super.dispose();
   }
 
