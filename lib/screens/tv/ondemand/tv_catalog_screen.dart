@@ -139,7 +139,10 @@ class _TvCatalogScreenState extends State<TvCatalogScreen> {
             for (final t in titles)
               if (t.categories.contains(_category)) t
           ];
-    final grid = _grid(visible);
+    // Un catálogo solo de miniaturas horizontales (YouTube) usa tarjetas
+    // horizontales; si hay carteles verticales mezclados, todo va en vertical.
+    final landscape = titles.isNotEmpty && titles.every((t) => t.landscapePoster);
+    final grid = _grid(visible, landscape: landscape);
     if (categories.isEmpty) return grid;
     // ← desde la cuadrícula vuelve a la categoría elegida (Flutter iría a la
     // más cercana en vertical, que con carteles altos suele ser otra).
@@ -232,14 +235,14 @@ class _TvCatalogScreenState extends State<TvCatalogScreen> {
     );
   }
 
-  Widget _grid(List<OnDemandTitle> titles) {
+  Widget _grid(List<OnDemandTitle> titles, {required bool landscape}) {
     return GridView.builder(
       padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 200,
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: landscape ? 320 : 200,
         mainAxisSpacing: 20,
         crossAxisSpacing: 20,
-        childAspectRatio: 0.58,
+        childAspectRatio: landscape ? 1.3 : 0.58,
       ),
       itemCount: titles.length,
       itemBuilder: (context, i) => _card(titles[i], autofocus: i == 0),
@@ -260,14 +263,18 @@ class _TvCatalogScreenState extends State<TvCatalogScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: _poster(title.posterUrl)),
+            if (title.landscapePoster)
+              AspectRatio(aspectRatio: 16 / 9, child: _poster(title.posterUrl))
+            else
+              Expanded(child: _poster(title.posterUrl)),
             const SizedBox(height: 8),
-            Text(title.title,
+            Flexible(
+                child: Text(title.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                    fontSize: TvTheme.fontSmall, color: TvTheme.textPrimary)),
+                    fontSize: TvTheme.fontSmall, color: TvTheme.textPrimary))),
           ],
         ),
       ),
@@ -317,7 +324,12 @@ class _MovieSheet extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(width: 200, height: 290, child: _poster(title.posterUrl)),
+              SizedBox(
+                  key: const ValueKey('tv-cine-poster'),
+                  // 16:9 si es una miniatura; 280 px para que quepan los botones.
+                  width: title.landscapePoster ? 280 : 200,
+                  height: title.landscapePoster ? 157.5 : 290,
+                  child: _poster(title.posterUrl)),
               const SizedBox(width: 28),
               Expanded(
                 child: Column(

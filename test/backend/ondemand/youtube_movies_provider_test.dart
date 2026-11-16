@@ -82,6 +82,7 @@ void main() {
     expect(m.categories, ['Uno']);
     expect(m.details, '82 min. · Uno');
     expect(m.posterUrl, 'https://i.ytimg.com/vi/abc/mqdefault.jpg');
+    expect(m.landscapePoster, isTrue); // miniatura 16:9: se muestra entera
     expect(m.synopsis, '');
   });
 

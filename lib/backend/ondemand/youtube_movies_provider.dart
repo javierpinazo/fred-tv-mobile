@@ -162,6 +162,7 @@ class YoutubeMoviesProvider implements OnDemandProvider {
               '${channelOf[e.key]!.name}',
           source: YoutubeSource(e.key, captions: channelOf[e.key]!.captions),
           categories: cats[e.key]!,
+          landscapePoster: true,
         ),
     ];
     _cache = titles;

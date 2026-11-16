@@ -45,6 +45,7 @@ class OnDemandTitle {
     required this.details,
     required this.source,
     this.categories = const [],
+    this.landscapePoster = false,
   });
 
   final String id;
@@ -58,6 +59,10 @@ class OnDemandTitle {
 
   /// Categorías del servicio a las que pertenece (vacía si no las tiene).
   final List<String> categories;
+
+  /// El cartel es una miniatura horizontal 16:9 (YouTube): se muestra entera,
+  /// sin recortarla a vertical.
+  final bool landscapePoster;
 }
 
 /// Un servicio de películas (Cineaparte, Pluto…).

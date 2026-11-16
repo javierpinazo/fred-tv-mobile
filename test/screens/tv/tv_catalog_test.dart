@@ -275,4 +275,57 @@ void main() {
     await tt.pumpAndSettle();
     expect(find.text('Expectante'), findsOneWidget);
   });
+
+  group('formato del cartel', () {
+    OnDemandTitle t(String id, {required bool landscape}) => OnDemandTitle(
+        id: id,
+        title: 'Peli $id',
+        synopsis: 'Sinopsis',
+        posterUrl: '',
+        details: '',
+        source: const VimeoSource('1'),
+        landscapePoster: landscape);
+
+    testWidgets('carteles verticales: tarjeta más alta que ancha', (tt) async {
+      await pumpTv(
+          tt,
+          TvCatalogScreen(
+              provider: FakeProvider([
+            [t('1', landscape: false)]
+          ])));
+      await tt.pumpAndSettle();
+      final size = tt.getSize(find.byKey(const ValueKey('tv-cine-1')));
+      expect(size.height, greaterThan(size.width));
+    });
+
+    testWidgets('miniaturas horizontales: tarjeta más ancha que alta y la '
+        'ficha deja el cartel en 16:9', (tt) async {
+      await pumpTv(
+          tt,
+          TvCatalogScreen(
+              provider: FakeProvider([
+            [t('1', landscape: true), t('2', landscape: true)]
+          ])));
+      await tt.pumpAndSettle();
+      final size = tt.getSize(find.byKey(const ValueKey('tv-cine-1')));
+      expect(size.width, greaterThan(size.height));
+
+      await _key(tt, LogicalKeyboardKey.select);
+      await tt.pumpAndSettle();
+      final poster = tt.getSize(find.byKey(const ValueKey('tv-cine-poster')));
+      expect(poster.width / poster.height, closeTo(16 / 9, 0.02));
+    });
+
+    testWidgets('catálogo mixto: se queda en vertical', (tt) async {
+      await pumpTv(
+          tt,
+          TvCatalogScreen(
+              provider: FakeProvider([
+            [t('1', landscape: true), t('2', landscape: false)]
+          ])));
+      await tt.pumpAndSettle();
+      final size = tt.getSize(find.byKey(const ValueKey('tv-cine-1')));
+      expect(size.height, greaterThan(size.width));
+    });
+  });
 }
