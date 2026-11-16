@@ -15,10 +15,10 @@ import 'package:open_tv/screens/tv/youtube/tv_youtube_player.dart';
 /// Reproductor que corresponde al origen de la película: Vimeo o YouTube.
 Widget onDemandPlayerFor(OnDemandTitle title) {
   switch (title.source) {
-    case PlutoSource():
-      // Provisional (Task 5): Pluto necesita resolver la URL antes de abrir
-      // el reproductor de películas.
-      throw UnsupportedError('Pluto TV se reproduce resolviendo su URL.');
+    case PlutoSource() || ArchiveSource() || PlexSource():
+      // Estos servicios resuelven la URL antes de abrir el reproductor de
+      // películas (ver `playOnDemandTitle`).
+      throw UnsupportedError('Este servicio se reproduce resolviendo su URL.');
     case VimeoSource(:final videoId):
       return TvVimeoPlayer(videoId: videoId, title: title.title);
     case YoutubeSource(:final videoId):
@@ -59,7 +59,7 @@ Future<void> playOnDemandTitle(
   VodPlayerBuilder playerBuilder = _defaultVodPlayer,
 }) async {
   final navigator = Navigator.of(context);
-  if (title.source is! PlutoSource) {
+  if (title.source is VimeoSource || title.source is YoutubeSource) {
     await navigator.push<void>(
       MaterialPageRoute<void>(builder: (_) => onDemandPlayerFor(title)),
     );

@@ -20,6 +20,18 @@ class PlutoSource extends OnDemandSource {
   const PlutoSource(super.videoId);
 }
 
+/// Vídeo de Internet Archive: `videoId` es el `identifier` del ítem; la URL del
+/// MP4 se resuelve al reproducir (ver [OnDemandResolver]).
+class ArchiveSource extends OnDemandSource {
+  const ArchiveSource(super.videoId);
+}
+
+/// Vídeo de Plex: `videoId` es el `ratingKey`; la URL HLS (con token) se
+/// resuelve al reproducir (ver [OnDemandResolver]).
+class PlexSource extends OnDemandSource {
+  const PlexSource(super.videoId);
+}
+
 /// Una película de un servicio on demand.
 class OnDemandTitle {
   const OnDemandTitle({
