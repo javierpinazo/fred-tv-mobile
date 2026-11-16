@@ -15,27 +15,31 @@ Future<void> _key(WidgetTester t, LogicalKeyboardKey k) async {
 }
 
 void main() {
-  test('Cineaparte y Pluto están habilitados; los demás servicios no', () {
-    expect(kOnDemandEnabledServices, {'cineaparte', 'pluto'});
+  test('Cineaparte, Pluto, Plex e Internet Archive están habilitados; YouTube no',
+      () {
+    expect(kOnDemandEnabledServices, {'cineaparte', 'pluto', 'plex', 'archive'});
     final services = onDemandServices();
     expect(services.map((s) => s.name),
         ['Cineaparte', 'Pluto TV', 'Plex', 'Internet Archive', 'YouTube']);
     expect(services.where((s) => s.enabled).map((s) => s.id),
-        ['cineaparte', 'pluto']);
-    expect(services.firstWhere((s) => s.id == 'pluto').provider, isNotNull);
+        ['cineaparte', 'pluto', 'plex', 'archive']);
+    for (final id in ['pluto', 'plex', 'archive']) {
+      expect(services.firstWhere((s) => s.id == id).provider, isNotNull, reason: id);
+    }
+    expect(services.firstWhere((s) => s.id == 'youtube-movies').provider, isNull);
   });
 
-  testWidgets('«Próximamente» solo en los 3 servicios sin conectar', (t) async {
+  testWidgets('«Próximamente» solo en YouTube', (t) async {
     await pumpTv(t, const Scaffold(body: TvOnDemandScreen()));
     for (final s in onDemandServices()) {
       expect(find.text(s.name), findsOneWidget);
     }
-    expect(find.text('Próximamente'), findsNWidgets(3));
+    expect(find.text('Próximamente'), findsOneWidget);
   });
 
   testWidgets('OK en un servicio sin conectar no abre nada', (t) async {
     await pumpTv(t, const Scaffold(body: TvOnDemandScreen()));
-    await focusKey(t, 'tv-ondemand-plex');
+    await focusKey(t, 'tv-ondemand-youtube-movies');
     await _key(t, LogicalKeyboardKey.select);
     await t.pumpAndSettle();
     expect(find.byType(TvOnDemandScreen), findsOneWidget);
@@ -63,6 +67,25 @@ void main() {
     expect(find.byType(TvCatalogScreen), findsOneWidget);
     expect(fake.calls, 1);
   });
+  for (final id in ['plex', 'archive']) {
+    testWidgets('OK en $id abre su catálogo', (t) async {
+      final fake = _FakeCine();
+      await pumpTv(
+        t,
+        Scaffold(
+          body: TvOnDemandScreen(services: [
+            OnDemandService(
+                id: id, name: id, icon: Icons.movie, provider: fake),
+          ]),
+        ),
+      );
+      await focusKey(t, 'tv-ondemand-$id');
+      await _key(t, LogicalKeyboardKey.select);
+      await t.pumpAndSettle();
+      expect(find.byType(TvCatalogScreen), findsOneWidget);
+      expect(fake.calls, 1);
+    });
+  }
 }
 
 class _FakeCine implements OnDemandProvider {
