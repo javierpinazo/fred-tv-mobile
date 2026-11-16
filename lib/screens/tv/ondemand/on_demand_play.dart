@@ -9,6 +9,10 @@ import 'package:open_tv/screens/tv/youtube/tv_youtube_player.dart';
 /// Reproductor que corresponde al origen de la película: Vimeo o YouTube.
 Widget onDemandPlayerFor(OnDemandTitle title) {
   switch (title.source) {
+    case PlutoSource():
+      // Provisional (Task 5): Pluto necesita resolver la URL antes de abrir
+      // el reproductor de películas.
+      throw UnsupportedError('Pluto TV se reproduce resolviendo su URL.');
     case VimeoSource(:final videoId):
       return TvVimeoPlayer(videoId: videoId, title: title.title);
     case YoutubeSource(:final videoId):
