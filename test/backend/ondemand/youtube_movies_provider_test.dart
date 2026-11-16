@@ -31,12 +31,15 @@ const _b = 'https://www.youtube.com/@dos';
 
 YoutubeMoviesProvider provider(FakeService s,
         {DateTime Function()? now,
-        List<({String name, String url})>? channels}) =>
+        List<({String name, String url, bool captions})>? channels}) =>
     YoutubeMoviesProvider(
       service: s,
       now: now,
       channels: channels ??
-          const [(name: 'Uno', url: _a), (name: 'Dos', url: _b)],
+          const [
+            (name: 'Uno', url: _a, captions: false),
+            (name: 'Dos', url: _b, captions: true),
+          ],
     );
 
 void main() {
@@ -93,6 +96,11 @@ void main() {
         v('5', 'Ahí está el detalle - Películas Clásicas Completas', '1:30:00'),
         v('6', 'Película completa', '1:30:00'),
         v('7', 'La película completa del año', '1:30:00'),
+        v('8', 'El maquinista de La General (1926) | VERSIÓN RESTAURADA HD 1080p | Película COMPLETA en español', '1:30:00'),
+        v('9', '🍕Eleven Men and a Girl (1930) Full HD Movie | Joan Bennett | PRE-CODE🍕', '1:30:00'),
+        v('10', 'Puños sangrientos | Película en Español', '1:30:00'),
+        v('11', 'The Red Tent (1969) - Mikhail Kalatozov | Drama | Mosfilm 4K', '1:30:00'),
+        v('12', '🍕🍕', '1:30:00'),
       ],
       _b: <YoutubeProgram>[],
     });
@@ -105,6 +113,11 @@ void main() {
       'Ahí está el detalle',
       'Película completa', // sin otra cosa que mostrar, se conserva
       'La película completa del año', // no es un sufijo: se conserva
+      'El maquinista de La General (1926)',
+      'Eleven Men and a Girl (1930)',
+      'Puños sangrientos',
+      'The Red Tent (1969) - Mikhail Kalatozov',
+      '🍕🍕', // sin nada más que mostrar, se conserva
     ]);
   });
 
@@ -157,10 +170,29 @@ void main() {
     expect(s.calls.length, 4);
   });
 
-  test('canales por defecto: Butaca', () {
-    expect(defaultYoutubeMovieChannels.map((c) => c.name), ['Butaca']);
-    expect(defaultYoutubeMovieChannels.first.url,
-        'https://www.youtube.com/@butaca');
+  test('canales por defecto: Butaca, Cinefilia, PizzaFlix, CINETEL y Mosfilm', () {
+    expect(defaultYoutubeMovieChannels.map((c) => c.name),
+        ['Butaca', 'Cinefilia', 'PizzaFlix', 'CINETEL', 'Mosfilm']);
+    expect(defaultYoutubeMovieChannels.map((c) => c.url), [
+      'https://www.youtube.com/@butaca',
+      'https://www.youtube.com/@Cinefiliablog',
+      'https://www.youtube.com/@PizzaFLIX',
+      'https://www.youtube.com/@CINETELMULTIMEDIA',
+      'https://www.youtube.com/@Mosfilm_eng',
+    ]);
+    // Subtítulos solo donde la película no está en español.
+    expect(defaultYoutubeMovieChannels.map((c) => c.captions),
+        [false, true, true, false, true]);
+  });
+
+  test('los subtítulos salen de la configuración del canal', () async {
+    final s = FakeService({
+      _a: [v('sin', 'Sin subs', '1:30:00')],
+      _b: [v('con', 'Con subs', '1:30:00')],
+    });
+    final t = await provider(s).titles();
+    expect((t[0].source as YoutubeSource).captions, isFalse);
+    expect((t[1].source as YoutubeSource).captions, isTrue);
   });
 
   test('id y nombre', () {

@@ -93,12 +93,16 @@ class TvYoutubePlayer extends StatefulWidget {
     this.openExternally,
     this.readyTimeout = const Duration(seconds: 20),
     this.keepAwake = true,
+    this.captions = false,
   });
 
   final Channel channel;
   final YoutubeProgram program;
   final YoutubePlayerSurface? surface;
   final Future<void> Function(String videoId)? openExternally;
+
+  /// Pedir subtítulos al reproductor (películas que no están en español).
+  final bool captions;
 
   /// Tiempo máximo sin noticias del reproductor antes de darlo por fallido.
   final Duration readyTimeout;
@@ -148,7 +152,8 @@ class _TvYoutubePlayerState extends State<TvYoutubePlayer> {
     final language = Localizations.localeOf(context).languageCode;
     try {
       unawaited(_surface.load(
-          youtubePlayerHtml(widget.program.videoId, language: language),
+          youtubePlayerHtml(widget.program.videoId,
+              language: language, captions: widget.captions),
           youtubePlayerOrigin));
     } on ArgumentError catch (e) {
       debugPrint('TvYoutubePlayer: $e');

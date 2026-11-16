@@ -233,4 +233,19 @@ void main() {
     await t.pump(const Duration(seconds: 25));
     expect(t.takeException(), isNull);
   });
+
+  testWidgets('captions: true pide subtítulos en la página', (t) async {
+    final surface = FakeSurface();
+    await pumpTvRoute(
+      t,
+      (_) => TvYoutubePlayer(
+        channel: _channel,
+        program: _video,
+        surface: surface,
+        keepAwake: false,
+        captions: true,
+      ),
+    );
+    expect(surface.html, contains('cc_load_policy:1'));
+  });
 }

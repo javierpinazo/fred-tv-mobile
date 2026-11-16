@@ -21,7 +21,7 @@ Widget onDemandPlayerFor(OnDemandTitle title) {
       throw UnsupportedError('Este servicio se reproduce resolviendo su URL.');
     case VimeoSource(:final videoId):
       return TvVimeoPlayer(videoId: videoId, title: title.title);
-    case YoutubeSource(:final videoId):
+    case YoutubeSource(:final videoId, :final captions):
       // El reproductor de YouTube pide un canal y un programa: se le da un
       // canal genérico que solo existe para esto (Cineaparte, YouTube…).
       return TvYoutubePlayer(
@@ -37,6 +37,7 @@ Widget onDemandPlayerFor(OnDemandTitle title) {
           title: title.title,
           kind: YoutubeProgramKind.video,
         ),
+        captions: captions,
       );
   }
 }

@@ -6,8 +6,32 @@ import 'package:open_tv/backend/youtube/youtube_program.dart';
 /// Canales de YouTube con películas completas subidas por quien tiene los
 /// derechos. Solo entran los que el usuario confirma: la app no busca
 /// películas por su cuenta.
-const List<({String name, String url})> defaultYoutubeMovieChannels = [
-  (name: 'Butaca', url: 'https://www.youtube.com/@butaca'),
+///
+/// `captions` pide subtítulos al reproductor: se activa en los canales cuyas
+/// películas no están en español.
+const List<({String name, String url, bool captions})>
+    defaultYoutubeMovieChannels = [
+  (name: 'Butaca', url: 'https://www.youtube.com/@butaca', captions: false),
+  (
+    name: 'Cinefilia',
+    url: 'https://www.youtube.com/@Cinefiliablog',
+    captions: true
+  ),
+  (
+    name: 'PizzaFlix',
+    url: 'https://www.youtube.com/@PizzaFLIX',
+    captions: true
+  ),
+  (
+    name: 'CINETEL',
+    url: 'https://www.youtube.com/@CINETELMULTIMEDIA',
+    captions: false
+  ),
+  (
+    name: 'Mosfilm',
+    url: 'https://www.youtube.com/@Mosfilm_eng',
+    captions: true
+  ),
 ];
 
 /// Una película dura al menos una hora; lo demás (cortos, avances, capítulos)
@@ -42,9 +66,22 @@ final _movieSuffix = RegExp(
     r'\s*[-–|]\s*pel[ií]culas?\s+(cl[aá]sicas?\s+)?completas?\b.*$',
     caseSensitive: false);
 
+final _emoji = RegExp(
+    r'[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]',
+    unicode: true);
+
+final _titleTail = RegExp(
+    r'\s*(full\s*hd\s*movie|pel[ií]cula en espa[ñn]ol)\s*$',
+    caseSensitive: false);
+
+/// Título para mostrar: sin emojis ni los «| Película en Español», «Full HD
+/// Movie»… que los canales añaden. Si no queda nada útil, el original.
 String _cleanTitle(String title) {
-  final cleaned = title.replaceFirst(_movieSuffix, '').trim();
-  return cleaned.length >= 2 ? cleaned : title.trim();
+  var t = title.split('|').first;
+  t = t.replaceFirst(_movieSuffix, '');
+  t = t.replaceAll(_emoji, '');
+  t = t.replaceFirst(_titleTail, '').trim();
+  return t.length >= 2 ? t : title.trim();
 }
 
 /// Películas completas de canales concretos de YouTube. Se reproducen con el
@@ -61,7 +98,7 @@ class YoutubeMoviesProvider implements OnDemandProvider {
   final YoutubeChannelService _service;
   final DateTime Function() _now;
   final Duration ttl;
-  final List<({String name, String url})> channels;
+  final List<({String name, String url, bool captions})> channels;
 
   List<OnDemandTitle>? _cache;
   DateTime? _cachedAt;
@@ -81,7 +118,7 @@ class YoutubeMoviesProvider implements OnDemandProvider {
     }
     final byId = <String, YoutubeProgram>{};
     final cats = <String, List<String>>{};
-    final channelOf = <String, String>{};
+    final channelOf = <String, ({String name, bool captions})>{};
     var anyChannelRead = false;
     for (final c in channels) {
       final List<YoutubeProgram> programs;
@@ -100,16 +137,19 @@ class YoutubeMoviesProvider implements OnDemandProvider {
           continue;
         }
         byId.putIfAbsent(p.videoId, () => p);
-        channelOf.putIfAbsent(p.videoId, () => c.name);
+        channelOf.putIfAbsent(
+            p.videoId, () => (name: c.name, captions: c.captions));
         final list = cats.putIfAbsent(p.videoId, () => []);
         if (!list.contains(c.name)) list.add(c.name);
       }
     }
     if (!anyChannelRead) {
-      throw OnDemandUnavailableException('No se pudo leer ningún canal de YouTube.');
+      throw OnDemandUnavailableException(
+          'No se pudo leer ningún canal de YouTube.');
     }
     if (byId.isEmpty) {
-      throw OnDemandUnavailableException('Los canales de YouTube no traen películas.');
+      throw OnDemandUnavailableException(
+          'Los canales de YouTube no traen películas.');
     }
     final titles = [
       for (final e in byId.entries)
@@ -118,9 +158,9 @@ class YoutubeMoviesProvider implements OnDemandProvider {
           title: _cleanTitle(e.value.title),
           synopsis: '',
           posterUrl: e.value.thumbnail,
-          details:
-              '${youtubeDurationMinutes(e.value.duration)} min. · ${channelOf[e.key]}',
-          source: YoutubeSource(e.key),
+          details: '${youtubeDurationMinutes(e.value.duration)} min. · '
+              '${channelOf[e.key]!.name}',
+          source: YoutubeSource(e.key, captions: channelOf[e.key]!.captions),
           categories: cats[e.key]!,
         ),
     ];

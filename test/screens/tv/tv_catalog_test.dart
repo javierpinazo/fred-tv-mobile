@@ -153,6 +153,18 @@ void main() {
       expect(w.title, 'Expectante');
     });
 
+    test('YouTube con subtítulos → TvYoutubePlayer con captions', () {
+      final w = onDemandPlayerFor(OnDemandTitle(
+          id: '3',
+          title: 'Con subs',
+          synopsis: '',
+          posterUrl: '',
+          details: '',
+          source: const YoutubeSource('B4yhLGy9-z8', captions: true)));
+      expect((w as TvYoutubePlayer).captions, isTrue);
+      expect((onDemandPlayerFor(_youtube) as TvYoutubePlayer).captions, isFalse);
+    });
+
     test('YouTube → TvYoutubePlayer con el id y el título', () {
       final w = onDemandPlayerFor(_youtube);
       expect(w, isA<TvYoutubePlayer>());

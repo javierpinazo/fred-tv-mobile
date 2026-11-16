@@ -11,7 +11,10 @@ class VimeoSource extends OnDemandSource {
 
 /// Vídeo alojado en YouTube (`youtube.com/embed/<id>`).
 class YoutubeSource extends OnDemandSource {
-  const YoutubeSource(super.videoId);
+  const YoutubeSource(super.videoId, {this.captions = false});
+
+  /// Pedir subtítulos al reproductor (películas que no están en español).
+  final bool captions;
 }
 
 /// Vídeo de Pluto TV: `videoId` es el `_id` del ítem; la URL se resuelve al

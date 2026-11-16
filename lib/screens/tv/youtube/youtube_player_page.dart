@@ -15,11 +15,18 @@ final _language = RegExp(r'^[a-z]{2}$');
 /// Página con el reproductor IFrame oficial de YouTube a pantalla completa,
 /// sin sus controles (se maneja con [youtubeCommandJs]). Lanza
 /// [ArgumentError] si [videoId] no tiene forma de id de YouTube.
-String youtubePlayerHtml(String videoId, {String language = 'es'}) {
+String youtubePlayerHtml(String videoId,
+    {String language = 'es', bool captions = false}) {
   if (!_videoId.hasMatch(videoId)) {
     throw ArgumentError.value(videoId, 'videoId', 'no es un id de YouTube');
   }
   final hl = _language.hasMatch(language) ? language : 'es';
+  // Con subtítulos (películas que no están en español) no se descargan los
+  // módulos de subtítulos y se piden en el idioma de la app.
+  final noCaptionsBody = captions
+      ? ''
+      : "try{player.unloadModule('captions');player.unloadModule('cc');}catch(e){}";
+  final captionVars = captions ? ",cc_load_policy:1,cc_lang_pref:'$hl'" : '';
   return '''
 <!doctype html>
 <html>
@@ -47,11 +54,11 @@ function state(){
 // YouTube enciende por su cuenta los subtítulos automáticos y tapan los
 // rótulos del programa: se descarga el módulo cada vez que puede volver.
 function noCaptions(){
-  try{player.unloadModule('captions');player.unloadModule('cc');}catch(e){}
+  $noCaptionsBody
 }
 function onYouTubeIframeAPIReady(){
   player=new YT.Player('p',{videoId:'$videoId',width:'100%',height:'100%',
-    playerVars:{autoplay:1,controls:0,rel:0,playsinline:1,fs:0,iv_load_policy:3,disablekb:1,hl:'$hl'},
+    playerVars:{autoplay:1,controls:0,rel:0,playsinline:1,fs:0,iv_load_policy:3,disablekb:1,hl:'$hl'$captionVars},
     events:{
       onReady:function(e){noCaptions();e.target.playVideo();state();},
       onApiChange:noCaptions,

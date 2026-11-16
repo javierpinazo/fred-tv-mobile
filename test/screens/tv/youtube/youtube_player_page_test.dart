@@ -105,4 +105,15 @@ void main() {
     expect(youtubeCommandJs(YoutubeKeyCommand.back30), 'ytSeek(-30)');
     expect(youtubeCommandJs(YoutubeKeyCommand.forward30), 'ytSeek(30)');
   });
+
+  test('con subtítulos: los pide y no descarga el módulo de subtítulos', () {
+    final on = youtubePlayerHtml('Ejg0OQPYVgw', captions: true);
+    expect(on, contains('cc_load_policy:1'));
+    expect(on, contains("cc_lang_pref:'es'"));
+    expect(on, isNot(contains("unloadModule('captions')")));
+
+    final off = youtubePlayerHtml('Ejg0OQPYVgw');
+    expect(off, isNot(contains('cc_load_policy')));
+    expect(off, contains("unloadModule('captions')"));
+  });
 }
