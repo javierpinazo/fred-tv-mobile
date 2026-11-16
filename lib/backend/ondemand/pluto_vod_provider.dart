@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_tv/backend/ondemand/on_demand_provider.dart';
 import 'package:open_tv/backend/ondemand/pluto_vod_parser.dart';
+import 'package:open_tv/backend/ondemand/uuid.dart';
 
 final _safeId = RegExp(r'^[A-Za-z0-9_-]{1,64}$');
 
@@ -25,17 +25,6 @@ class _PlutoSession {
   final String stitcherParams;
 
   Map<String, String> get authHeaders => {'Authorization': 'Bearer $token'};
-}
-
-String _uuidV4() {
-  final r = Random.secure();
-  final b = List<int>.generate(16, (_) => r.nextInt(256));
-  b[6] = (b[6] & 0x0f) | 0x40;
-  b[8] = (b[8] & 0x3f) | 0x80;
-  String h(int from, int to) => [
-        for (var i = from; i < to; i++) b[i].toRadixString(16).padLeft(2, '0')
-      ].join();
-  return '${h(0, 4)}-${h(4, 6)}-${h(6, 8)}-${h(8, 10)}-${h(10, 16)}';
 }
 
 Future<List<OnDemandTitle>> _parseInIsolate(String json) =>
@@ -88,7 +77,7 @@ class PlutoVodProvider implements OnDemandProvider, OnDemandResolver {
           'deviceModel': 'web',
           'deviceMake': 'chrome',
           'deviceType': 'web',
-          'clientID': _uuidV4(),
+          'clientID': newUuidV4(),
           'clientModelNumber': '1.0.0',
           'serverSideAds': 'false',
         });
