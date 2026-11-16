@@ -29,7 +29,9 @@ String _details(Map<String, dynamic> item) {
   if (genre.isNotEmpty) parts.add(genre);
   final rating = _str(item['rating']);
   if (rating.isNotEmpty) parts.add(rating);
-  final ms = int.tryParse(_str(item['originalContentDuration']));
+  // La API la manda como número (o, a veces, como texto).
+  final raw = item['originalContentDuration'];
+  final ms = raw is num ? raw.toInt() : int.tryParse(_str(raw));
   if (ms != null && ms > 0) {
     parts.add('${(ms / 60000).round()} min.');
   }

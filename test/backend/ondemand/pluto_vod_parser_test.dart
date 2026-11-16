@@ -130,4 +130,20 @@ void main() {
           reason: bad);
     }
   });
+
+  test('la duración puede venir como número o como texto', () {
+    final t = parsePlutoVodCatalog(catalog([
+      {
+        'name': 'X',
+        'items': [
+          movie('n', 'Numérica', extra: {'originalContentDuration': 7245000}),
+          movie('t', 'Texto', extra: {'originalContentDuration': '3600000'}),
+          movie('z', 'Cero', extra: {'originalContentDuration': 0}),
+        ],
+      },
+    ]));
+    expect(t[0].details, '121 min.');
+    expect(t[1].details, '60 min.');
+    expect(t[2].details, '');
+  });
 }
