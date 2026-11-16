@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show HandshakeException;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -45,6 +46,7 @@ class FakeProvider implements OnDemandProvider {
     final r = results[calls < results.length ? calls : results.length - 1];
     calls++;
     if (r is Exception) throw r;
+    if (r is Error) throw r;
     return r as List<OnDemandTitle>;
   }
 }
@@ -246,5 +248,19 @@ void main() {
       await _key(tt, LogicalKeyboardKey.arrowLeft);
       expect(isFocused(tt, const ValueKey('tv-cat-Drama')), isTrue);
     });
+  });
+
+  testWidgets('C1: una excepción cualquiera al cargar muestra el error y '
+      '«Reintentar» (no un spinner eterno)', (tt) async {
+    final p = FakeProvider([
+      const HandshakeException('CERTIFICATE_VERIFY_FAILED'),
+      [_vimeo],
+    ]);
+    await pumpTv(tt, TvCatalogScreen(provider: p));
+    await tt.pumpAndSettle();
+    expect(find.text('No se pudieron cargar las películas'), findsOneWidget);
+    await _key(tt, LogicalKeyboardKey.select);
+    await tt.pumpAndSettle();
+    expect(find.text('Expectante'), findsOneWidget);
   });
 }

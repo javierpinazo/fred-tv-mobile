@@ -98,6 +98,15 @@ void main() {
         'Desnuda en la playa',
         'Naked City',
         'Striptease',
+        'Una película para adultos',
+        'cine para adultos',
+        'Solo para adultos',
+        'pornografía de los 70',
+        'película pornográfica',
+        'pornographic film',
+        'Erotismo y deseo',
+        'softcore',
+        'Playboy: la película',
       ]) {
         expect(isAdultText(s), isTrue, reason: s);
       }
@@ -110,6 +119,8 @@ void main() {
         'Romeo y Julieta',
         'La noche del terror',
         'Sexto sentido',
+        'Año +1800',
+        'Los adultos de la familia',
         'Essex 1950',
         'Un hombre desnudo de miedo'.replaceAll('desnudo', 'valiente'),
         '',

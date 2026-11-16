@@ -53,12 +53,20 @@ class _TvVodPlayerState extends State<TvVodPlayer> {
   bool _overlay = false;
   bool _closing = false;
   Duration _position = Duration.zero;
+  // Hasta dónde llegó (para retomar si el servidor corta a mitad de película).
+  Duration _lastPosition = Duration.zero;
 
   @override
   void initState() {
     super.initState();
     _subs
       ..add(_engine.firstFrame.listen((_) {
+        if (_failed) {
+          // El fotograma llegó tarde, con el aviso de error ya en pantalla:
+          // que no suene la película detrás.
+          unawaited(_engine.pause());
+          return;
+        }
         _readyTimer?.cancel();
         if (mounted && !_started) setState(() => _started = true);
       }))
@@ -72,6 +80,7 @@ class _TvVodPlayerState extends State<TvVodPlayer> {
       }))
       ..add(_engine.positionStream.listen((p) {
         _position = p;
+        _lastPosition = p;
         if (mounted && _overlay) setState(() {});
       }));
     _open();
@@ -98,6 +107,8 @@ class _TvVodPlayerState extends State<TvVodPlayer> {
         url: widget.stream.url,
         userAgent: tvFallbackUserAgent,
         headers: widget.stream.headers,
+        // Tras un corte, retoma donde iba (no si fue al empezar).
+        start: _lastPosition > const Duration(seconds: 5) ? _lastPosition : null,
       ));
     } catch (e) {
       debugPrint('TvVodPlayer: no se pudo abrir: $e');
@@ -108,6 +119,8 @@ class _TvVodPlayerState extends State<TvVodPlayer> {
   void _fail() {
     if (!mounted || _failed) return;
     _readyTimer?.cancel();
+    // El motor puede seguir cargando: se para para que no suene detrás del aviso.
+    unawaited(_engine.pause());
     setState(() => _failed = true);
     // El foco estaba en las teclas del reproductor: se lleva al aviso.
     WidgetsBinding.instance.addPostFrameCallback((_) {

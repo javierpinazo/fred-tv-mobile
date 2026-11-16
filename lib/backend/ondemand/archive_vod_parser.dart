@@ -35,10 +35,11 @@ const _letters = r'[a-z0-9áéíóúüñ]';
 const _adultWords = r'xxx|porno?|erotic[ao]s?|erótic[ao]s?|erotica|'
     r'sexploitation|nsfw|hardcore|explotaci[oó]n sexual|'
     r'sex|sexo|sexy|sexual(es)?|sexuellement|nudes?|desnud[oa]s?|naked|'
-    r'striptease|'
+    r'striptease|erotismo|softcore|playboy|pornograf[ií]a|pornogr[aá]fic[ao]s?|'
+    r'pornographic|(solo |cine |película |pelicula )?para adultos(?! mayores)|'
     r'adults? (films?|movies?|only|content|entertainment)|'
     r'(films?|movies?) for adults';
-const _adultAge = r'(?<!\d)(18\+|\+18)';
+const _adultAge = r'(?<!\d)(18\+|\+18(?!\d))';
 
 /// Palabras completas (sin letras pegadas por ningún lado) o «18+».
 final _adult =

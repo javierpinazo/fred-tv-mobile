@@ -69,7 +69,8 @@ class _TvCatalogScreenState extends State<TvCatalogScreen> {
         _titles = titles;
         _failed = titles.isEmpty;
       });
-    } on OnDemandUnavailableException catch (e) {
+    } catch (e) {
+      // Cualquier fallo (red, TLS…) muestra el error con «Reintentar».
       debugPrint('TvCatalogScreen: $e');
       if (mounted) setState(() => _failed = true);
     }

@@ -28,6 +28,16 @@ bool exoVideoLayoutChanged(VideoPlayerValue before, VideoPlayerValue after) =>
 /// Motor ExoPlayer (Media3) vía `video_player`: HLS/DASH nativo y decodificación
 /// por hardware optimizada para Android. No permite elegir pistas.
 class ExoEngine implements TvEngine {
+  /// [prepareFix] solo se cambia en pruebas.
+  ExoEngine({Future<HlsAudioFix?> Function(TvMedia media)? prepareFix})
+      : _prepareFix = prepareFix ?? _defaultPrepareFix;
+
+  static Future<HlsAudioFix?> _defaultPrepareFix(TvMedia media) =>
+      HlsAudioFix.prepare(media.url,
+          userAgent: media.userAgent, headers: media.headers);
+
+  final Future<HlsAudioFix?> Function(TvMedia media) _prepareFix;
+
   VideoPlayerController? _controller;
   HlsAudioFix? _fix;
   final ValueNotifier<int> _tick = ValueNotifier(0);
@@ -112,8 +122,12 @@ class ExoEngine implements TvEngine {
     await _closeFix();
     // HLS que declara solo video: se sirve la lista corregida en local para que
     // ExoPlayer cree la pista de audio.
-    final fix = await HlsAudioFix.prepare(media.url,
-        userAgent: media.userAgent, headers: media.headers);
+    final fix = await _prepareFix(media);
+    if (_disposed) {
+      // Se cerró el reproductor mientras se preparaba la lista: nada que crear.
+      await fix?.close();
+      return;
+    }
     _fix = fix;
     if (fix != null) debugPrint('ExoEngine: lista HLS corregida (audio)');
     final controller = VideoPlayerController.networkUrl(
@@ -125,6 +139,14 @@ class ExoEngine implements TvEngine {
     controller.addListener(_onValue);
     try {
       await controller.initialize();
+      if (_disposed && _controller == controller) {
+        // Atrás durante la carga: el controlador nació después de `dispose`.
+        controller.removeListener(_onValue);
+        _controller = null;
+        await controller.dispose();
+        await _closeFix();
+        return;
+      }
       if (_disposed || _controller != controller) return;
       if (media.start != null) await controller.seekTo(media.start!);
       await controller.play();

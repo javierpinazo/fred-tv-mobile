@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show HandshakeException;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,7 +37,7 @@ class FakeResolver implements OnDemandProvider, OnDemandResolver {
   Future<OnDemandStream> resolve(OnDemandTitle title) {
     final r = results[calls < results.length ? calls : results.length - 1];
     calls++;
-    if (r is Exception) return Future.error(r);
+    if (r is Exception || r is Error) return Future.error(r);
     if (r is Completer<OnDemandStream>) return r.future;
     return Future.value(r as OnDemandStream);
   }
@@ -158,4 +159,26 @@ void main() {
       expect(built, hasLength(1));
     });
   }
+
+  testWidgets('C1: una excepción cualquiera al resolver no deja «Preparando…» '
+      'abierto: muestra el error y «Reintentar» funciona', (t) async {
+    final p = FakeResolver([const HandshakeException('CERTIFICATE_VERIFY_FAILED'), _stream]);
+    final built = await _launch(t, p);
+    await t.pumpAndSettle();
+    expect(find.text('Preparando la película…'), findsNothing);
+    expect(find.text('No se pudieron cargar las películas'), findsOneWidget);
+    await _key(t, LogicalKeyboardKey.select); // «Reintentar»
+    await t.pumpAndSettle();
+    expect(p.calls, 2);
+    expect(built, hasLength(1));
+  });
+
+  testWidgets('C1: un ArgumentError al resolver también muestra el error',
+      (t) async {
+    final p = FakeResolver([ArgumentError('id raro')]);
+    await _launch(t, p);
+    await t.pumpAndSettle();
+    expect(find.text('Preparando la película…'), findsNothing);
+    expect(find.text('Reintentar'), findsOneWidget);
+  });
 }

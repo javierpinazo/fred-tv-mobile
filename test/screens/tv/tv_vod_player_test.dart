@@ -15,6 +15,7 @@ class FakeEngine implements TvEngine {
   final List<TvMedia> opened = [];
   final List<Duration> seeks = [];
   int toggles = 0;
+  int pauses = 0;
   bool disposed = false;
   Object? openError;
 
@@ -60,7 +61,7 @@ class FakeEngine implements TvEngine {
   @override
   Future<void> play() async {}
   @override
-  Future<void> pause() async {}
+  Future<void> pause() async => pauses++;
   @override
   Future<void> playOrPause() async => toggles++;
   @override
@@ -231,5 +232,48 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byType(TvVodPlayer), findsNothing);
     expect(e.disposed, isTrue);
+  });
+
+  testWidgets('I1: tras el tiempo de espera para el motor, y si el primer '
+      'fotograma llega tarde lo vuelve a parar', (t) async {
+    final e = await _open(t, readyTimeout: const Duration(seconds: 3));
+    await t.pump(const Duration(seconds: 4));
+    expect(find.text('Reintentar'), findsOneWidget);
+    expect(e.pauses, greaterThanOrEqualTo(1));
+    final before = e.pauses;
+
+    e.frame(); // llega tarde, ya con el aviso en pantalla
+    await t.pump();
+    expect(e.pauses, greaterThan(before));
+    expect(find.text('Reintentar'), findsOneWidget);
+  });
+
+  testWidgets('I3: «Reintentar» tras un corte retoma desde donde iba',
+      (t) async {
+    final e = await _open(t);
+    expect(e.opened.first.start, isNull);
+    e.frame();
+    await t.pump();
+    e.tick(const Duration(minutes: 90));
+    await t.pump();
+    e.error('corte del servidor');
+    await t.pump();
+    await t.pump();
+    await _key(t, LogicalKeyboardKey.select); // «Reintentar»
+    await t.pump();
+    expect(e.opened, hasLength(2));
+    expect(e.opened[1].start, const Duration(minutes: 90));
+  });
+
+  testWidgets('I3: si el corte fue en los primeros segundos no hay retoma',
+      (t) async {
+    final e = await _open(t);
+    e.tick(const Duration(seconds: 3));
+    e.error('corte');
+    await t.pump();
+    await t.pump();
+    await _key(t, LogicalKeyboardKey.select);
+    await t.pump();
+    expect(e.opened[1].start, isNull);
   });
 }

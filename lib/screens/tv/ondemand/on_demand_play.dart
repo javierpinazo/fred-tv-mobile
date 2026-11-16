@@ -91,7 +91,9 @@ Future<OnDemandStream?> _resolveWithDialog(
       final stream = await resolver.resolve(title);
       if (nav.mounted) nav.pop(); // «Preparando…»
       return stream;
-    } on OnDemandUnavailableException catch (e) {
+    } catch (e) {
+      // Cualquier fallo (red, TLS, id raro…) vuelve al usuario al aviso: un
+      // diálogo «Preparando…» sin salida obligaría a matar la app.
       debugPrint('playOnDemandTitle: $e');
       if (!nav.mounted) return null;
       nav.pop(); // «Preparando…»
