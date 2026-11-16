@@ -204,7 +204,8 @@ void main() {
 
     e.error('otra vez');
     await t.pump();
-    await focusKey(t, 'vod-back');
+    await t.pump(); // el foco pasa al aviso después del fotograma
+    await _key(t, LogicalKeyboardKey.arrowRight); // «Reintentar» → «Volver»
     await _key(t, LogicalKeyboardKey.select);
     await t.pumpAndSettle();
     expect(find.byType(TvVodPlayer), findsNothing);
