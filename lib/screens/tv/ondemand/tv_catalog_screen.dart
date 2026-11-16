@@ -1,5 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:open_tv/backend/ondemand/on_demand_provider.dart';
 import 'package:open_tv/l10n/l10n.dart';
 import 'package:open_tv/screens/tv/ondemand/on_demand_play.dart';
@@ -12,8 +15,8 @@ typedef OnDemandPlay = Future<void> Function(
 
 /// Películas gratuitas de un servicio on demand: cuadrícula de carteles, y al
 /// pulsar OK una ficha con la sinopsis y el botón «Ver».
-class TvCineaparteScreen extends StatefulWidget {
-  const TvCineaparteScreen({
+class TvCatalogScreen extends StatefulWidget {
+  const TvCatalogScreen({
     super.key,
     required this.provider,
     this.onPlay = playOnDemandTitle,
@@ -23,12 +26,27 @@ class TvCineaparteScreen extends StatefulWidget {
   final OnDemandPlay onPlay;
 
   @override
-  State<TvCineaparteScreen> createState() => _TvCineaparteScreenState();
+  State<TvCatalogScreen> createState() => _TvCatalogScreenState();
 }
 
-class _TvCineaparteScreenState extends State<TvCineaparteScreen> {
+class _TvCatalogScreenState extends State<TvCatalogScreen> {
   List<OnDemandTitle>? _titles;
   bool _failed = false;
+
+  /// Categoría elegida; `null` = «Todas».
+  String? _category;
+
+  // Un nodo de foco por categoría (`null` = «Todas»), para volver a la elegida.
+  final Map<String?, FocusNode> _catNodes = {};
+  FocusNode _catNode(String? c) => _catNodes.putIfAbsent(c, FocusNode.new);
+
+  @override
+  void dispose() {
+    for (final n in _catNodes.values) {
+      n.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -40,6 +58,7 @@ class _TvCineaparteScreenState extends State<TvCineaparteScreen> {
     setState(() {
       _titles = null;
       _failed = false;
+      _category = null;
     });
     try {
       final titles = await widget.provider.titles();
@@ -51,7 +70,7 @@ class _TvCineaparteScreenState extends State<TvCineaparteScreen> {
         _failed = titles.isEmpty;
       });
     } on OnDemandUnavailableException catch (e) {
-      debugPrint('TvCineaparteScreen: $e');
+      debugPrint('TvCatalogScreen: $e');
       if (mounted) setState(() => _failed = true);
     }
   }
@@ -112,6 +131,107 @@ class _TvCineaparteScreenState extends State<TvCineaparteScreen> {
     if (titles == null) {
       return const Center(child: CircularProgressIndicator());
     }
+    final categories = _categoriesOf(titles);
+    final visible = _category == null
+        ? titles
+        : [
+            for (final t in titles)
+              if (t.categories.contains(_category)) t
+          ];
+    final grid = _grid(visible);
+    if (categories.isEmpty) return grid;
+    // ← desde la cuadrícula vuelve a la categoría elegida (Flutter iría a la
+    // más cercana en vertical, que con carteles altos suele ser otra).
+    final guarded = Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent ||
+            event.logicalKey != LogicalKeyboardKey.arrowLeft) {
+          return KeyEventResult.ignored;
+        }
+        FocusManager.instance.primaryFocus
+            ?.focusInDirection(TraversalDirection.left);
+        // El cambio de foco se aplica en una microtarea: se mira después.
+        scheduleMicrotask(() {
+          if (mounted && _catNodes.values.any((n) => n.hasFocus)) {
+            _catNode(_category).requestFocus();
+          }
+        });
+        return KeyEventResult.handled;
+      },
+      child: grid,
+    );
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: 240, child: _categoryColumn(l10n, categories)),
+        const SizedBox(width: 12),
+        Expanded(child: guarded),
+      ],
+    );
+  }
+
+  /// Categorías distintas de los títulos, en orden alfabético sin distinguir
+  /// mayúsculas.
+  static List<String> _categoriesOf(List<OnDemandTitle> titles) {
+    final set = <String>{for (final t in titles) ...t.categories};
+    return set.toList()
+      ..sort((a, b) {
+        final byLower = a.toLowerCase().compareTo(b.toLowerCase());
+        return byLower != 0 ? byLower : a.compareTo(b);
+      });
+  }
+
+  Widget _categoryColumn(AppLocalizations l10n, List<String> categories) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      children: [
+        _categoryItem(const ValueKey('tv-cat-all'), l10n.onDemandAllCategories,
+            node: _catNode(null),
+            selected: _category == null,
+            onSelect: () => setState(() => _category = null)),
+        for (final c in categories)
+          _categoryItem(ValueKey('tv-cat-$c'), c,
+              node: _catNode(c),
+              selected: _category == c,
+              onSelect: () => setState(() => _category = c)),
+      ],
+    );
+  }
+
+  Widget _categoryItem(Key key, String label,
+      {required FocusNode node,
+      required bool selected,
+      required VoidCallback onSelect}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: TvFocusable(
+        key: key,
+        focusNode: node,
+        onSelect: onSelect,
+        builder: (context, focused) => Container(
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: selected
+                ? TvTheme.accent
+                : (focused ? TvTheme.surfaceFocused : TvTheme.surface),
+            borderRadius: BorderRadius.circular(TvTheme.radius),
+          ),
+          child: Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontSize: TvTheme.fontBody,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+                  color: TvTheme.textPrimary)),
+        ),
+      ),
+    );
+  }
+
+  Widget _grid(List<OnDemandTitle> titles) {
     return GridView.builder(
       padding: const EdgeInsets.all(12),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(

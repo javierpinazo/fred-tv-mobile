@@ -190,6 +190,12 @@ abstract class AppLocalizations {
   /// **'No se pudieron cargar las películas'**
   String get onDemandLoadError;
 
+  /// No description provided for @onDemandAllCategories.
+  ///
+  /// In es, this message translates to:
+  /// **'Todas'**
+  String get onDemandAllCategories;
+
   /// No description provided for @navMyLists.
   ///
   /// In es, this message translates to:

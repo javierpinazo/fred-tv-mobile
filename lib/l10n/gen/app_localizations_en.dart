@@ -51,6 +51,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onDemandLoadError => 'Could not load the movies';
 
   @override
+  String get onDemandAllCategories => 'All';
+
+  @override
   String get navMyLists => 'My lists';
 
   @override

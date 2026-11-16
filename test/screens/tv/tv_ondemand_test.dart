@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_tv/backend/ondemand/on_demand_provider.dart';
 import 'package:open_tv/backend/ondemand/on_demand_registry.dart';
-import 'package:open_tv/screens/tv/ondemand/tv_cineaparte_screen.dart';
+import 'package:open_tv/screens/tv/ondemand/tv_catalog_screen.dart';
 import 'package:open_tv/screens/tv/tv_ondemand.dart';
 
 import 'fakes.dart';
@@ -40,7 +40,7 @@ void main() {
     await _key(t, LogicalKeyboardKey.select);
     await t.pumpAndSettle();
     expect(find.byType(TvOnDemandScreen), findsOneWidget);
-    expect(find.byType(TvCineaparteScreen), findsNothing);
+    expect(find.byType(TvCatalogScreen), findsNothing);
     expect(t.takeException(), isNull);
   });
 
@@ -61,7 +61,7 @@ void main() {
     await focusKey(t, 'tv-ondemand-cineaparte');
     await _key(t, LogicalKeyboardKey.select);
     await t.pumpAndSettle();
-    expect(find.byType(TvCineaparteScreen), findsOneWidget);
+    expect(find.byType(TvCatalogScreen), findsOneWidget);
     expect(fake.calls, 1);
   });
 }

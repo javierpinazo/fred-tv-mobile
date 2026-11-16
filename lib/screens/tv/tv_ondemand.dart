@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_tv/backend/ondemand/on_demand_registry.dart';
 import 'package:open_tv/l10n/l10n.dart';
-import 'package:open_tv/screens/tv/ondemand/tv_cineaparte_screen.dart';
+import 'package:open_tv/screens/tv/ondemand/tv_catalog_screen.dart';
 import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
@@ -58,7 +58,7 @@ class _TvOnDemandScreenState extends State<TvOnDemandScreen> {
     final provider = s.provider;
     if (provider == null) return;
     Navigator.of(context).push<void>(MaterialPageRoute<void>(
-        builder: (_) => TvCineaparteScreen(provider: provider)));
+        builder: (_) => TvCatalogScreen(provider: provider)));
   }
 
   Widget _card(BuildContext context, OnDemandService s) {

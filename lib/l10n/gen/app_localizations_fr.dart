@@ -51,6 +51,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get onDemandLoadError => 'Impossible de charger les films';
 
   @override
+  String get onDemandAllCategories => 'Toutes';
+
+  @override
   String get navMyLists => 'Mes listes';
 
   @override

@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_tv/backend/ondemand/on_demand_provider.dart';
 import 'package:open_tv/screens/tv/ondemand/on_demand_play.dart';
-import 'package:open_tv/screens/tv/ondemand/tv_cineaparte_screen.dart';
+import 'package:open_tv/screens/tv/ondemand/tv_catalog_screen.dart';
 import 'package:open_tv/screens/tv/ondemand/vimeo_player_page.dart';
 import 'package:open_tv/screens/tv/youtube/tv_youtube_player.dart';
 
@@ -70,7 +70,7 @@ Future<List<OnDemandTitle>> _played(
     WidgetTester t, FakeProvider p, void Function(OnDemandTitle) sink) async {
   await pumpTv(
     t,
-    TvCineaparteScreen(
+    TvCatalogScreen(
       provider: p,
       onPlay: (context, title) async => sink(title),
     ),
@@ -83,7 +83,7 @@ void main() {
   testWidgets('muestra la carga y luego una tarjeta por película', (t) async {
     final gate = Completer<List<OnDemandTitle>>();
     await pumpTvRoute(
-        t, (_) => TvCineaparteScreen(provider: _GatedProvider(gate.future)));
+        t, (_) => TvCatalogScreen(provider: _GatedProvider(gate.future)));
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
     gate.complete([_vimeo, _youtube]);
@@ -100,7 +100,7 @@ void main() {
       OnDemandUnavailableException('sin red'),
       [_vimeo],
     ]);
-    await pumpTv(t, TvCineaparteScreen(provider: p));
+    await pumpTv(t, TvCatalogScreen(provider: p));
     await t.pumpAndSettle();
     expect(find.text('No se pudieron cargar las películas'), findsOneWidget);
     expect(find.text('Reintentar'), findsOneWidget);
@@ -113,7 +113,7 @@ void main() {
 
   testWidgets('catálogo vacío se trata como error, no como pantalla en blanco',
       (t) async {
-    await pumpTv(t, TvCineaparteScreen(provider: FakeProvider([<OnDemandTitle>[]])));
+    await pumpTv(t, TvCatalogScreen(provider: FakeProvider([<OnDemandTitle>[]])));
     await t.pumpAndSettle();
     expect(find.text('No se pudieron cargar las películas'), findsOneWidget);
   });
@@ -159,6 +159,92 @@ void main() {
       expect(yt.program.title, 'Túpac Amaru');
       expect(yt.program.isLive, isFalse);
       expect(yt.channel.name, 'Cineaparte');
+    });
+  });
+
+  group('categorías', () {
+    OnDemandTitle t(String id, String name, List<String> cats) => OnDemandTitle(
+        id: id,
+        title: name,
+        synopsis: '',
+        posterUrl: '',
+        details: '',
+        source: const VimeoSource('1'),
+        categories: cats);
+
+    final titles = [
+      t('1', 'Peli Drama', ['Drama']),
+      t('2', 'Peli Acción', ['acción']),
+      t('3', 'Peli Mixta', ['Drama', 'Comedia']),
+    ];
+
+    testWidgets('sin categorías no hay columna', (tt) async {
+      await pumpTv(tt, TvCatalogScreen(provider: FakeProvider([[_vimeo]])));
+      await tt.pumpAndSettle();
+      expect(find.text('Todas'), findsNothing);
+    });
+
+    testWidgets('columna con «Todas» y las categorías en orden alfabético',
+        (tt) async {
+      await pumpTv(tt, TvCatalogScreen(provider: FakeProvider([titles])));
+      await tt.pumpAndSettle();
+      expect(find.byKey(const ValueKey('tv-cat-all')), findsOneWidget);
+      final ys = [
+        for (final k in ['tv-cat-all', 'tv-cat-acción', 'tv-cat-Comedia', 'tv-cat-Drama'])
+          tt.getTopLeft(find.byKey(ValueKey(k))).dy
+      ];
+      expect(ys, orderedEquals([...ys]..sort()));
+      expect(find.text('Peli Drama'), findsOneWidget);
+      expect(find.text('Peli Acción'), findsOneWidget);
+    });
+
+    testWidgets('elegir una categoría filtra y «Todas» restablece', (tt) async {
+      await pumpTv(tt, TvCatalogScreen(provider: FakeProvider([titles])));
+      await tt.pumpAndSettle();
+
+      await focusKey(tt, 'tv-cat-Drama');
+      await _key(tt, LogicalKeyboardKey.select);
+      await tt.pumpAndSettle();
+      expect(find.text('Peli Drama'), findsOneWidget);
+      expect(find.text('Peli Mixta'), findsOneWidget); // en varias categorías
+      expect(find.text('Peli Acción'), findsNothing);
+
+      await focusKey(tt, 'tv-cat-Comedia');
+      await _key(tt, LogicalKeyboardKey.select);
+      await tt.pumpAndSettle();
+      expect(find.text('Peli Mixta'), findsOneWidget);
+      expect(find.text('Peli Drama'), findsNothing);
+
+      await focusKey(tt, 'tv-cat-all');
+      await _key(tt, LogicalKeyboardKey.select);
+      await tt.pumpAndSettle();
+      expect(find.text('Peli Acción'), findsOneWidget);
+      expect(find.text('Peli Drama'), findsOneWidget);
+    });
+
+    testWidgets('→ entra en la cuadrícula y ← vuelve a la columna', (tt) async {
+      await pumpTv(tt, TvCatalogScreen(provider: FakeProvider([titles])));
+      await tt.pumpAndSettle();
+      expect(isFocused(tt, const ValueKey('tv-cine-1')), isTrue);
+
+      await _key(tt, LogicalKeyboardKey.arrowLeft);
+      expect(isFocused(tt, const ValueKey('tv-cat-all')), isTrue);
+      await _key(tt, LogicalKeyboardKey.arrowRight);
+      expect(isFocused(tt, const ValueKey('tv-cine-1')), isTrue);
+    });
+
+    testWidgets('← desde la cuadrícula vuelve a la categoría elegida',
+        (tt) async {
+      await pumpTv(tt, TvCatalogScreen(provider: FakeProvider([titles])));
+      await tt.pumpAndSettle();
+      await focusKey(tt, 'tv-cat-Drama');
+      await _key(tt, LogicalKeyboardKey.select);
+      await tt.pumpAndSettle();
+
+      await _key(tt, LogicalKeyboardKey.arrowRight);
+      expect(isFocused(tt, const ValueKey('tv-cine-1')), isTrue);
+      await _key(tt, LogicalKeyboardKey.arrowLeft);
+      expect(isFocused(tt, const ValueKey('tv-cat-Drama')), isTrue);
     });
   });
 }
