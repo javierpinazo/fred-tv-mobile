@@ -34,6 +34,8 @@ String _plain(String html) {
 const _letters = r'[a-z0-9áéíóúüñ]';
 const _adultWords = r'xxx|porno?|erotic[ao]s?|erótic[ao]s?|erotica|'
     r'sexploitation|nsfw|hardcore|explotaci[oó]n sexual|'
+    r'sex|sexo|sexy|sexual(es)?|sexuellement|nudes?|desnud[oa]s?|naked|'
+    r'striptease|'
     r'adults? (films?|movies?|only|content|entertainment)|'
     r'(films?|movies?) for adults';
 const _adultAge = r'(?<!\d)(18\+|\+18)';

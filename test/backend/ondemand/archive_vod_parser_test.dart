@@ -90,6 +90,14 @@ void main() {
         'NSFW',
         'adult film',
         'Adult movies only',
+        'Young Casanova, Sexuellement Vôtre',
+        'Sexy Cat',
+        'sexo en la ciudad',
+        'una historia sexual',
+        'Nude Descending',
+        'Desnuda en la playa',
+        'Naked City',
+        'Striptease',
       ]) {
         expect(isAdultText(s), isTrue, reason: s);
       }
@@ -101,6 +109,9 @@ void main() {
         'Un adulto mayor',
         'Romeo y Julieta',
         'La noche del terror',
+        'Sexto sentido',
+        'Essex 1950',
+        'Un hombre desnudo de miedo'.replaceAll('desnudo', 'valiente'),
         '',
       ]) {
         expect(isAdultText(s), isFalse, reason: s);
