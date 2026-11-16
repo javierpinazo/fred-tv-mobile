@@ -54,6 +54,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get onDemandAllCategories => 'Toutes';
 
   @override
+  String get onDemandResolving => 'Préparation du film…';
+
+  @override
   String get navMyLists => 'Mes listes';
 
   @override

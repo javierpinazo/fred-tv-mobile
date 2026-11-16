@@ -72,7 +72,7 @@ Future<List<OnDemandTitle>> _played(
     t,
     TvCatalogScreen(
       provider: p,
-      onPlay: (context, title) async => sink(title),
+      onPlay: (context, provider, title) async => sink(title),
     ),
   );
   await t.pumpAndSettle();

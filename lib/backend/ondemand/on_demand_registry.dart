@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:open_tv/backend/ondemand/cineaparte_provider.dart';
 import 'package:open_tv/backend/ondemand/on_demand_provider.dart';
+import 'package:open_tv/backend/ondemand/pluto_vod_provider.dart';
 
-/// Cineaparte (películas gratuitas con Vimeo y YouTube) está conectado a la
-/// pantalla de la TV. En `false` su tarjeta vuelve a «Próximamente».
-const kOnDemandCineaparteEnabled = true;
+/// Servicios conectados a la pantalla de la TV. Quitar uno devuelve su
+/// tarjeta a «Próximamente».
+const kOnDemandEnabledServices = {'cineaparte', 'pluto'};
 
 /// Un servicio de películas que lista la pantalla «On demand».
 class OnDemandService {
@@ -23,7 +24,7 @@ class OnDemandService {
   final OnDemandProvider? provider;
 
   bool get enabled =>
-      provider != null && (id != 'cineaparte' || kOnDemandCineaparteEnabled);
+      provider != null && kOnDemandEnabledServices.contains(id);
 }
 
 /// Servicios de la pantalla, en el orden en que se muestran.
@@ -34,8 +35,11 @@ List<OnDemandService> onDemandServices() => [
         icon: Icons.movie_filter_outlined,
         provider: CineaparteProvider(),
       ),
-      const OnDemandService(
-          id: 'pluto', name: 'Pluto TV', icon: Icons.live_tv_outlined),
+      OnDemandService(
+          id: 'pluto',
+          name: 'Pluto TV',
+          icon: Icons.live_tv_outlined,
+          provider: PlutoVodProvider()),
       const OnDemandService(
           id: 'plex', name: 'Plex', icon: Icons.play_circle_outline),
       const OnDemandService(

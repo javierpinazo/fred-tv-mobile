@@ -15,6 +15,7 @@
   "onDemandWatch": "Regarder",
   "onDemandLoadError": "Impossible de charger les films",
   "onDemandAllCategories": "Toutes",
+  "onDemandResolving": "Préparation du film…",
   "navMyLists": "Mes listes",
   "navSearch": "Rechercher",
   "navSettings": "Réglages",

@@ -11,7 +11,7 @@ import 'package:open_tv/screens/tv/widgets/tv_focusable.dart';
 import 'package:open_tv/screens/tv/widgets/tv_theme.dart';
 
 typedef OnDemandPlay = Future<void> Function(
-    BuildContext context, OnDemandTitle title);
+    BuildContext context, OnDemandProvider provider, OnDemandTitle title);
 
 /// Películas gratuitas de un servicio on demand: cuadrícula de carteles, y al
 /// pulsar OK una ficha con la sinopsis y el botón «Ver».
@@ -80,7 +80,7 @@ class _TvCatalogScreenState extends State<TvCatalogScreen> {
       context: context,
       builder: (ctx) => _MovieSheet(title: title),
     );
-    if (watch == true && mounted) await widget.onPlay(context, title);
+    if (watch == true && mounted) await widget.onPlay(context, widget.provider, title);
   }
 
   @override

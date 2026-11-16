@@ -15,6 +15,7 @@
   "onDemandWatch": "Assistir",
   "onDemandLoadError": "Não foi possível carregar os filmes",
   "onDemandAllCategories": "Todas",
+  "onDemandResolving": "Preparando o filme…",
   "navMyLists": "Minhas listas",
   "navSearch": "Buscar",
   "navSettings": "Configurações",

@@ -15,28 +15,27 @@ Future<void> _key(WidgetTester t, LogicalKeyboardKey k) async {
 }
 
 void main() {
-  test('Cineaparte está habilitada; los demás servicios aún no', () {
-    expect(kOnDemandCineaparteEnabled, isTrue);
+  test('Cineaparte y Pluto están habilitados; los demás servicios no', () {
+    expect(kOnDemandEnabledServices, {'cineaparte', 'pluto'});
     final services = onDemandServices();
-    final cine = services.firstWhere((s) => s.id == 'cineaparte');
-    expect(cine.provider, isNotNull);
-    expect(cine.enabled, isTrue);
     expect(services.map((s) => s.name),
         ['Cineaparte', 'Pluto TV', 'Plex', 'Internet Archive', 'YouTube']);
-    expect(services.where((s) => s.enabled).map((s) => s.id), ['cineaparte']);
+    expect(services.where((s) => s.enabled).map((s) => s.id),
+        ['cineaparte', 'pluto']);
+    expect(services.firstWhere((s) => s.id == 'pluto').provider, isNotNull);
   });
 
-  testWidgets('Cineaparte sin «Próximamente»; los otros 4 sí', (t) async {
+  testWidgets('«Próximamente» solo en los 3 servicios sin conectar', (t) async {
     await pumpTv(t, const Scaffold(body: TvOnDemandScreen()));
     for (final s in onDemandServices()) {
       expect(find.text(s.name), findsOneWidget);
     }
-    expect(find.text('Próximamente'), findsNWidgets(4));
+    expect(find.text('Próximamente'), findsNWidgets(3));
   });
 
   testWidgets('OK en un servicio sin conectar no abre nada', (t) async {
     await pumpTv(t, const Scaffold(body: TvOnDemandScreen()));
-    await focusKey(t, 'tv-ondemand-pluto');
+    await focusKey(t, 'tv-ondemand-plex');
     await _key(t, LogicalKeyboardKey.select);
     await t.pumpAndSettle();
     expect(find.byType(TvOnDemandScreen), findsOneWidget);

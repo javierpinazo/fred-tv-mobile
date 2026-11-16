@@ -196,6 +196,12 @@ abstract class AppLocalizations {
   /// **'Todas'**
   String get onDemandAllCategories;
 
+  /// No description provided for @onDemandResolving.
+  ///
+  /// In es, this message translates to:
+  /// **'Preparando la película…'**
+  String get onDemandResolving;
+
   /// No description provided for @navMyLists.
   ///
   /// In es, this message translates to:
