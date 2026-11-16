@@ -15,31 +15,38 @@ Future<void> _key(WidgetTester t, LogicalKeyboardKey k) async {
 }
 
 void main() {
-  test('Cineaparte, Pluto, Plex e Internet Archive están habilitados; YouTube no',
-      () {
-    expect(kOnDemandEnabledServices, {'cineaparte', 'pluto', 'plex', 'archive'});
+  test('los cinco servicios están habilitados y tienen proveedor', () {
+    expect(kOnDemandEnabledServices,
+        {'cineaparte', 'pluto', 'plex', 'archive', 'youtube-movies'});
     final services = onDemandServices();
     expect(services.map((s) => s.name),
         ['Cineaparte', 'Pluto TV', 'Plex', 'Internet Archive', 'YouTube']);
     expect(services.where((s) => s.enabled).map((s) => s.id),
-        ['cineaparte', 'pluto', 'plex', 'archive']);
-    for (final id in ['pluto', 'plex', 'archive']) {
-      expect(services.firstWhere((s) => s.id == id).provider, isNotNull, reason: id);
+        ['cineaparte', 'pluto', 'plex', 'archive', 'youtube-movies']);
+    for (final s in services) {
+      expect(s.provider, isNotNull, reason: s.id);
     }
-    expect(services.firstWhere((s) => s.id == 'youtube-movies').provider, isNull);
   });
 
-  testWidgets('«Próximamente» solo en YouTube', (t) async {
+  testWidgets('ningún servicio dice «Próximamente»', (t) async {
     await pumpTv(t, const Scaffold(body: TvOnDemandScreen()));
     for (final s in onDemandServices()) {
       expect(find.text(s.name), findsOneWidget);
     }
-    expect(find.text('Próximamente'), findsOneWidget);
+    expect(find.text('Próximamente'), findsNothing);
   });
 
   testWidgets('OK en un servicio sin conectar no abre nada', (t) async {
-    await pumpTv(t, const Scaffold(body: TvOnDemandScreen()));
-    await focusKey(t, 'tv-ondemand-youtube-movies');
+    await pumpTv(
+      t,
+      const Scaffold(
+        body: TvOnDemandScreen(services: [
+          OnDemandService(id: 'futuro', name: 'Futuro', icon: Icons.movie),
+        ]),
+      ),
+    );
+    expect(find.text('Próximamente'), findsOneWidget);
+    await focusKey(t, 'tv-ondemand-futuro');
     await _key(t, LogicalKeyboardKey.select);
     await t.pumpAndSettle();
     expect(find.byType(TvOnDemandScreen), findsOneWidget);

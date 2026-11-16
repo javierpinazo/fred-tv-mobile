@@ -4,10 +4,17 @@ import 'package:open_tv/backend/ondemand/cineaparte_provider.dart';
 import 'package:open_tv/backend/ondemand/on_demand_provider.dart';
 import 'package:open_tv/backend/ondemand/plex_vod_provider.dart';
 import 'package:open_tv/backend/ondemand/pluto_vod_provider.dart';
+import 'package:open_tv/backend/ondemand/youtube_movies_provider.dart';
 
 /// Servicios conectados a la pantalla de la TV. Quitar uno devuelve su
 /// tarjeta a «Próximamente».
-const kOnDemandEnabledServices = {'cineaparte', 'pluto', 'plex', 'archive'};
+const kOnDemandEnabledServices = {
+  'cineaparte',
+  'pluto',
+  'plex',
+  'archive',
+  'youtube-movies',
+};
 
 /// Un servicio de películas que lista la pantalla «On demand».
 class OnDemandService {
@@ -52,8 +59,9 @@ List<OnDemandService> onDemandServices() => [
           name: 'Internet Archive',
           icon: Icons.account_balance_outlined,
           provider: ArchiveVodProvider()),
-      const OnDemandService(
+      OnDemandService(
           id: 'youtube-movies',
           name: 'YouTube',
-          icon: Icons.smart_display_outlined),
+          icon: Icons.smart_display_outlined,
+          provider: YoutubeMoviesProvider()),
     ];

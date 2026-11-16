@@ -23,11 +23,11 @@ Widget onDemandPlayerFor(OnDemandTitle title) {
       return TvVimeoPlayer(videoId: videoId, title: title.title);
     case YoutubeSource(:final videoId):
       // El reproductor de YouTube pide un canal y un programa: se le da un
-      // canal «Cineaparte» que solo existe para esto.
+      // canal genérico que solo existe para esto (Cineaparte, YouTube…).
       return TvYoutubePlayer(
         channel: Channel(
-          name: 'Cineaparte',
-          url: 'https://www.cineaparte.com/',
+          name: 'On demand',
+          url: 'https://www.youtube.com/',
           mediaType: MediaType.movie,
           sourceId: -1,
           favorite: false,

@@ -160,7 +160,7 @@ void main() {
       expect(yt.program.videoId, 'B4yhLGy9-z8');
       expect(yt.program.title, 'Túpac Amaru');
       expect(yt.program.isLive, isFalse);
-      expect(yt.channel.name, 'Cineaparte');
+      expect(yt.channel.name, 'On demand');
     });
   });
 
