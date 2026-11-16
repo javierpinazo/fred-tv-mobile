@@ -32,14 +32,15 @@ String _plain(String html) {
 }
 
 const _letters = r'[a-z0-9áéíóúüñ]';
-final _adult = RegExp(
-  // Palabras completas (sin letras pegadas por ningún lado).
-  '(?<!$_letters)(xxx|porno?|erotic[ao]s?|erótic[ao]s?|erotica|sexploitation|'
-  r'nsfw|hardcore|explotaci[oó]n sexual|adults? (films?|movies?|only|content|'
-  r'entertainment)|(films?|movies?) for adults)(?!' +
-      _letters +
-      r')|(?<!\d)(18\+|\+18)',
-);
+const _adultWords = r'xxx|porno?|erotic[ao]s?|erótic[ao]s?|erotica|'
+    r'sexploitation|nsfw|hardcore|explotaci[oó]n sexual|'
+    r'adults? (films?|movies?|only|content|entertainment)|'
+    r'(films?|movies?) for adults';
+const _adultAge = r'(?<!\d)(18\+|\+18)';
+
+/// Palabras completas (sin letras pegadas por ningún lado) o «18+».
+final _adult =
+    RegExp('(?<!$_letters)($_adultWords)(?!$_letters)|$_adultAge');
 
 /// `true` si el texto parece de contenido para adultos. Filtro de mínimos por
 /// palabras: Internet Archive no está moderado y no trae clasificación.

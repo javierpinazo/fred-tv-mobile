@@ -123,9 +123,9 @@ void main() {
     expect(find.text('No se pudieron cargar las películas'), findsNothing);
   });
 
-  testWidgets('Archive y Plex también se resuelven antes de abrir el reproductor',
-      (t) async {
-    for (final src in const [ArchiveSource('peli-1'), PlexSource('abc123')]) {
+  for (final src in const [ArchiveSource('peli-1'), PlexSource('abc123')]) {
+    testWidgets('${src.runtimeType} se resuelve antes de abrir el reproductor',
+        (t) async {
       final p = FakeResolver([_stream]);
       final built = <OnDemandStream>[];
       await pumpTv(
@@ -154,8 +154,8 @@ void main() {
       );
       await t.tap(find.byKey(const ValueKey('go2')));
       await t.pumpAndSettle();
-      expect(p.calls, 1, reason: '$src');
-      expect(built, hasLength(1), reason: '$src');
-    }
-  });
+      expect(p.calls, 1);
+      expect(built, hasLength(1));
+    });
+  }
 }
